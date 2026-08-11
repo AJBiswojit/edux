@@ -9,15 +9,6 @@ import { getQuery } from './query'
 
 export const useFacultyStudents = () => useQuery(getQuery('/faculty/students', ['faculty', 'students']))
 
-export const useFacultyBatches = () => useQuery(getQuery('/faculty/batches', ['faculty', 'batches']))
-
-export const useFacultyBatch = (id) =>
-  useQuery({
-    queryKey: ['faculty', 'batches', id],
-    queryFn: () => request({ url: `/faculty/batches/${id}` }).then((r) => r.data),
-    enabled: !!id,
-  })
-
 /** Phase 4 — 360° individual student intelligence bundle. */
 export const useFacultyStudent360 = (id) =>
   useQuery({
@@ -42,7 +33,7 @@ export const useFacultyAttemptAnalysis = (studentId, attemptId) =>
   })
 
 export default {
-  useFacultyStudents, useFacultyBatches, useFacultyBatch,
+  useFacultyStudents,
   useFacultyStudent360, useWeakTopicQuestions,
   useFacultyAttemptAnalysis,
 }

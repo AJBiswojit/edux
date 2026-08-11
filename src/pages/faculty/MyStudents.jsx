@@ -16,7 +16,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { StatCard } from '@/components/shared/stat-card'
 import { Badge, Button, Card, Input, Select, SelectItem, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
-import { useFacultyStudents, useFacultyBatches } from '@/services/faculty-students'
+import { useFacultyStudents } from '@/services/faculty-students'
 import { SimilarIssuesTab } from '@/components/students-workspace/student-issues-tabs'
 import { InterventionCenterTab } from '@/components/students-workspace/intervention-center'
 import { formatDate } from '@/utils/format'
@@ -95,7 +95,6 @@ function StudentList({ students, onOpen }) {
 function MyStudents() {
   const navigate = useNavigate()
   const { data, isLoading, isError, refetch } = useFacultyStudents()
-  const { data: batchesData } = useFacultyBatches()
 
   const [view, setView] = useState('students') // students | batches
   const [domain, setDomain] = useState('All')
@@ -109,7 +108,8 @@ function MyStudents() {
 
   /* ALL hooks above any early return (hooks-order rule) */
   const allStudents = data?.students ?? []
-  const allBatches = data?.batches ?? batchesData?.batches ?? []
+  /* The /faculty/students response already carries batches — no second request. */
+  const allBatches = data?.batches ?? []
 
   const batchOptions = useMemo(
     () => allBatches

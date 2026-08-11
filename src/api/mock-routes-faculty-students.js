@@ -18,7 +18,7 @@ import {
   facultyBatches, facultyStudents, getStudentAttempts, attentionSignalsByRoll,
 } from '@/intelligence/faculty/datasets/students-directory'
 import {
-  computeMyStudentsDirectory, computeBatchDetail,
+  computeMyStudentsDirectory,
   computeAttemptAnalysis, computeStudent360,
 } from '@/intelligence/faculty'
 import { normalizeExamAttempt } from '@/intelligence'
@@ -62,19 +62,6 @@ function directoryPayload() {
 }
 
 mockRoute('get', '/faculty/students', () => directoryPayload())
-
-mockRoute('get', '/faculty/batches', () => ({ batches: directoryPayload().batches }))
-
-mockRoute('get', '/faculty/batches/:id', ({ params }) => {
-  const dir = directoryPayload()
-  const batch = computeBatchDetail(params.id, dir)
-  if (!batch) {
-    const err = new Error('Batch not found.')
-    err.response = { status: 404, data: { message: err.message } }
-    throw err
-  }
-  return { batch }
-})
 
 /* Phase 4 — weak-topic → existing Question Bank connection: given a
    subject + chapter, return the bank questions matching (same chapter,
