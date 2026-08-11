@@ -18,12 +18,12 @@ import {
   useSubmitInterventionAttempt,
 } from '@/services/faculty-interventions'
 import { InterventionPracticeRunner } from '@/components/intervention-workspace/intervention-practice-runner'
+import { DOMAIN_BADGE } from '@/constants/ui'
 
 const STATUS_STYLE = {
   Assigned: 'info', 'In Progress': 'info', Completed: 'success', 'Re-test Pending': 'warning',
   Evaluating: 'warning', Resolved: 'success', Improving: 'success', Persistent: 'danger',
 }
-const DOMAIN_BADGE = { University: 'info', Competitive: 'gradient' }
 
 function InterventionCard({ iv, onStartPractice, onStartRetest }) {
   return (

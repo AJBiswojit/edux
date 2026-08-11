@@ -13,7 +13,10 @@ import {
   computeChapterDrilldown,
   generateInterventionRecommendation,
 } from '@/intelligence/faculty/engine/ground-level-intelligence'
+import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 import { EvidenceQuestionCard, InterventionRecommendationCard, QuestionDetailDialog } from './student-evidence'
+
+const LETTERS = QUESTION_OPTION_LABELS
 
 function Breadcrumb({ items, onNavigate }) {
   return (
@@ -403,8 +406,6 @@ function QuestionAnalysisPanel({ s360, domain, context }) {
     if (chapterFilter !== 'All') items.push({ label: chapterFilter })
     return items
   }, [subjectFilter, chapterFilter])
-
-  const LETTERS = ['A', 'B', 'C', 'D']
 
   return (
     <Card className="p-5 space-y-4">

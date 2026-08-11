@@ -6,23 +6,14 @@
  */
 
 import { useState } from 'react'
-import { CalendarCheck2, CheckCircle2, ClipboardList, FileCheck2, FileText, Megaphone, Presentation, Repeat, Sparkles, Zap } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { Timeline } from '@/components/shared/timeline'
 import { Badge, Card } from '@/components/ui'
+import { ACTIVITY_TYPE_ICON } from '@/constants/ui'
 import { formatDate } from '@/utils/format'
 import { WorkspaceSection } from './shared'
 
-const TYPE_ICON = {
-  lecture: { Icon: Presentation, cls: 'from-indigo-500 to-blue-500' },
-  attendance: { Icon: CalendarCheck2, cls: 'from-emerald-500 to-teal-500' },
-  assignment: { Icon: FileText, cls: 'from-violet-500 to-purple-500' },
-  evaluation: { Icon: CheckCircle2, cls: 'from-emerald-500 to-teal-500' },
-  revision: { Icon: Repeat, cls: 'from-amber-500 to-orange-500' },
-  paper: { Icon: FileCheck2, cls: 'from-sky-500 to-cyan-500' },
-  quiz: { Icon: Zap, cls: 'from-fuchsia-500 to-pink-500' },
-  exam: { Icon: ClipboardList, cls: 'from-rose-500 to-red-500' },
-  announcement: { Icon: Megaphone, cls: 'from-slate-500 to-slate-600' },
-}
+const TYPE_ICON = ACTIVITY_TYPE_ICON
 
 function TimelineTab({ data }) {
   const tl = data.derived.teachingTimeline ?? {}

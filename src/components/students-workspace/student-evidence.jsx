@@ -12,9 +12,11 @@ import {
   generateAiObservation,
   generateWhyFlagged,
 } from '@/intelligence/faculty/engine/ground-level-intelligence'
+import { QUESTION_OPTION_LABELS } from '@/constants/ui'
+
+const LETTERS = QUESTION_OPTION_LABELS
 
 function EvidenceQuestionCard({ row, allRows }) {
-  const LETTERS = ['A', 'B', 'C', 'D']
   const evidence = resolveEvidenceQuestions([row])[0]
   const whyFlags = generateWhyFlagged(evidence, allRows)
 
@@ -50,7 +52,6 @@ function EvidenceQuestionCard({ row, allRows }) {
 
 function QuestionDetailDialog({ row, open, onClose, allRows }) {
   if (!row) return null
-  const LETTERS = ['A', 'B', 'C', 'D']
   const evidence = resolveEvidenceQuestions([row])[0]
   const observation = generateAiObservation(evidence)
   const whyFlags = generateWhyFlagged(evidence, allRows ?? [])

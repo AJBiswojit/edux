@@ -6,10 +6,8 @@
 import { Link } from 'react-router-dom'
 import { FileText } from 'lucide-react'
 import { Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+import { DOMAIN_BADGE, FAMILY_BADGE } from '@/constants/ui'
 import { formatDate } from '@/utils/format'
-
-const DOMAIN_BADGE = { University: 'info', Competitive: 'gradient' }
-const FAMILY_BADGE = { JEE: 'warning', NEET: 'success' }
 
 function ExamHistoryTable({ attempts, studentId }) {
   return (
@@ -58,5 +56,5 @@ function ExamHistoryTable({ attempts, studentId }) {
   )
 }
 
-export { ExamHistoryTable, DOMAIN_BADGE, FAMILY_BADGE }
+export { ExamHistoryTable }
 export default ExamHistoryTable

@@ -20,7 +20,8 @@ import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { Student360Panels } from '@/components/students-workspace/student-360-panels'
-import { ExamHistoryTable, DOMAIN_BADGE, FAMILY_BADGE } from '@/components/students-workspace/student-exam-history'
+import { ExamHistoryTable } from '@/components/students-workspace/student-exam-history'
+import { DOMAIN_BADGE, FAMILY_BADGE, STUDENT_STATUS_STYLES } from '@/constants/ui'
 import {
   SubjectIntelligencePanel, SubjectDrilldownPanel,
   ChapterIntelligencePanel, QuestionAnalysisPanel,
@@ -30,8 +31,6 @@ import {
 } from '@/components/students-workspace/student-profile-panels'
 import { useFacultyStudent360 } from '@/services/faculty-students'
 import { useFacultyStudentInterventions } from '@/services/faculty-interventions'
-
-const STATUS_STYLES = { Strong: 'success', Improving: 'info', Stable: 'secondary', 'Needs Attention': 'danger', 'No exams': 'outline' }
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -111,7 +110,7 @@ function StudentProfile() {
                 ))}
               </div>
             )}
-            <Badge variant={STATUS_STYLES[data?.status] ?? 'secondary'} className="px-3 py-1">{data?.status}</Badge>
+            <Badge variant={STUDENT_STATUS_STYLES[data?.status] ?? 'secondary'} className="px-3 py-1">{data?.status}</Badge>
           </div>
         }
       />

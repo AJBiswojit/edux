@@ -19,14 +19,11 @@ import { Badge, Button, Card, Input, Select, SelectItem, Tabs, TabsList, TabsTri
 import { useFacultyStudents } from '@/services/faculty-students'
 import { SimilarIssuesTab } from '@/components/students-workspace/student-issues-tabs'
 import { InterventionCenterTab } from '@/components/students-workspace/intervention-center'
+import { DOMAIN_BADGE, FAMILY_BADGE, STUDENT_STATUS_STYLES } from '@/constants/ui'
 import { formatDate } from '@/utils/format'
 
-const STATUS_STYLES = { Strong: 'success', Improving: 'info', Stable: 'secondary', 'Needs Attention': 'danger', 'No exams': 'outline' }
-const DOMAIN_BADGE = { University: 'info', Competitive: 'gradient' }
-const FAMILY_BADGE = { JEE: 'warning', NEET: 'success' }
-
 function StatusBadge({ status }) {
-  return <Badge variant={STATUS_STYLES[status] ?? 'secondary'} size="sm">{status}</Badge>
+  return <Badge variant={STUDENT_STATUS_STYLES[status] ?? 'secondary'} size="sm">{status}</Badge>
 }
 
 function StudentRow({ student, onOpen }) {

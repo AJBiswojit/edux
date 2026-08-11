@@ -18,8 +18,8 @@ import { StatCard } from '@/components/shared/stat-card'
 import { AreaTrend, BarCompare, DonutChart } from '@/components/charts'
 import { formatDate } from '@/utils/format'
 import { useWeakTopicQuestions } from '@/services/faculty-students'
+import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 
-const STATUS_STYLES = { Strong: 'success', Improving: 'info', Stable: 'secondary', 'Needs Attention': 'danger', 'No exams': 'outline' }
 const TREND_STYLE = { improving: 'success', declining: 'danger', stable: 'secondary', new: 'info' }
 const TREND_ICON = { improving: TrendingUp, declining: TrendingDown, stable: Minus, new: Sparkles }
 const ISSUE_TONE = { 'Persistent weakness': 'danger', 'Resolved issue': 'success', 'Improving issue': 'info', 'Declining area': 'warning', 'Strong area': 'success', 'Developing area': 'secondary' }
@@ -118,7 +118,7 @@ function WeaknessCard({ w, studentId, s360 }) {
 
 function QuestionEvidenceDialog({ open, onOpenChange, subject, chapter, studentId, s360 }) {
   const { data } = useWeakTopicQuestions(subject, chapter)
-  const LETTERS = ['A', 'B', 'C', 'D']
+  const LETTERS = QUESTION_OPTION_LABELS
 
   /* CRITICAL FIX: Always show canonical attempt evidence first */
   const canonicalEvidence = (s360?.question?.rows ?? []).filter((r) =>

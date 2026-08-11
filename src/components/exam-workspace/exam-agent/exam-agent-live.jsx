@@ -20,9 +20,10 @@ import {
   buildDemoSimulationPlan, computeLiveExamStats, demoTimeScale, formatClock, formatPace,
 } from '@/intelligence'
 import { cn } from '@/utils/cn'
+import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 import { AgentChip, ExamTypeBadge, PacePill } from './exam-agent-shared'
 
-const LETTERS = ['A', 'B', 'C', 'D']
+const LETTERS = QUESTION_OPTION_LABELS
 
 const DIFF_STYLES = { Easy: 'success', Medium: 'warning', Hard: 'danger' }
 

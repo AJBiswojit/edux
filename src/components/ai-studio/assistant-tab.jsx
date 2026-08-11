@@ -11,6 +11,7 @@ import { useAIAssistantRespond, useAIAssistantThreads } from '@/services'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { ChatMessage, TypingDots } from '@/components/shared/chat-message'
 import { Badge, Button, Card, useToast } from '@/components/ui'
+import { useChatAssistant } from '@/hooks/use-chat-assistant'
 
 /* Frontend-only persistence: new exchanges survive full reloads via
    localStorage (the mock dataset itself resets with the page). */
@@ -30,9 +31,6 @@ function AssistantTab({ data }) {
   const prompts = data.derived.aiStudio?.prompts ?? []
   const [threads, setThreads] = useState([])
   const [activeId, setActiveId] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
   const [pinned, setPinned] = useState(['ta2'])
   const scrollRef = useRef(null)
   const toast = useToast()
@@ -42,6 +40,21 @@ function AssistantTab({ data }) {
   useEffect(() => {
     setExtraHistory(loadHistory())
   }, [])
+
+  const persistExchange = (userMsg, aiMsg) => {
+    const next = [...extraHistory, userMsg, aiMsg].slice(-40)
+    setExtraHistory(next)
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
+    } catch { /* storage unavailable — keep in-memory only */ }
+  }
+
+  const chat = useChatAssistant({
+    ask,
+    fallbackReply: () => 'Here’s my take: based on your teaching health and current backlog, start with the highest-priority item — clear the grading queue, then prep tomorrow’s lecture. Want me to draft either?',
+    onAssistantMessage: persistExchange,
+  })
+  const { messages, setMessages, input, setInput, loading, send } = chat
 
   useEffect(() => {
     if (!threadsData) return
@@ -60,36 +73,6 @@ function AssistantTab({ data }) {
     setActiveId(id)
     const base = threads.find((t) => t.id === id)?.messages ?? []
     setMessages(id === threads[0]?.id ? [...base, ...extraHistory] : base)
-  }
-
-  const persistExchange = (userMsg, aiMsg) => {
-    const next = [...extraHistory, userMsg, aiMsg].slice(-40)
-    setExtraHistory(next)
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
-    } catch { /* storage unavailable — keep in-memory only */ }
-  }
-
-  const send = async (text) => {
-    const trimmed = text?.trim()
-    if (!trimmed || loading) return
-    const userMsg = { id: `u_${Date.now()}`, role: 'user', text: trimmed, time: new Date().toISOString() }
-    setMessages((m) => [...m, userMsg])
-    setInput('')
-    setLoading(true)
-    try {
-      const { reply } = await ask({ text: trimmed })
-      const aiMsg = { id: `a_${Date.now()}`, role: 'assistant', text: reply, time: new Date().toISOString() }
-      setMessages((m) => [...m, aiMsg])
-      persistExchange(userMsg, aiMsg)
-    } catch {
-      /* Simulated replies never fail — but keep a graceful fallback. */
-      const aiMsg = { id: `a_${Date.now()}`, role: 'assistant', text: 'Here’s my take: based on your teaching health and current backlog, start with the highest-priority item — clear the grading queue, then prep tomorrow’s lecture. Want me to draft either?', time: new Date().toISOString() }
-      setMessages((m) => [...m, aiMsg])
-      persistExchange(userMsg, aiMsg)
-    } finally {
-      setLoading(false)
-    }
   }
 
   if (isLoading) return <DashboardSkeleton cards={2} />
