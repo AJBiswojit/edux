@@ -1,0 +1,120 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getQuery as get } from './query'
+import request from '@/api/client'
+
+/* ================= STUDENT ================= */
+
+export const useStudentProfile = () => useQuery(get('/student/profile', ['student', 'profile']))
+export const useStudentDashboard = () => useQuery(get('/student/dashboard', ['student', 'dashboard']))
+export const useStudentAttendance = () => useQuery(get('/student/attendance', ['student', 'attendance']))
+export const useStudentAssignments = () => useQuery(get('/student/assignments', ['student', 'assignments']))
+export const useStudentCourses = () => useQuery(get('/student/courses', ['student', 'courses']))
+export const useCourseDetail = (id) =>
+  useQuery({ ...get(`/student/courses/${id}`, ['student', 'courses', id]), enabled: !!id })
+export const useStudentSubjects = () => useQuery(get('/student/subjects', ['student', 'subjects']))
+export const useCalendarEvents = () => useQuery(get('/student/events', ['student', 'events']))
+export const useMockTests = () => useQuery(get('/student/mock-tests', ['student', 'mock-tests']))
+export const useExams = () => useQuery(get('/student/exams', ['student', 'exams']))
+export const useStudentSettings = () => useQuery(get('/student/settings', ['student', 'settings']))
+
+export function useUpdateStudentSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'patch', url: '/student/settings', data: payload }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['student', 'settings'] }),
+  })
+}
+
+/* ================= FACULTY ================= */
+
+export const useFacultyProfile = () => useQuery(get('/faculty/profile', ['faculty', 'profile']))
+export const useFacultyDashboard = () => useQuery(get('/faculty/dashboard', ['faculty', 'dashboard']))
+export const useFacultyAttendance = () => useQuery(get('/faculty/attendance', ['faculty', 'attendance']))
+export const useFacultyAssignments = () => useQuery(get('/faculty/assignments', ['faculty', 'assignments']))
+export const useQuestionBank = () => useQuery(get('/faculty/question-bank', ['faculty', 'question-bank']))
+export const useFacultyStudentAnalytics = () => useQuery(get('/faculty/student-analytics', ['faculty', 'student-analytics']))
+export const useFacultyResearch = () => useQuery(get('/faculty/research', ['faculty', 'research']))
+export const useFacultyLecturePlanner = () => useQuery(get('/faculty/lecture-planner', ['faculty', 'lecture-planner']))
+export const useFacultyExamBuilder = () => useQuery(get('/faculty/exam-builder', ['faculty', 'exam-builder']))
+export const useFacultyReports = () => useQuery(get('/faculty/reports', ['faculty', 'reports']))
+export const useFacultySettings = () => useQuery(get('/faculty/settings', ['faculty', 'settings']))
+export const useFacultyRoster = () => useQuery(get('/faculty/roster', ['faculty', 'roster']))
+
+/* ================= ADMIN ================= */
+
+export const useAdminDashboard = () => useQuery(get('/admin/dashboard', ['admin', 'dashboard']))
+export const useAdminUsers = () => useQuery(get('/admin/users', ['admin', 'users']))
+export const useAdminDepartments = () => useQuery(get('/admin/departments', ['admin', 'departments']))
+export const useAdminCourses = () => useQuery(get('/admin/courses', ['admin', 'courses']))
+export const useAdminAnalytics = () => useQuery(get('/admin/analytics', ['admin', 'analytics']))
+export const useAdminPerformance = () => useQuery(get('/admin/performance', ['admin', 'performance']))
+export const useAdminPlacements = () => useQuery(get('/admin/placements', ['admin', 'placements']))
+export const useAdminResearch = () => useQuery(get('/admin/research', ['admin', 'research']))
+export const useAdminRoles = () => useQuery(get('/admin/roles', ['admin', 'roles']))
+export const useAdminPermissions = () => useQuery(get('/admin/permissions', ['admin', 'permissions']))
+export const useAdminAuditLogs = () => useQuery(get('/admin/audit-logs', ['admin', 'audit-logs']))
+export const useAdminAiConfig = () => useQuery(get('/admin/ai-config', ['admin', 'ai-config']))
+export const useAdminSettings = () => useQuery(get('/admin/settings', ['admin', 'settings']))
+
+/* ================= PARENT ================= */
+
+export const useParentProfile = () => useQuery(get('/parent/profile', ['parent', 'profile']))
+export const useParentDashboard = () => useQuery(get('/parent/dashboard', ['parent', 'dashboard']))
+export const useParentProgress = () => useQuery(get('/parent/progress', ['parent', 'progress']))
+export const useParentAttendance = () => useQuery(get('/parent/attendance', ['parent', 'attendance']))
+export const useParentPerformance = () => useQuery(get('/parent/performance', ['parent', 'performance']))
+export const useParentExamResults = () => useQuery(get('/parent/exam-results', ['parent', 'exam-results']))
+export const useParentCommunication = () => useQuery(get('/parent/communication', ['parent', 'communication']))
+export const useParentAIInsights = () => useQuery(get('/parent/ai-insights', ['parent', 'ai-insights']))
+export const useParentReports = () => useQuery(get('/parent/reports', ['parent', 'reports']))
+
+/* ================= AI ================= */
+
+export const useAITutorThreads = () => useQuery(get('/ai/tutor/threads', ['ai', 'tutor', 'threads']))
+export const useAITutorThread = (id) =>
+  useQuery({ ...get(`/ai/tutor/threads/${id}`, ['ai', 'tutor', 'threads', id]), enabled: !!id })
+
+export function useAITutorRespond() {
+  return useMutation({
+    mutationFn: ({ text, threadId }) =>
+      request({ method: 'post', url: '/ai/tutor/respond', data: { text, threadId } }).then((r) => r.data),
+  })
+}
+
+export const useCopilotSuggestions = (path) =>
+  useQuery({ ...get('/ai/copilot/suggestions', ['ai', 'copilot', path]), enabled: !!path })
+
+export const useLearningPath = () => useQuery(get('/ai/learning-path', ['ai', 'learning-path']))
+export const useAIRecommendations = () => useQuery(get('/ai/recommendations', ['ai', 'recommendations']))
+export const useAIWeaknesses = () => useQuery(get('/ai/weaknesses', ['ai', 'weaknesses']))
+export const useAIPrediction = () => useQuery(get('/ai/prediction', ['ai', 'prediction']))
+
+export function useGraphSearch(query) {
+  return useQuery({
+    queryKey: ['ai', 'graph-search', query],
+    queryFn: () => request({ url: '/ai/graph-search', params: { q: query } }).then((r) => r.data),
+    enabled: !!query && query.length > 2,
+  })
+}
+
+export const useAIAssistantThreads = () => useQuery(get('/ai/assistant/threads', ['ai', 'assistant', 'threads']))
+
+export function useAIAssistantRespond() {
+  return useMutation({
+    mutationFn: ({ text }) => request({ method: 'post', url: '/ai/assistant/respond', data: { text } }).then((r) => r.data),
+  })
+}
+
+export function useGenerateQuiz() {
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/ai/generate-quiz', data: payload }).then((r) => r.data),
+  })
+}
+
+export function useGenerateExam() {
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/ai/generate-exam', data: payload }).then((r) => r.data),
+  })
+}
+
+export const useAIStats = () => useQuery(get('/ai/stats', ['ai', 'stats']))
