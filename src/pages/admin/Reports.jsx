@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { FileBarChart, LayoutDashboard, Library, ListPlus, PencilLine, Users } from 'lucide-react'
+import { FileBarChart, LayoutDashboard, Library, ListPlus, Users } from 'lucide-react'
 import { useAdminIntelligence } from '@/services/admin-intelligence'
 import { REPORT_TYPES, buildReportPreviewDoc } from '@/intelligence/admin'
 import { PageHeader } from '@/components/shared/page-header'
@@ -20,7 +20,7 @@ import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Tabs, TabsList, TabsTrigger, TabsContent, useToast } from '@/components/ui'
 import {
   ReportCenterTab, ReportGenerateTab, ReportPreviewTab,
-  DepartmentCompareTab, ReportLibraryTab, TEMPLATES,
+  DepartmentCompareTab, ReportLibraryTab,
 } from '@/components/admin-reports'
 import { LIBRARY_KEY } from '@/components/admin-reports/library-tab'
 

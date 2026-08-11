@@ -7,7 +7,7 @@
  */
 import { useState } from 'react'
 import { BookOpen, CheckCircle2, FileText, PencilLine, RefreshCw, Sparkles, Trash2, XCircle } from 'lucide-react'
-import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea } from '@/components/ui'
 import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 
 const DIFF_STYLE = { Easy: 'success', Medium: 'warning', Hard: 'danger' }

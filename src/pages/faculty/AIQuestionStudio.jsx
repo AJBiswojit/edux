@@ -6,11 +6,11 @@
  */
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, FilePlus2, History, Sparkles, Upload, Wand2 } from 'lucide-react'
+import { BookOpen, History, Sparkles, Upload, Wand2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { StatCard } from '@/components/shared/stat-card'
-import { Badge, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Tabs, TabsList, TabsTrigger, TabsContent, useToast } from '@/components/ui'
+import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Tabs, TabsList, TabsTrigger, TabsContent, useToast } from '@/components/ui'
 import { useQuestionStudioSummary, useStudioSessions, useUploadSource } from '@/services/question-studio'
 import { SourceLibraryTab } from '@/components/question-studio/source-library'
 import { StudioWorkflow } from '@/components/question-studio/studio-workflow'

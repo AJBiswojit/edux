@@ -23,7 +23,7 @@
  */
 
 import { round1, avg } from './scores.js'
-import { buildAttemptSignals, classifyChapterTrend } from '@/intelligence/engine/exam-attempt-intelligence.js'
+import { buildAttemptSignals } from '@/intelligence/engine/exam-attempt-intelligence.js'
 
 /* ------------------------------------------------------------------ */
 /* Fingerprint                                                         */

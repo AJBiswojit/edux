@@ -11,9 +11,9 @@ import { StatCard } from '@/components/shared/stat-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { ProgressRing } from '@/components/shared/progress-ring'
 import { MiniBars, AnimatedValue } from '@/components/charts'
-import { Badge, Button, Card } from '@/components/ui'
+import { Badge, Button } from '@/components/ui'
 import { formatDate } from '@/utils/format'
-import { AiSummaryCard, WorkspaceSection } from './shared'
+import { AiSummaryCard } from './shared'
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 

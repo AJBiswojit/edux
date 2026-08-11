@@ -6,7 +6,7 @@
 import { AlertTriangle, CalendarCheck2, TrendingUp, Users } from 'lucide-react'
 import { ChartCard } from '@/components/shared/chart-card'
 import { AreaTrend, BarCompare, LineTrend } from '@/components/charts'
-import { Badge, Select, SelectItem } from '@/components/ui'
+import { Badge } from '@/components/ui'
 import { EmptyState } from '@/components/shared/empty-state'
 import { KpiStrip, WorkspaceSection } from './shared'
 

@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import {  } from 'framer-motion'
 import {
   CheckCircle2, ChevronDown, FileText, History, Pencil, Printer, RefreshCw,
   Save, Send, SlidersHorizontal, Sparkles, Trash2, Wand2,

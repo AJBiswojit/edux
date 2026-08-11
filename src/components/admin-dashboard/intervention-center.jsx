@@ -7,7 +7,7 @@
 
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { AlertTriangle, ArrowRight, CheckCircle2, TrendingUp, Users } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CheckCircle2, Users } from 'lucide-react'
 import { ChartCard } from '@/components/shared/chart-card'
 import { Badge, Button } from '@/components/ui'
 import { WorkspaceSection } from '@/components/teaching-workspace/shared'

@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { BookOpen, CheckCircle2, Headphones, HelpCircle, LifeBuoy, MessageSquare, Rocket, Wrench } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
-import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 
 const FAQS = [
   { q: 'How do I interpret the institution health score?', a: 'The score is a weighted blend of six pillars — academic health, student success, attendance, assessment, faculty and outcomes. It updates from the intelligence foundation whenever you open the Command Center.' },

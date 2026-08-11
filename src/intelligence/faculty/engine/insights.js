@@ -8,7 +8,7 @@
  * Everything derives from the centralized datasets — no hardcoded values.
  */
 
-import { clamp, round1, avg, weighted } from './scores.js'
+import { clamp, round1, avg } from './scores.js'
 
 /* ---------- Topic difficulty (from question bank) ---------- */
 export function computeTopicDifficulty({ questionBank }) {

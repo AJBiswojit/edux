@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  ArrowUp, BrainCircuit, Check, ClipboardCopy, Copy, RefreshCw, Save, Sparkles,
+  ArrowUp, BrainCircuit, Check, ClipboardCopy, Copy, Save, Sparkles,
 } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
 import { EXEC_QUICK_PROMPTS, generateExecResponse } from '@/intelligence/admin/ai'

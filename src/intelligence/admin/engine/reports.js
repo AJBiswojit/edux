@@ -5,7 +5,7 @@
  * UI itself is a later phase — this is the data contract.
  */
 
-import { round1, avg } from './scores.js'
+import { avg } from './scores.js'
 
 export function buildInstitutionSummary({ health, totals, students, assessments, aiAdoption }) {
   const pillars = health?.pillars ?? []

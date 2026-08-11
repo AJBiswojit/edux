@@ -8,9 +8,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertTriangle, BookOpen, CheckCircle2, ClipboardList, Clock, FileText, PencilLine, Send, Sparkles, Target, Users, X,
+  AlertTriangle, BookOpen, CheckCircle2, ClipboardList, Clock, FileText, PencilLine, Send, Sparkles, Target, X,
 } from 'lucide-react'
-import { Badge, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import {
   useInterventions, useIntervention, useInterventionPractice,

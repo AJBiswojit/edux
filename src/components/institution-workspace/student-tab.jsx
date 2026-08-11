@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { AlertTriangle, Award, TrendingUp, Users } from 'lucide-react'
+import { AlertTriangle, Award } from 'lucide-react'
 import { ChartCard } from '@/components/shared/chart-card'
 import { AreaTrend, BarCompare, DonutChart } from '@/components/charts'
 import { Badge, Select, SelectItem } from '@/components/ui'

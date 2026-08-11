@@ -15,7 +15,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, ArrowUpDown, BookOpen, Search, Sp
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { StatCard } from '@/components/shared/stat-card'
-import { Badge, Button, Card, Input, Select, SelectItem, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
+import { Badge, Card, Input, Select, SelectItem, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { useFacultyStudents } from '@/services/faculty-students'
 import { SimilarIssuesTab } from '@/components/students-workspace/student-issues-tabs'
 import { InterventionCenterTab } from '@/components/students-workspace/intervention-center'

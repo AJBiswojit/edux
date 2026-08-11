@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom'
 import { useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle, CalendarCheck2, Clock, FileText, LayoutDashboard,
-  Lightbulb, Presentation, Sparkles, Users,
+  Lightbulb, Sparkles, Users,
 } from 'lucide-react'
 import { useFacultyIntelligence } from '@/services/faculty-intelligence'
 import { PageHeader } from '@/components/shared/page-header'

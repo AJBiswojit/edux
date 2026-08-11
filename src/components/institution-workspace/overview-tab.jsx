@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { ChartCard } from '@/components/shared/chart-card'
 import { ProgressRing } from '@/components/shared/progress-ring'
-import { AreaTrend, BarCompare, LineTrend } from '@/components/charts'
+import { AreaTrend, LineTrend } from '@/components/charts'
 import { Badge, Button } from '@/components/ui'
 import { KpiStrip, WorkspaceSection } from './shared'
 

@@ -7,7 +7,7 @@
  */
 import { useMemo, useState } from 'react'
 import { BookOpen, FileText, Search, Sparkles, Wand2 } from 'lucide-react'
-import { Badge, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Select, SelectItem, useToast } from '@/components/ui'
+import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { useQuestionStudioSources, useQuestionStudioSource, useAnalyzeSource } from '@/services/question-studio'
 

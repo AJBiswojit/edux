@@ -16,10 +16,10 @@
  */
 import { mockRoute } from './mock-server'
 import {
-  facultyBatches, facultyStudents, getStudentAttempts,
+  facultyStudents, getStudentAttempts,
 } from '@/intelligence/faculty/datasets/students-directory'
 import {
-  computeStudentIssueFingerprints, groupSimilarIssues, computeInterventions,
+  computeStudentIssueFingerprints, groupSimilarIssues,
   buildInterventionFromGroup, canTransition, selectPracticeQuestions,
   buildRetestEntity, computeEffectiveness,
 } from '@/intelligence/faculty'

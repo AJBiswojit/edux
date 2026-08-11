@@ -35,7 +35,7 @@ import {
   studioRecentUploads, facultyPortfolio, aiStudioHistory, savedLessonPlans,
 } from './ai-studio.js'
 import {
-  facultyBatches, facultyStudents, getStudentAttempts, attentionSignalsByRoll,
+  facultyBatches, facultyStudents,
 } from './students-directory.js'
 
 export const facultyDatasets = {

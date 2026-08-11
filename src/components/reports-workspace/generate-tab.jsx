@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2, FileBarChart, FileText, ListChecks, Sparkles, Wand2 } from 'lucide-react'
 import { useCreateReport } from '@/services/extra'
-import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { Badge, Button, Card, Field, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 import { buildReportPreview } from '@/intelligence/faculty'
 
 function ReportsGenerateTab({ data }) {

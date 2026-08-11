@@ -6,14 +6,14 @@
  */
 
 import { Link } from 'react-router-dom'
-import { ArrowRight, BookOpenCheck, BrainCircuit, CalendarClock, FileText, Layers, Sparkles, Target, Wand2 } from 'lucide-react'
+import { ArrowRight, BookOpenCheck, BrainCircuit, CalendarClock, FileText, Layers, Target, Wand2 } from 'lucide-react'
 import { StatCard } from '@/components/shared/stat-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { ProgressRing } from '@/components/shared/progress-ring'
 import { BarCompare, DonutChart } from '@/components/charts'
-import { Badge, Button, Card } from '@/components/ui'
+import { Badge, Button } from '@/components/ui'
 import { AiSummaryCard, WorkspaceSection } from '@/components/teaching-workspace/shared'
-import { formatDate } from '@/utils/format'
+import {  } from '@/utils/format'
 
 const BLOOM_COLORS = { Remember: '#6366f1', Understand: '#3b82f6', Apply: '#14b8a6', Analyze: '#10b981', Evaluate: '#f59e0b', Create: '#8b5cf6' }
 
