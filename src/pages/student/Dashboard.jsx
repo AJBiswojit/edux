@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Activity, ArrowRight, BookOpen, FileBarChart, FileText, Gauge, GraduationCap, Route as RouteIcon, Sparkles, Target } from 'lucide-react'
+import { ArrowRight, FileBarChart, Route as RouteIcon, Sparkles, Target } from 'lucide-react'
 import { useStudentIntelligence } from '@/services/intelligence'
 import { StatCard } from '@/components/shared/stat-card'
 import { ChartCard } from '@/components/shared/chart-card'
@@ -13,72 +13,9 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/compo
 import { formatDate } from '@/utils/format'
 import {
   SuccessCenter, DailyBrief, InterventionCenter, SmartActions,
-  AcademicJourney, RecentActivities, UpcomingDeadlines,
+  AcademicJourney, RecentActivities, UpcomingDeadlines, AcademicInfoCard,
 } from '@/components/dashboard'
 
-/** Compact academic identity card — sits right below the welcome banner. */
-function AcademicInfoCard({ profile, onViewAcademics }) {
-  const items = [
-    { label: 'Student ID', value: profile?.studentId ?? profile?.rollNo ?? '—', icon: FileText },
-    { label: 'Program', value: profile?.program ?? '—', icon: GraduationCap },
-    { label: 'Branch / Department', value: profile?.branch ?? profile?.department ?? '—', icon: BookOpen },
-    { label: 'Semester', value: profile?.semester ?? '—', icon: Activity },
-    { label: 'Section', value: profile?.section ?? '—', icon: Target },
-    { label: 'Academic Mentor', value: profile?.mentor ?? '—', icon: Sparkles },
-    { label: 'CGPA', value: profile?.cgpa ?? '—', icon: Gauge },
-    { label: 'Attendance', value: `${profile?.attendance ?? '—'}%`, icon: Activity },
-  ]
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-      className="mb-6"
-    >
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900">
-        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gradient-to-br from-indigo-500/10 to-teal-500/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center">
-          {/* Identity */}
-          <div className="flex min-w-[240px] items-center gap-4">
-            <div className="relative shrink-0">
-              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-teal-500 font-display text-xl font-bold text-white shadow-lift">
-                {profile?.name?.split(' ').map((w) => w[0]).slice(0, 2).join('') ?? 'AS'}
-              </div>
-              <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-xl bg-emerald-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-slate-900">✓</span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Academic information</p>
-              <h2 className="mt-0.5 truncate text-[17px] font-bold text-slate-900 dark:text-white">{profile?.name ?? 'Student'}</h2>
-              <p className="truncate text-[11.5px] text-slate-400">{profile?.rollNo ?? ''} · {profile?.institution ?? ''}</p>
-              <Link to="/student/programs" className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline dark:text-indigo-400">
-                View program <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="hidden h-14 w-px bg-slate-200/70 lg:block dark:bg-slate-800" />
-
-          {/* Detail chips */}
-          <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
-            {items.map((it) => (
-              <div key={it.label} className="rounded-2xl bg-slate-50/80 px-3 py-2.5 ring-1 ring-slate-100 transition-colors hover:bg-indigo-50/60 hover:ring-indigo-200 dark:bg-slate-800/50 dark:ring-slate-800 dark:hover:bg-indigo-500/10 dark:hover:ring-indigo-500/30">
-                <p className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                  <it.icon className="h-3 w-3" /> {it.label}
-                </p>
-                <p className="mt-0.5 truncate text-[12px] font-bold text-slate-800 dark:text-slate-100">{it.value}</p>
-              </div>
-            ))}
-          </div>
-
-          <Button asChild variant="outline" size="sm" className="shrink-0">
-            <Link to="/student/academics"><BookOpen className="h-4 w-4" /> Academics</Link>
-          </Button>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
 
 /**
  * Student Dashboard — Academic Command Center.
@@ -126,9 +63,23 @@ function Dashboard() {
   const subjectMastery = (derived.subjectMasteryRanking ?? []).map((s) => ({ subject: s.subject, mastery: s.mastery }))
   /* Academic info card consumes the compat profile view derived from the master profile. */
   const academicProfileView = {
-    name: profile.fullName, rollNo: profile.rollNo, institution: profile.institution,
-    program: profile.program, branch: profile.branch, semester: profile.semester,
-    section: profile.section, mentor: profile.mentor, cgpa: profile.cgpa, attendance: profile.attendance,
+    name: profile.fullName,
+    fullName: profile.fullName,
+    initials: `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase() || undefined,
+    studentId: profile.studentId ?? profile.rollNo,
+    rollNo: profile.rollNo,
+    enrollmentNo: profile.enrollmentNo,
+    institution: profile.institution,
+    program: profile.program,
+    branch: profile.branch,
+    department: profile.department,
+    semester: profile.semester,
+    section: profile.section,
+    batch: profile.batch,
+    mentor: profile.mentor,
+    cgpa: profile.cgpa,
+    attendance: profile.attendance,
+    academicStatus: profile.academicStatus,
   }
   /* Phase 27.2: weekly study delta derives from the foundation (was hardcoded "+12%"). */
   const weeklyStudySeries = datasets.learningBehaviourDetailed?.weeklyStudy ?? []
