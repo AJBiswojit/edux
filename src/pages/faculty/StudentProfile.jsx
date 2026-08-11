@@ -302,8 +302,6 @@ function SubjectDrilldownPanel({ s360, domain, subject, onSelectChapter, onBack 
 function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
   const [selectedChapter, setSelectedChapter] = useState(context?.chapter ?? null)
   const [selectedTopic, setSelectedTopic] = useState(context?.topic ?? null)
-  const [showEvidence, setShowEvidence] = useState(false)
-  const [showDetail, setShowDetail] = useState(null)
 
   const questionRows = useMemo(() => {
     const rows = (s360?.question?.rows ?? []).filter((r) =>
@@ -453,7 +451,7 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Evidence Questions</h4>
             <div className="mt-2 space-y-2">
               {topicRows.map((r, i) => (
-                <EvidenceQuestionCard key={`${r.attemptId}-${r.id}-${i}`} row={r} allRows={questionRows} onViewDetail={() => setShowDetail(r)} />
+                <EvidenceQuestionCard key={`${r.attemptId}-${r.id}-${i}`} row={r} allRows={questionRows} />
               ))}
             </div>
           </div>
@@ -471,7 +469,7 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
 /* ================================================================== */
 /* Evidence Question Card                                              */
 /* ================================================================== */
-function EvidenceQuestionCard({ row, allRows, onViewDetail }) {
+function EvidenceQuestionCard({ row, allRows }) {
   const LETTERS = ['A', 'B', 'C', 'D']
   const evidence = resolveEvidenceQuestions([row])[0]
   const whyFlags = generateWhyFlagged(evidence, allRows)
@@ -502,9 +500,6 @@ function EvidenceQuestionCard({ row, allRows, onViewDetail }) {
           </ul>
         </div>
       )}
-      <div className="mt-2 flex gap-2">
-        <Button size="sm" variant="outline" onClick={onViewDetail}><FileText className="h-3 w-3" /> View Full Question</Button>
-      </div>
     </div>
   )
 }
@@ -966,7 +961,6 @@ function StudentProfile() {
   const [selectedSubject, setSelectedSubject] = useState(null)
   const [chapterContext, setChapterContext] = useState(null)
   const [questionContext, setQuestionContext] = useState(null)
-  const [showDetail, setShowDetail] = useState(null)
 
   const activeDomain = useMemo(() => {
     if (domain) return domain
@@ -1197,9 +1191,6 @@ function StudentProfile() {
       <p className="mt-4 text-[11px] font-medium text-slate-400">
         Status derived deterministically from this student's exam series — every insight is traceable to actual questions.
       </p>
-
-      {/* Global question detail dialog */}
-      <QuestionDetailDialog row={showDetail} open={!!showDetail} onClose={() => setShowDetail(null)} allRows={data?.question?.rows ?? []} />
     </div>
   )
 }

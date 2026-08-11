@@ -27,12 +27,9 @@ export function useUpdateStudentSettings() {
 
 /* ================= FACULTY ================= */
 
-export const useFacultyProfile = () => useQuery(get('/faculty/profile', ['faculty', 'profile']))
-export const useFacultyDashboard = () => useQuery(get('/faculty/dashboard', ['faculty', 'dashboard']))
 export const useFacultyAttendance = () => useQuery(get('/faculty/attendance', ['faculty', 'attendance']))
 export const useFacultyAssignments = () => useQuery(get('/faculty/assignments', ['faculty', 'assignments']))
 export const useQuestionBank = () => useQuery(get('/faculty/question-bank', ['faculty', 'question-bank']))
-export const useFacultyStudentAnalytics = () => useQuery(get('/faculty/student-analytics', ['faculty', 'student-analytics']))
 export const useFacultyResearch = () => useQuery(get('/faculty/research', ['faculty', 'research']))
 export const useFacultyLecturePlanner = () => useQuery(get('/faculty/lecture-planner', ['faculty', 'lecture-planner']))
 export const useFacultyExamBuilder = () => useQuery(get('/faculty/exam-builder', ['faculty', 'exam-builder']))

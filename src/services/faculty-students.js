@@ -18,13 +18,6 @@ export const useFacultyBatch = (id) =>
     enabled: !!id,
   })
 
-export const useFacultyStudent = (id) =>
-  useQuery({
-    queryKey: ['faculty', 'students', id],
-    queryFn: () => request({ url: `/faculty/students/${id}` }).then((r) => r.data),
-    enabled: !!id,
-  })
-
 /** Phase 4 — 360° individual student intelligence bundle. */
 export const useFacultyStudent360 = (id) =>
   useQuery({
@@ -41,13 +34,6 @@ export const useWeakTopicQuestions = (subject, chapter) =>
     enabled: !!subject && !!chapter,
   })
 
-export const useFacultyStudentExams = (id) =>
-  useQuery({
-    queryKey: ['faculty', 'students', id, 'exams'],
-    queryFn: () => request({ url: `/faculty/students/${id}/exams` }).then((r) => r.data),
-    enabled: !!id,
-  })
-
 export const useFacultyAttemptAnalysis = (studentId, attemptId) =>
   useQuery({
     queryKey: ['faculty', 'students', studentId, 'exams', attemptId, 'analysis'],
@@ -57,6 +43,6 @@ export const useFacultyAttemptAnalysis = (studentId, attemptId) =>
 
 export default {
   useFacultyStudents, useFacultyBatches, useFacultyBatch,
-  useFacultyStudent, useFacultyStudent360, useWeakTopicQuestions,
-  useFacultyStudentExams, useFacultyAttemptAnalysis,
+  useFacultyStudent360, useWeakTopicQuestions,
+  useFacultyAttemptAnalysis,
 }

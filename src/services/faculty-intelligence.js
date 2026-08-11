@@ -8,6 +8,3 @@ import { getQuery as get } from './query'
  */
 
 export const useFacultyIntelligence = () => useQuery(get('/faculty-intelligence/summary', ['faculty-intelligence', 'summary']))
-export const useFacultyIntelligenceDerived = () => useQuery(get('/faculty-intelligence/derived', ['faculty-intelligence', 'derived']))
-export const useFacultyIntelligenceDatasets = () => useQuery(get('/faculty-intelligence/datasets', ['faculty-intelligence', 'datasets']))
-export const useMasterFacultyProfile = () => useQuery(get('/faculty-intelligence/profile', ['faculty-intelligence', 'profile']))
