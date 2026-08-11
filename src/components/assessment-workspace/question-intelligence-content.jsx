@@ -12,10 +12,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   Archive, Copy, Database, Eye, Filter, PencilLine, Sparkles, Tag, Trash2, Wand2,
 } from 'lucide-react'
-import { useQuestionBank } from '@/services'
 import { CompetitiveQuestionBrowser } from './competitive-question-browser'
-import { useFacultyIntelligence } from '@/services/faculty-intelligence'
-import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 import { cn } from '@/utils/cn'
 
@@ -24,9 +21,10 @@ const STATUS_STYLES = { Approved: 'success', Review: 'warning', Flagged: 'danger
 const QUALITY_STYLES = { Excellent: 'success', Good: 'info', Average: 'warning', 'Needs attention': 'danger' }
 const BLOOM_COLORS = { Remember: '#6366f1', Understand: '#3b82f6', Apply: '#14b8a6', Analyze: '#10b981', Evaluate: '#f59e0b', Create: '#8b5cf6' }
 
-function QuestionIntelligenceContent() {
-  const { data, isLoading, isError, refetch } = useQuestionBank()
-  const { data: intelData } = useFacultyIntelligence()
+/* Question bank (`data`) and Faculty Intelligence (`intelData`) are loaded by
+   the parent Question Intelligence workspace and passed as props — this child
+   never re-fetches them. */
+function QuestionIntelligenceContent({ data, intelData }) {
   const [searchParams] = useSearchParams()
   const [context, setContext] = useState('University')
   const [difficulty, setDifficulty] = useState('All')
@@ -87,9 +85,6 @@ function QuestionIntelligenceContent() {
     }
     return rows
   }, [questions, difficulty, status, sourceFilter, subject, type, tag, query])
-
-  if (isLoading) return <DashboardSkeleton cards={2} />
-  if (isError) return <ErrorState onRetry={() => refetch()} />
 
   const stats = intelData?.derived?.assessment?.questionStats ?? {}
   const qualityMap = Object.fromEntries((stats.quality ?? []).map((q) => [q.id, q]))

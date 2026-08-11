@@ -10,7 +10,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, ClipboardCheck, FileText, FlaskConical, FolderKanban, ListChecks, Wrench } from 'lucide-react'
 import { useSaveStudioItem } from '@/services/extra'
 import { generateEvaluation } from '@/intelligence/faculty'
-import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { Badge, Button, Card, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 
 const ICON_MAP = { ClipboardCheck, FileText, ListChecks, FlaskConical, Wrench, FolderKanban }
 

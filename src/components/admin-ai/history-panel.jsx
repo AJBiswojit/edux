@@ -5,9 +5,9 @@
  */
 
 import { useState } from 'react'
-import { History, MessageSquare, Save, Trash2 } from 'lucide-react'
+import { MessageSquare, Save, Trash2 } from 'lucide-react'
 import { Badge, Button, Card } from '@/components/ui'
-import { formatRelative } from '@/utils/format'
+import {  } from '@/utils/format'
 
 const INSIGHTS_KEY = 'aurora_admin_ai_insights'
 

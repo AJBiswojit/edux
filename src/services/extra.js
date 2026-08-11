@@ -22,7 +22,6 @@ export const useFacultyTimetable = () => useQuery(get('/faculty/timetable', ['fa
 export const useFacultyAnnouncements = () => useQuery(get('/faculty/announcements', ['faculty', 'announcements']))
 export const useFacultyQuizBuilder = () => useQuery(get('/faculty/quiz-builder', ['faculty', 'quiz-builder']))
 export const useFacultyAiStudio = () => useQuery(get('/faculty/ai-studio', ['faculty', 'ai-studio']))
-export const useWeakStudents = () => useQuery(get('/faculty/weak-students', ['faculty', 'weak-students']))
 
 /* ================= PARENT (extra) ================= */
 export const useParentAssignments = () => useQuery(get('/parent/assignments', ['parent', 'assignments']))

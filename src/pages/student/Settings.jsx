@@ -4,25 +4,9 @@ import { Bell, BellRing, Download, Languages, Lock, Moon, Palette, ShieldCheck, 
 import { useStudentSettings, useUpdateStudentSettings } from '@/services'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
-import { Avatar, Badge, Button, Card, Select, SelectItem, Switch, useToast } from '@/components/ui'
+import { Button, Card, Select, SelectItem, Switch, useToast } from '@/components/ui'
+import { SettingRow, SettingsProfileCard } from '@/components/settings'
 import { useTheme } from '@/contexts/theme-context'
-
-function SettingRow({ icon: Icon, title, desc, children }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-4 py-4">
-      <div className="flex min-w-0 items-start gap-3.5">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-teal-500/10 text-indigo-600 ring-1 ring-indigo-500/15 dark:text-indigo-300">
-          <Icon className="h-4 w-4" />
-        </span>
-        <div>
-          <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-100">{title}</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{desc}</p>
-        </div>
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  )
-}
 
 function Settings() {
   const { data, isLoading, isError, refetch } = useStudentSettings()
@@ -63,27 +47,22 @@ function Settings() {
       />
 
       {/* Profile card */}
-      <Card className="mb-6 p-6">
-        <div className="flex flex-wrap items-center gap-5">
-          <Avatar name="Aarav Sharma" size="xl" />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Aarav Sharma</h2>
-              <Badge variant="success">Verified student</Badge>
-            </div>
-            <p className="mt-1 text-sm text-slate-400">21CS114 · B.Tech CSE · Semester 5 · Meridian Institute of Technology</p>
-            <p className="text-xs text-slate-400">{data.profile.email} · {data.profile.phone}</p>
-          </div>
-          <div className="flex gap-2">
+      <SettingsProfileCard
+        name="Aarav Sharma"
+        badge={{ label: 'Verified student', variant: 'success' }}
+        subtitle="21CS114 · B.Tech CSE · Semester 5 · Meridian Institute of Technology"
+        contact={`${data.profile.email} · ${data.profile.phone}`}
+        actions={
+          <>
             <Button variant="outline" size="sm" onClick={() => toast.info('Edit profile', 'Profile editing is available in the full editor.')}>
               <User className="h-4 w-4" /> Edit
             </Button>
             <Button variant="outline" size="sm" onClick={() => toast.success('Exporting…', 'Your data export is being prepared.')}>
               <Download className="h-4 w-4" /> Export data
             </Button>
-          </div>
-        </div>
-      </Card>
+          </>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Notifications */}

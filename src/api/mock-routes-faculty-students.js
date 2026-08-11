@@ -18,8 +18,8 @@ import {
   facultyBatches, facultyStudents, getStudentAttempts, attentionSignalsByRoll,
 } from '@/intelligence/faculty/datasets/students-directory'
 import {
-  computeMyStudentsDirectory, computeBatchDetail, computeStudentProfileBundle,
-  computeStudentExamHistory, computeAttemptAnalysis, computeStudent360,
+  computeMyStudentsDirectory,
+  computeAttemptAnalysis, computeStudent360,
 } from '@/intelligence/faculty'
 import { normalizeExamAttempt } from '@/intelligence'
 import { EXAM_AGENT_EXAMS } from '@/mock-data/exam-agent'
@@ -63,19 +63,6 @@ function directoryPayload() {
 
 mockRoute('get', '/faculty/students', () => directoryPayload())
 
-mockRoute('get', '/faculty/batches', () => ({ batches: directoryPayload().batches }))
-
-mockRoute('get', '/faculty/batches/:id', ({ params }) => {
-  const dir = directoryPayload()
-  const batch = computeBatchDetail(params.id, dir)
-  if (!batch) {
-    const err = new Error('Batch not found.')
-    err.response = { status: 404, data: { message: err.message } }
-    throw err
-  }
-  return { batch }
-})
-
 /* Phase 4 — weak-topic → existing Question Bank connection: given a
    subject + chapter, return the bank questions matching (same chapter,
    subject-code prefix for university courses). The UI opens the existing
@@ -112,23 +99,6 @@ mockRoute('get', '/faculty/students/weak-topic-questions', async ({ params }) =>
    comparison, persistent/resolved issues. All derived from canonical
    attempts (demo excluded) via the Phase 2 adapter — no second engine. */
 
-mockRoute('get', '/faculty/students/:id', ({ params }) => {
-  const student = facultyStudents.find((s) => s.id === params.id)
-  if (!student) {
-    const err = new Error('Student not found.')
-    err.response = { status: 404, data: { message: err.message } }
-    throw err
-  }
-  const att = attentionMap().get(student.id)
-  return computeStudentProfileBundle({
-    student,
-    batches: facultyBatches,
-    attempts: canonicalAttemptsFor(student.id),
-    weakFlag: att?.weakFlag ?? false,
-    attentionReason: att?.reason ?? null,
-  })
-})
-
 mockRoute('get', '/faculty/students/:id/360', ({ params }) => {
   const student = facultyStudents.find((s) => s.id === params.id)
   if (!student) {
@@ -141,17 +111,6 @@ mockRoute('get', '/faculty/students/:id/360', ({ params }) => {
     batches: facultyBatches,
     attempts: canonicalAttemptsFor(student.id),
   })
-})
-
-mockRoute('get', '/faculty/students/:id/exams', ({ params }) => {
-  const student = facultyStudents.find((s) => s.id === params.id)
-  if (!student) {
-    const err = new Error('Student not found.')
-    err.response = { status: 404, data: { message: err.message } }
-    throw err
-  }
-  const items = computeStudentExamHistory(canonicalAttemptsFor(student.id), params ?? {})
-  return { items, count: items.length, studentId: student.id }
 })
 
 /* Per-attempt analysis in the EXISTING AI Exam Analysis shape — reuses the

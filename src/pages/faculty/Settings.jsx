@@ -3,24 +3,8 @@ import { Bell, BookOpen, CalendarClock, Clock, ShieldCheck } from 'lucide-react'
 import { useFacultySettings } from '@/services'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
-import { Avatar, Badge, Button, Card, Select, SelectItem, Switch, useToast } from '@/components/ui'
-
-function SettingRow({ icon: Icon, title, desc, children }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-4 py-4">
-      <div className="flex min-w-0 items-start gap-3.5">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10 text-teal-600 ring-1 ring-teal-500/15 dark:text-teal-300">
-          <Icon className="h-4 w-4" />
-        </span>
-        <div>
-          <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-100">{title}</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{desc}</p>
-        </div>
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  )
-}
+import { Button, Card, Select, SelectItem, Switch, useToast } from '@/components/ui'
+import { SettingRow, SettingsProfileCard } from '@/components/settings'
 
 function Settings() {
   const { data, isLoading, isError, refetch } = useFacultySettings()
@@ -50,25 +34,22 @@ function Settings() {
         breadcrumbs={[{ label: 'Faculty' }, { label: 'Settings' }]}
       />
 
-      <Card className="mb-6 p-6">
-        <div className="flex flex-wrap items-center gap-5">
-          <Avatar name="Dr. Meera Krishnan" size="xl" />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Dr. Meera Krishnan</h2>
-              <Badge variant="success">Verified faculty</Badge>
-            </div>
-            <p className="mt-1 text-sm text-slate-400">{data.profile.designation} · {data.profile.department}</p>
-            <p className="text-xs text-slate-400">{data.profile.email} · {data.profile.phone}</p>
-            <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
-              <Clock className="h-3 w-3" /> Office hours: {data.profile.officeHours} · {data.profile.room}
-            </p>
-          </div>
+      <SettingsProfileCard
+        name="Dr. Meera Krishnan"
+        badge={{ label: 'Verified faculty', variant: 'success' }}
+        subtitle={`${data.profile.designation} · ${data.profile.department}`}
+        contact={`${data.profile.email} · ${data.profile.phone}`}
+        extra={
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
+            <Clock className="h-3 w-3" /> Office hours: {data.profile.officeHours} · {data.profile.room}
+          </p>
+        }
+        actions={
           <Button variant="outline" size="sm" onClick={() => toast.info('Edit profile', 'Profile editing opens the registrar-approved editor.')}>
             Edit profile
           </Button>
-        </div>
-      </Card>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="divide-y divide-slate-100 p-6 dark:divide-slate-800">
@@ -76,19 +57,19 @@ function Settings() {
             <BookOpen className="h-4 w-4 text-teal-500" />
             <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Teaching preferences</h3>
           </div>
-          <SettingRow icon={Bell} title="Auto-grade with AI" desc="AI pre-grades submissions; you review and approve.">
+          <SettingRow tone="faculty" icon={Bell} title="Auto-grade with AI" desc="AI pre-grades submissions; you review and approve.">
             <Switch checked={p.autoGradeWithAI} onCheckedChange={(v) => toggle('autoGradeWithAI', v)} />
           </SettingRow>
-          <SettingRow icon={Bell} title="AI-draft lessons" desc="Assistant drafts lesson structures from your topics.">
+          <SettingRow tone="faculty" icon={Bell} title="AI-draft lessons" desc="Assistant drafts lesson structures from your topics.">
             <Switch checked={p.aiDraftLessons} onCheckedChange={(v) => toggle('aiDraftLessons', v)} />
           </SettingRow>
-          <SettingRow icon={Bell} title="Submission alerts" desc="Notify me the moment a student submits.">
+          <SettingRow tone="faculty" icon={Bell} title="Submission alerts" desc="Notify me the moment a student submits.">
             <Switch checked={p.notifyOnSubmission} onCheckedChange={(v) => toggle('notifyOnSubmission', v)} />
           </SettingRow>
-          <SettingRow icon={CalendarClock} title="Weekly class summary" desc="A Monday digest of class health and flags.">
+          <SettingRow tone="faculty" icon={CalendarClock} title="Weekly class summary" desc="A Monday digest of class health and flags.">
             <Switch checked={p.weeklySummary} onCheckedChange={(v) => toggle('weeklySummary', v)} />
           </SettingRow>
-          <SettingRow icon={BookOpen} title="Student polls" desc="Allow quick comprehension polls during lectures.">
+          <SettingRow tone="faculty" icon={BookOpen} title="Student polls" desc="Allow quick comprehension polls during lectures.">
             <Switch checked={p.allowStudentPolls} onCheckedChange={(v) => toggle('allowStudentPolls', v)} />
           </SettingRow>
         </Card>

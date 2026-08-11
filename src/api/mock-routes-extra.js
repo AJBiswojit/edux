@@ -21,7 +21,7 @@ import { performanceAccuracy } from '@/mock-data/performance-accuracy'
 import { paperGenerator } from '@/mock-data/paper-generator'
 import { pyqAnalysis, pyqFilters, pyqPatterns, applyPyqVariant } from '@/mock-data/pyq-analysis'
 import { pyqVariants } from '@/mock-data/pyq-analysis'
-import { facultyCourses, facultyTimetable, facultyAnnouncements, facultyQuizBuilder, facultyAiStudio, weakStudentDetection } from '@/mock-data/faculty-extra'
+import { facultyCourses, facultyTimetable, facultyAnnouncements, facultyQuizBuilder, facultyAiStudio } from '@/mock-data/faculty-extra'
 import { facultyReports } from '@/mock-data/faculty'
 import { aiStudioHistory, savedLessonPlans } from '@/intelligence/faculty/datasets/ai-studio'
 import { adminPeople } from '@/intelligence/admin/datasets/people'
@@ -57,7 +57,6 @@ mockRoute('get', '/faculty/timetable', () => ({ items: facultyTimetable }))
 mockRoute('get', '/faculty/announcements', () => ({ items: facultyAnnouncements }))
 mockRoute('get', '/faculty/quiz-builder', () => facultyQuizBuilder)
 mockRoute('get', '/faculty/ai-studio', () => facultyAiStudio)
-mockRoute('get', '/faculty/weak-students', () => weakStudentDetection)
 
 /* ---------------- Parent (extra) ---------------- */
 mockRoute('get', '/parent/assignments', () => ({ items: parentAssignments }))

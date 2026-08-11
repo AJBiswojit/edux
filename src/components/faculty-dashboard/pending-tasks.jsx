@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import { CalendarCheck2, ClipboardCheck, FileText, GraduationCap, ListChecks, Users } from 'lucide-react'
 import { ChartCard } from '@/components/shared/chart-card'
 import { Badge } from '@/components/ui'
+import { PRIORITY_VARIANT } from '@/constants/ui'
 
 const TYPE_META = {
   assignments: { icon: ClipboardCheck, color: 'text-amber-500' },
@@ -18,7 +19,6 @@ const TYPE_META = {
   class: { icon: Users, color: 'text-emerald-500' },
   meeting: { icon: ListChecks, color: 'text-sky-500' },
 }
-const PRIORITY_VARIANT = { Critical: 'danger', High: 'warning', Medium: 'secondary', Low: 'default' }
 
 function PendingTasks({ data }) {
   const tasks = data.derived.dashboard?.pendingTasks ?? []

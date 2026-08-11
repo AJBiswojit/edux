@@ -9,7 +9,7 @@ import { Award, BookOpen, Download, GraduationCap, HeartPulse, Medal, Users } fr
 import { ChartCard } from '@/components/shared/chart-card'
 import { AreaTrend } from '@/components/charts'
 import { Badge, Button, Card, useToast } from '@/components/ui'
-import { WorkspaceSection } from '@/components/teaching-workspace/shared'
+import {  } from '@/components/teaching-workspace/shared'
 
 function ProfileTab({ data }) {
   const p = data.derived.aiStudio?.portfolio ?? {}

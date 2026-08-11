@@ -13,8 +13,8 @@ import {
 } from '@/mock-data/student-academics'
 import { studentSettings } from '@/mock-data/student-growth'
 import {
-  facultyProfile, facultyDashboard, facultyAttendance, facultyAssignments, questionBank,
-  facultyStudentAnalytics, facultyResearch, facultyLecturePlanner, facultyExamBuilder,
+  facultyAttendance, facultyAssignments, questionBank,
+  facultyResearch, facultyLecturePlanner, facultyExamBuilder,
   facultyReports, facultySettings,
 } from '@/mock-data/faculty'
 import {
@@ -167,12 +167,9 @@ mockRoute('get', '/student/settings', () => studentSettings)
 mockRoute('patch', '/student/settings', ({ body }) => ({ ok: true, settings: { ...studentSettings, ...body } }))
 
 /* ---------------- Faculty ---------------- */
-mockRoute('get', '/faculty/profile', () => facultyProfile)
-mockRoute('get', '/faculty/dashboard', () => facultyDashboard)
 mockRoute('get', '/faculty/attendance', () => facultyAttendance)
 mockRoute('get', '/faculty/assignments', () => ({ items: facultyAssignments }))
 mockRoute('get', '/faculty/question-bank', () => questionBank)
-mockRoute('get', '/faculty/student-analytics', () => facultyStudentAnalytics)
 mockRoute('get', '/faculty/research', () => facultyResearch)
 mockRoute('get', '/faculty/lecture-planner', () => ({ items: facultyLecturePlanner }))
 mockRoute('get', '/faculty/exam-builder', () => facultyExamBuilder)

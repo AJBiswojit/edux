@@ -9,9 +9,10 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Send, XCircle } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
+import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 import { cn } from '@/utils/cn'
 
-const LETTERS = ['A', 'B', 'C', 'D']
+const LETTERS = QUESTION_OPTION_LABELS
 
 function InterventionPracticeRunner({ questions = [], title, subtitle, durationMinutes = 20, kind = 'practice', onSubmit, onCancel }) {
   const [current, setCurrent] = useState(0)

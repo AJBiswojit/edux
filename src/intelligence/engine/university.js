@@ -14,7 +14,7 @@
  * (mock percentiles, PYQ stats, negative marking) are read here.
  */
 
-import { round1, avg, pctOf, clamp } from './scores.js'
+import { round1, avg } from './scores.js'
 
 /* Deterministic monthly attendance calendar (current month) — Sundays +
    national holidays are Holiday; a few days are Absent/Leave; future days

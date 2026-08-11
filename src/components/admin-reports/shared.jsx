@@ -6,8 +6,8 @@
 
 import { motion } from 'framer-motion'
 import { ArrowRight, FileText, Info } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { AreaTrend, BarCompare, DonutChart, LineTrend } from '@/components/charts'
+import {  } from 'react-router-dom'
+import { BarCompare, DonutChart, LineTrend } from '@/components/charts'
 import { Badge, Button, Card } from '@/components/ui'
 
 const REPORT_ICONS = {

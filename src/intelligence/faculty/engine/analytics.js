@@ -4,7 +4,7 @@
  * progress, weak-chapter detection, revision priority and cohorts.
  */
 
-import { clamp, round1, avg, weighted } from './scores.js'
+import { round1, avg } from './scores.js'
 
 /* ---------- Course progress ---------- */
 export function computeCourseProgress({ courses, attendance }) {

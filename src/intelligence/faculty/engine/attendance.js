@@ -6,7 +6,7 @@
  * attendance dataset (no hardcoded values in the UI).
  */
 
-import { clamp, round1, avg } from './scores.js'
+import { round1, avg } from './scores.js'
 
 const matchesClass = (record, row) => {
   if (record.section !== row.section) return false

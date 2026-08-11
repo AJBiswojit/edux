@@ -12,12 +12,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertTriangle, BookOpen, CheckCircle2, Clock, FileText, Layers, ListChecks, Sparkles, Users, X,
+  AlertTriangle, BookOpen, CheckCircle2, FileText, Layers, ListChecks, Sparkles, Users, X,
 } from 'lucide-react'
 import { Badge, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { useSimilarIssues, useInterventions, useInterventionStatus, useRelatedResources } from '@/services/faculty-interventions'
-import { formatDate } from '@/utils/format'
+import {  } from '@/utils/format'
 
 const PRIORITY_STYLE = { Critical: 'danger', High: 'danger', Medium: 'warning', Low: 'secondary' }
 const STATUS_STYLE = { Detected: 'secondary', Recommended: 'warning', Planned: 'info', Dismissed: 'outline' }

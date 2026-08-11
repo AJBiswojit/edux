@@ -9,8 +9,8 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { BrainCircuit, Building2, GraduationCap, Sparkles, Target, TrendingUp } from 'lucide-react'
-import { usePYQFilters, usePYQAnalysis } from '@/services/extra'
+import { BrainCircuit, Building2, GraduationCap, Sparkles, Target } from 'lucide-react'
+import { usePYQAnalysis } from '@/services/extra'
 import { ChartCard } from '@/components/shared/chart-card'
 import { AreaTrend, BarCompare, DonutChart } from '@/components/charts'
 import { Badge, Button, Card, Select, SelectItem } from '@/components/ui'

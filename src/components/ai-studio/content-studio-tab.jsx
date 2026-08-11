@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useSaveStudioItem } from '@/services/extra'
 import { generateStudioContent } from '@/intelligence/faculty'
-import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { Badge, Button, Card, Field, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 
 const ICON_MAP = {
   BookOpen, Presentation, ClipboardList, ListChecks, FileText, Briefcase, MessageSquare,

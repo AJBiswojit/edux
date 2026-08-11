@@ -215,7 +215,7 @@ function QuestionIntelligence() {
 
         {/* ---------------- Question Intelligence ---------------- */}
         <TabsContent value="question-intelligence">
-          <QuestionIntelligenceContent />
+          <QuestionIntelligenceContent data={qbData} intelData={intelData} />
         </TabsContent>
 
         {/* ---------------- PYQ Intelligence ---------------- */}

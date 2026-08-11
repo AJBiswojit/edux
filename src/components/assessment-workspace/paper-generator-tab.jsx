@@ -17,13 +17,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import {  } from 'framer-motion'
 import {
   CheckCircle2, ChevronDown, FileText, History, Pencil, Printer, RefreshCw,
   Save, Send, SlidersHorizontal, Sparkles, Trash2, Wand2,
 } from 'lucide-react'
 import { usePaperGenerator, usePaperDelete, usePaperDuplicate, usePaperCreate, usePaperRegenerate, usePaperArchive } from '@/services/extra'
-import { useFacultyIntelligence } from '@/services/faculty-intelligence'
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import {
@@ -251,7 +250,7 @@ function Section({ n, title, subtitle, children, right }) {
   )
 }
 
-function PaperGeneratorTab({ data, editPaper = null, onClearEdit = null }) {
+function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = null }) {
   const { data: paperData, isLoading, isError, refetch } = usePaperGenerator()
   const [searchParams] = useSearchParams()
   /* Phase 6 — re-test prefill: ?mode=&exam=&subject=&chapter=&topic=&difficulty=&count=&duration=&marks=&intervention= */
@@ -272,7 +271,6 @@ function PaperGeneratorTab({ data, editPaper = null, onClearEdit = null }) {
     if (sp.get('title')) setTitle(sp.get('title'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  const { data: intelData } = useFacultyIntelligence()
   const { mutateAsync: deletePaper } = usePaperDelete()
   const { mutateAsync: duplicatePaper } = usePaperDuplicate()
   const { mutateAsync: createPaper } = usePaperCreate()

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { ThemeProvider } from '@/contexts/theme-context'
 // Single toast system: the provider that also renders the toast UI lives in
-// components/ui/toast.jsx (contexts/toast-context re-exports it for compat).
+// components/ui/toast.jsx.
 import { ToastProvider } from '@/components/ui/toast'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ErrorBoundary } from '@/components/shared/error-boundary'

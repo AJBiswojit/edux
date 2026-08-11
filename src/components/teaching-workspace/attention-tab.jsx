@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, BookOpenCheck, HeartHandshake, Mail, Send, Sparkles, Users } from 'lucide-react'
 import { StatCard } from '@/components/shared/stat-card'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { PRIORITY_VARIANT } from '@/constants/ui'
 import { WorkspaceSection } from './shared'
 
 const CATEGORY_COLORS = {
@@ -20,8 +21,6 @@ const CATEGORY_COLORS = {
   'Poor Quiz Results': { badge: 'danger', dot: '#e11d48' },
   'Academic Decline': { badge: 'warning', dot: '#f97316' },
 }
-
-const PRIORITY_VARIANT = { Critical: 'danger', High: 'warning', Medium: 'secondary', Low: 'default' }
 
 function AttentionTab({ data }) {
   const at = data.derived.attentionStudents ?? {}

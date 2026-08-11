@@ -10,12 +10,12 @@ import { motion } from 'framer-motion'
 import { BookOpenCheck, Mail, Users } from 'lucide-react'
 import { ChartCard } from '@/components/shared/chart-card'
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Select, SelectItem, useToast } from '@/components/ui'
+import { PRIORITY_VARIANT } from '@/constants/ui'
 
 const CATEGORY_BADGE = {
   'Low Attendance': 'warning', 'Weak Performance': 'danger', 'Pending Assignments': 'info',
   'Low Engagement': 'secondary', 'Poor Quiz Results': 'danger', 'Academic Decline': 'warning',
 }
-const PRIORITY_VARIANT = { Critical: 'danger', High: 'warning', Medium: 'secondary', Low: 'default' }
 
 function AttentionSection({ data }) {
   const students = data.derived.dashboard?.attention ?? []

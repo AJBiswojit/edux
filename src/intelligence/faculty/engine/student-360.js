@@ -24,8 +24,8 @@
  *     emotion/motivation/psychology.
  */
 
-import { round1, avg, clamp } from './scores.js'
-import { buildExamEvidence, buildAttemptSignals, classifyChapterTrend } from '@/intelligence/engine/exam-attempt-intelligence.js'
+import { round1, avg } from './scores.js'
+import { buildExamEvidence, buildAttemptSignals } from '@/intelligence/engine/exam-attempt-intelligence.js'
 import { ATTEMPT_CLASSIFICATIONS } from '@/intelligence/engine/exam-agent.js'
 import { computeStudentProfileBundle } from './students-directory.js'
 

@@ -7,11 +7,12 @@
  */
 import { useState } from 'react'
 import { BookOpen, CheckCircle2, FileText, PencilLine, RefreshCw, Sparkles, Trash2, XCircle } from 'lucide-react'
-import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
+import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea } from '@/components/ui'
+import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 
 const DIFF_STYLE = { Easy: 'success', Medium: 'warning', Hard: 'danger' }
 const REVIEW_STYLE = { Draft: 'secondary', Reviewed: 'info', Approved: 'success', Rejected: 'danger' }
-const LETTERS = ['A', 'B', 'C', 'D']
+const LETTERS = QUESTION_OPTION_LABELS
 
 export function SourceContextDialog({ question, source, open, onOpenChange }) {
   if (!question || !source) return null
@@ -58,7 +59,7 @@ export function QuestionEditorDialog({ question, open, onOpenChange, onSave }) {
         <div className="space-y-3">
           <Field label="Question text"><Textarea rows={4} value={q.question} onChange={(e) => set('question', e.target.value)} /></Field>
           <div className="grid gap-2">
-            {['A', 'B', 'C', 'D'].map((L, i) => (
+            {LETTERS.map((L, i) => (
               <Field key={L} label={`Option ${L}`}>
                 <Input value={q.options?.[i] ?? ''} onChange={(e) => { const opts = [...(q.options ?? [])]; opts[i] = e.target.value; set('options', opts) }} />
               </Field>

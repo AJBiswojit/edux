@@ -10,7 +10,7 @@ import { Sparkles, TrendingUp } from 'lucide-react'
 import { StatCard } from '@/components/shared/stat-card'
 import { ChartCard } from '@/components/shared/chart-card'
 import { BarCompare, DonutChart, LineTrend } from '@/components/charts'
-import { Badge, Card } from '@/components/ui'
+import { Badge } from '@/components/ui'
 import { AiInsightCard, WorkspaceSection } from '@/components/teaching-workspace/shared'
 import { formatDate } from '@/utils/format'
 

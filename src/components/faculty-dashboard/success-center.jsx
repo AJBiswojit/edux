@@ -9,7 +9,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, BookOpenCheck, HeartPulse, Sparkles, Users } from 'lucide-react'
 import { ProgressRing } from '@/components/shared/progress-ring'
 import { Sparkline } from '@/components/charts'
-import { Badge, Card } from '@/components/ui'
+import { Card } from '@/components/ui'
 
 const CARDS = [
   {

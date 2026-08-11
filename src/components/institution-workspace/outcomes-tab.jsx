@@ -7,7 +7,7 @@
 import { Award, Briefcase, IndianRupee } from 'lucide-react'
 import { ChartCard } from '@/components/shared/chart-card'
 import { AreaTrend, BarCompare, LineTrend } from '@/components/charts'
-import { Badge, Card, Progress } from '@/components/ui'
+import { Badge, Card } from '@/components/ui'
 import { KpiStrip, WorkspaceSection } from './shared'
 
 function OutcomesTab({ data }) {

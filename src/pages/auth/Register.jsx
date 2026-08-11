@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import {
-  ArrowLeft, ArrowRight, BrainCircuit, Building2, CalendarDays, Check, ChevronDown,
+  ArrowLeft, ArrowRight, BrainCircuit, Building2, CalendarDays, Check,
   GraduationCap, Rocket, Target, UserRound,
 } from 'lucide-react'
 import { Button, Field, Input, Select, SelectItem, Checkbox, useToast } from '@/components/ui'

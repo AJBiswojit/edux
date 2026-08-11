@@ -6,7 +6,7 @@
  * papers generated, quizzes published, exam drafts and announcements.
  */
 
-import { round1 } from './scores.js'
+import {  } from './scores.js'
 
 const EVENT_TYPE = {
   lecture: { label: 'Lecture completed', icon: 'presentation' },

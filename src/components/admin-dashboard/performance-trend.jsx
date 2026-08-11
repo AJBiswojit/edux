@@ -6,7 +6,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { AreaTrend, LineTrend, BarCompare } from '@/components/charts'
+import { AreaTrend, BarCompare } from '@/components/charts'
 import { ChartCard } from '@/components/shared/chart-card'
 import { cn } from '@/utils/cn'
 
