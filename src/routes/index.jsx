@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { LandingLayout } from '@/components/layout/LandingLayout'
 import { AuthLayout } from '@/components/layout/AuthLayout'
@@ -48,9 +48,6 @@ const FacultyCourseOverview = lazy(() => import('@/pages/faculty/CourseOverview'
 const FacultyQuizBuilder = lazy(() => import('@/pages/faculty/QuizBuilder'))
 const FacultyTimetable = lazy(() => import('@/pages/faculty/Timetable'))
 const FacultyAnnouncements = lazy(() => import('@/pages/faculty/Announcements'))
-const AIContentStudio = lazy(() => import('@/pages/faculty/AIContentStudio'))
-const PaperGenerator = lazy(() => import('@/pages/faculty/PaperGenerator'))
-const PYQAnalysis = lazy(() => import('@/pages/faculty/PYQAnalysis'))
 const QuestionIntelligence = lazy(() => import('@/pages/faculty/QuestionIntelligence'))
 const MyStudents = lazy(() => import('@/pages/faculty/MyStudents'))
 const StudentProfile = lazy(() => import('@/pages/faculty/StudentProfile'))
@@ -107,7 +104,6 @@ const Mentor = lazy(() => import('@/pages/student/Mentor'))
 const FacultyDashboard = lazy(() => import('@/pages/faculty/Dashboard'))
 const FacultyAttendance = lazy(() => import('@/pages/faculty/Attendance'))
 const FacultyAssignments = lazy(() => import('@/pages/faculty/Assignments'))
-const QuestionBank = lazy(() => import('@/pages/faculty/QuestionBank'))
 const AITeachingAssistant = lazy(() => import('@/pages/faculty/AITeachingAssistant'))
 const FacultyResearch = lazy(() => import('@/pages/faculty/Research'))
 const LecturePlanner = lazy(() => import('@/pages/faculty/LecturePlanner'))
@@ -165,6 +161,15 @@ function withSuspense(Component) {
    working while pointing at the workspace tabs. Page files stay intact. */
 function LegacyRedirect({ to }) {
   return <Navigate to={to} replace />
+}
+
+/* Phase 5: superseded Faculty pages (Question Bank, Paper Generator,
+   PYQ Analysis, AI Content Studio) redirect to their canonical Assessment /
+   AI Intelligence destination. The original query string is preserved so
+   old deep links (e.g. paper-generator `?mode=&exam=…`) keep working. */
+function LegacyFacultyRedirect({ to }) {
+  const { search } = useLocation()
+  return <Navigate to={to + search} replace />
 }
 
 /* Parent/Guardian is NOT part of the current product version. Pages, routes
@@ -258,13 +263,14 @@ function AppRoutes() {
         <Route path="quiz-builder" element={withSuspense(FacultyQuizBuilder)} />
         <Route path="timetable" element={withSuspense(FacultyTimetable)} />
         <Route path="announcements" element={withSuspense(FacultyAnnouncements)} />
-        <Route path="ai-studio" element={withSuspense(AIContentStudio)} />
+        {/* Legacy superseded pages → canonical Assessment / AI Intelligence destinations */}
+        <Route path="ai-studio" element={<LegacyFacultyRedirect to="/faculty/ai-assistant?tab=content" />} />
         <Route path="attendance" element={withSuspense(FacultyAttendance)} />
         <Route path="assignments" element={withSuspense(FacultyAssignments)} />
-        <Route path="question-bank" element={withSuspense(QuestionBank)} />
+        <Route path="question-bank" element={<LegacyFacultyRedirect to="/faculty/question-intelligence?tab=question-intelligence" />} />
         <Route path="question-intelligence" element={withSuspense(QuestionIntelligence)} />
-        <Route path="paper-generator" element={withSuspense(PaperGenerator)} />
-        <Route path="pyq-analysis" element={withSuspense(PYQAnalysis)} />
+        <Route path="paper-generator" element={<LegacyFacultyRedirect to="/faculty/question-intelligence?tab=paper-generator" />} />
+        <Route path="pyq-analysis" element={<LegacyFacultyRedirect to="/faculty/question-intelligence?tab=pyq" />} />
         <Route path="ai-assistant" element={withSuspense(AITeachingAssistant)} />
         <Route path="my-students" element={withSuspense(MyStudents)} />
         <Route path="my-students/:studentId" element={withSuspense(StudentProfile)} />
