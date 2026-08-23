@@ -11,22 +11,17 @@ import {
 } from '../../src/intelligence/faculty/engine/student-360.js'
 import { groupSimilarIssues } from '../../src/intelligence/faculty/engine/similar-issues.js'
 
-/**
- * PHASE 5 CONSOLIDATED — the ONE canonical Student 360 domain-isolation suite.
- *
- * Phase 4 ended with two near-duplicate suites:
- *   · tests/intelligence/student-360-domain-isolation.test.js  (10 tests — canonical)
- *   · test/student-360-domain-isolation.test.js                ( 9 tests — duplicate)
- * Phase 5 merged every meaningful assertion from the duplicate into THIS file
- * and removed the duplicate + its private fixture module. Coverage below:
- * University isolation · JEE isolation · NEET isolation · University+JEE ·
- * University+NEET · no cross-family leakage · question evidence isolation ·
- * DNA evidence isolation · trend isolation · comparison isolation ·
- * adapter context rejection (no subject-name inference) · Similar Issues
- * partition (groups AND individuals).
- */
+import { fixtureStudent as student } from '../fixtures/students.js'
 
-const student = { id: 'fixture-student', roll: 'FIX-001', name: 'Fixture Student', batchId: 'fixture-batch' }
+/**
+ * Canonical Student 360 domain-isolation suite.
+ *
+ * Coverage: University isolation · JEE isolation · NEET isolation ·
+ * University+JEE · University+NEET · no cross-family leakage · question
+ * evidence isolation · DNA evidence isolation · trend isolation ·
+ * comparison isolation · adapter context rejection (no subject-name inference) ·
+ * Similar Issues partition (groups AND individuals).
+ */
 
 function attempt({ id, examMode, examFamily = null, subject, chapter, topic = chapter }) {
   return {

@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
 
 /**
- * Phase 4 — Student 360 consolidation route/redirect + data-surface tests.
+ * Student 360 consolidation route/redirect + data-surface tests.
  *
  * Verifies (against the REAL API router, no DOM) that:
  *   · the canonical /faculty/students/:id/360 API still serves the bundle;
@@ -11,23 +12,14 @@ import { beforeAll, describe, expect, it } from 'vitest'
  *   · the attempt-analysis endpoint is preserved;
  *   · no second/duplicate student-360 engine endpoint was introduced.
  */
-const mem = new Map()
-const storage = {
-  getItem: (k) => (mem.has(k) ? mem.get(k) : null),
-  setItem: (k, v) => mem.set(k, String(v)),
-  removeItem: (k) => mem.delete(k),
-  clear: () => mem.clear(),
-}
-globalThis.window = { localStorage: storage }
-globalThis.localStorage = storage
+installTestStorage()
 
 let server
-const get = (url, params = {}) => server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
+let get
 
 beforeAll(async () => {
-  await import('../../src/api/index.js')
-  server = await import('../../src/api/core/router.js')
-  server.setResponseLatency([0, 0])
+  server = await initApi()
+  ;({ get } = makeHelpers(server))
 })
 
 describe('canonical Student 360 API surface (unchanged contract)', () => {

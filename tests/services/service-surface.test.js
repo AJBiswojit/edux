@@ -1,9 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
 
 /**
- * Phase 3 — service/API surface protection suite.
+ * Service/API surface protection suite.
  *
- * Proves that after the service hook + mock endpoint consolidation:
+ * Proves that:
  *   · every CANONICAL endpoint still serves its contract (Student/Admin/
  *     Faculty intelligence snapshots, My Students, Student 360, Exam
  *     Analysis, Exam Agent attempts, Question Intelligence, PYQ, Paper
@@ -15,26 +16,14 @@ import { beforeAll, describe, expect, it } from 'vitest'
  * does, with latency zeroed.
  */
 
-/* localStorage shim — mock handlers persist attempts / sessions / shares
-   through window.localStorage in the browser. */
-const mem = new Map()
-const storage = {
-  getItem: (k) => (mem.has(k) ? mem.get(k) : null),
-  setItem: (k, v) => mem.set(k, String(v)),
-  removeItem: (k) => mem.delete(k),
-  clear: () => mem.clear(),
-}
-globalThis.window = { localStorage: storage }
-globalThis.localStorage = storage
+installTestStorage()
 
 let server
-const get = (url, params = {}) => server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
+let get
 
 beforeAll(async () => {
-  // Registering the route modules mirrors main.jsx exactly.
-  await import('../../src/api/index.js')
-  server = await import('../../src/api/core/router.js')
-  server.setResponseLatency([0, 0])
+  server = await initApi()
+  ;({ get } = makeHelpers(server))
 })
 
 describe('canonical intelligence snapshots', () => {

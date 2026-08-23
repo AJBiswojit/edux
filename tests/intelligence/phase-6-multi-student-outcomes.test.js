@@ -4,38 +4,28 @@ import {
   matchInterventionExamAttempts, metricsFromCanonicalAttempt,
   sameInterventionTarget, selectPracticeQuestions,
 } from '../../src/intelligence/faculty/engine/index.js'
+import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
+import { canonicalExamAttempt as canonicalAttempt } from '../fixtures/attempts.js'
 
 /**
- * PHASE 6 — Multi-student intervention + canonical ExamAttempt outcomes.
+ * Multi-student intervention + canonical ExamAttempt outcomes.
  * Logic/API coverage follows the 25 requested areas. No DOM, random data,
  * backend, second store, or second lifecycle is used.
  */
-const mem = new Map()
-const storage = {
-  getItem: (key) => (mem.has(key) ? mem.get(key) : null),
-  setItem: (key, value) => mem.set(key, String(value)),
-  removeItem: (key) => mem.delete(key),
-  clear: () => mem.clear(),
-}
-globalThis.window = { localStorage: storage }
-globalThis.localStorage = storage
+const { storage, clear } = installTestStorage()
 
 let server
 let groups
 let jeeGroup
 let neetGroup
 let universityGroup
-const get = (url, params = {}) => server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
-const post = (url, data) => server.dispatchRequest({ method: 'post', url, data }).then((r) => r.data)
-const fail = async (request) => {
-  try { await request() } catch (error) { return error }
-  throw new Error('Expected request to fail')
-}
+let get
+let post
+let fail
 
 beforeAll(async () => {
-  await import('../../src/api/index.js')
-  server = await import('../../src/api/core/router.js')
-  server.setResponseLatency([0, 0])
+  server = await initApi()
+  ;({ get, post, fail } = makeHelpers(server))
   const payload = await get('/faculty/similar-issues')
   groups = payload.groups
   jeeGroup = groups.find((group) => group.examFamily === 'JEE' && group.students.length >= 2)
@@ -43,7 +33,7 @@ beforeAll(async () => {
   universityGroup = groups.find((group) => group.domain === 'University' && group.students.length >= 2)
 })
 
-beforeEach(() => storage.clear())
+beforeEach(() => clear())
 
 const config = (overrides = {}) => ({
   count: 1, difficulty: 'Mixed', questionType: 'Any',
@@ -64,34 +54,6 @@ async function assign(interventionId) {
   await post(`/faculty/interventions/${interventionId}/status`, { status: 'Approved' })
   await post(`/faculty/interventions/${interventionId}/status`, { status: 'Planned' })
   await post(`/faculty/interventions/${interventionId}/assign`, {})
-}
-
-function canonicalAttempt({
-  id = 'exam-after-1', studentId = 'student-a', interventionId = null,
-  domain = 'Competitive', examFamily = 'JEE', subject = 'Physics', chapter = 'Rotational Motion',
-  submittedAt = '2026-09-01T10:00:00.000Z', correct = 3, incorrect = 1, skipped = 1,
-}) {
-  const rows = []
-  for (let i = 0; i < correct + incorrect + skipped; i += 1) {
-    const isSkipped = i >= correct + incorrect
-    const isCorrect = i < correct
-    rows.push({
-      questionId: `${id}-q${i + 1}`,
-      academicContext: { subject, chapter, topic: chapter },
-      question: { type: 'MCQ', marks: 4, correctAnswer: 0, text: `${chapter} ${i + 1}` },
-      response: { selectedAnswer: isSkipped ? null : isCorrect ? 0 : 1, status: isSkipped ? 'skipped' : 'answered' },
-      timing: { timeSpent: isSkipped ? 0 : 60 + i },
-      evaluation: { isCorrect, isSkipped },
-    })
-  }
-  return {
-    id, studentId, interventionId, source: 'exam-agent', mode: 'manual',
-    examId: `exam-${examFamily ?? 'uni'}`, examName: 'Exam Agent Practice',
-    examMode: domain, examFamily: domain === 'University' ? null : examFamily,
-    submittedAt, completedAt: submittedAt,
-    scoring: { score: correct * 4 - incorrect, maxScore: rows.length * 4 },
-    questionAttempts: rows,
-  }
 }
 
 const target = (extra = {}) => ({

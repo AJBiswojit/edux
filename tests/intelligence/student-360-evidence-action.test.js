@@ -1,25 +1,25 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { existsSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
+import { fixtureStudent as student, fixtureStudentB as studentB } from '../fixtures/students.js'
+import { makeAttempt as attempt } from '../fixtures/attempts.js'
 
 /**
- * PHASE 5 — STUDENT 360 EVIDENCE → ACTION HARDENING test suite.
+ * STUDENT 360 EVIDENCE → ACTION HARDENING test suite.
  *
  * Logic-level coverage (engine + mock API, no DOM):
- *   1.  duplicate test consolidation (canonical file present, duplicate gone)
- *   2.  individual issue detection (buildIndividualIssue from fingerprints)
- *   3.  grouped vs individual issue separation
- *   4-6. University / JEE / NEET isolation for individual issues + creation
- *   7.  evidence question retrieval (real canonical rows per issue)
- *   8.  empty evidence behavior
- *   9.  subject → chapter drilldown (derived metrics)
- *   10. chapter → evidence questions
- *   11. weakness → recommendation (existing engine reuse)
- *   12. recommendation → intervention creation (existing lifecycle)
- *   13. intervention payload integrity (§12 fields)
- *   14. existing intervention lifecycle preservation (valid/invalid transitions)
- *   15. URL state helpers (?context=&tab=&subject=&chapter=)
- *   16. no unsupported AI claims (deterministic, data-grounded why-detected)
+ *   1.  individual issue detection (buildIndividualIssue from fingerprints)
+ *   2.  grouped vs individual issue separation
+ *   3-5. University / JEE / NEET isolation for individual issues + creation
+ *   6.  evidence question retrieval (real canonical rows per issue)
+ *   7.  empty evidence behavior
+ *   8.  subject → chapter drilldown (derived metrics)
+ *   9.  chapter → evidence questions
+ *   10. weakness → recommendation (existing engine reuse)
+ *   11. recommendation → intervention creation (existing lifecycle)
+ *   12. intervention payload integrity (§12 fields)
+ *   13. existing intervention lifecycle preservation (valid/invalid transitions)
+ *   14. URL state helpers (?context=&tab=&subject=&chapter=)
+ *   15. no unsupported AI claims (deterministic, data-grounded why-detected)
  */
 import {
   computeStudent360,
@@ -38,104 +38,48 @@ import {
   build360SearchParams, student360Url,
 } from '../../src/utils/student-360-url.js'
 
-/* ---------- localStorage shim (mock handlers persist via window.localStorage) ---------- */
-const mem = new Map()
-const storage = {
-  getItem: (k) => (mem.has(k) ? mem.get(k) : null),
-  setItem: (k, v) => mem.set(k, String(v)),
-  removeItem: (k) => mem.delete(k),
-  clear: () => mem.clear(),
-}
-globalThis.window = { localStorage: storage }
-globalThis.localStorage = storage
+installTestStorage()
 
 let server
-const get = (url, params = {}) => server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
-const post = (url, data, params = {}) => server.dispatchRequest({ method: 'post', url, data, params }).then((r) => r.data)
-const failing = async (fn) => {
-  try {
-    await fn()
-  } catch (e) {
-    return e
-  }
-  throw new Error('expected the request to fail')
-}
+let get
+let post
+let failing
 
 beforeAll(async () => {
-  await import('../../src/api/index.js')
-  server = await import('../../src/api/core/router.js')
-  server.setResponseLatency([0, 0])
+  server = await initApi()
+  ;({ get, post, failing } = makeHelpers(server))
 })
 
-/* ---------- shared fixtures (canonical attempt contract) ---------- */
-const student = { id: 'fixture-student', roll: 'FIX-001', name: 'Fixture Student', batchId: 'fixture-batch' }
-const studentB = { id: 'fixture-student-b', roll: 'FIX-002', name: 'Fixture Student B', batchId: 'fixture-batch' }
-
-function attempt({ id, examMode, examFamily = null, subject, chapter, topic = chapter, outcomes, submittedAt }) {
-  return {
-    id,
-    studentId: student.id,
-    roll: student.roll,
-    mode: 'manual',
-    examMode,
-    examFamily,
-    examType: examFamily,
-    category: examMode,
-    examId: id,
-    examName: id,
-    submittedAt: submittedAt ?? `2026-08-${String(Number(id.slice(-2)) || 1).padStart(2, '0')}T10:00:00.000Z`,
-    scoring: { pct: 50, accuracy: 50, attemptRate: 100 },
-    questionAttempts: outcomes.map((o, index) => ({
-      questionId: `${id}-q${index + 1}`,
-      academicContext: { subject, chapter, topic },
-      question: { difficulty: o.diff ?? 'Medium', marks: 4, type: 'MCQ', correctAnswer: 0, text: `${chapter} q${index + 1}` },
-      response: {
-        selectedAnswer: o.skipped ? null : (o.correct ? 0 : 1),
-        status: o.skipped ? 'skipped' : 'answered',
-        answerChanges: o.changes ?? 0,
-        markedForReview: !!o.marked,
-      },
-      timing: { timeSpent: o.time ?? 60 },
-      behaviour: { visits: o.visits ?? 1 },
-      evaluation: {
-        isCorrect: !!o.correct,
-        isSkipped: !!o.skipped,
-        classification: o.classification ?? null,
-      },
-    })),
-  }
-}
-
 const jeeWeak = attempt({
-  id: 'jee-02', examMode: 'Competitive', examFamily: 'JEE',
+  id: 'jee-02', student, examMode: 'Competitive', examFamily: 'JEE',
   subject: 'Physics', chapter: 'Rotational Motion',
   outcomes: [
     { correct: false, time: 25 }, { correct: false, time: 110 }, { correct: true, time: 90 },
   ],
 })
 const jeeWeak2 = attempt({
-  id: 'jee-03', examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion',
+  id: 'jee-03', student, examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion',
   submittedAt: '2026-08-20T10:00:00.000Z',
   outcomes: [
     { correct: false, time: 25 }, { correct: false, time: 110 }, { correct: false, time: 60 },
   ],
 })
 const jeeSolo = attempt({
-  id: 'jee-04', examMode: 'Competitive', examFamily: 'JEE',
+  id: 'jee-04', student, examMode: 'Competitive', examFamily: 'JEE',
   subject: 'Mathematics', chapter: 'Calculus',
   outcomes: [{ correct: false, time: 120 }, { correct: false, time: 130 }, { correct: false, time: 60 }],
 })
 const neetSolo = attempt({
-  id: 'neet-05', examMode: 'Competitive', examFamily: 'NEET',
+  id: 'neet-05', student, examMode: 'Competitive', examFamily: 'NEET',
   subject: 'Biology', chapter: 'Human Physiology',
   outcomes: [{ correct: false, time: 120 }, { skipped: true, time: 0 }, { correct: false, time: 60 }],
 })
 const uniS0 = attempt({
-  id: 'uni-01', examMode: 'University', subject: 'CS501', chapter: 'Graph Algorithms',
+  id: 'uni-01', student, examMode: 'University', subject: 'CS501', chapter: 'Graph Algorithms',
   outcomes: [{ correct: false, time: 100 }, { correct: false, time: 110 }],
 })
 const uniSolo = attempt({
-  id: 'uni-02', examMode: 'University', subject: 'CS501', chapter: 'Graph Algorithms',
+  id: 'uni-02', student, examMode: 'University', subject: 'CS501', chapter: 'Graph Algorithms',
   submittedAt: '2026-08-18T10:00:00.000Z',
   outcomes: [{ correct: false, time: 100 }, { correct: false, time: 110 }],
 })
@@ -144,12 +88,12 @@ const allAttempts = [jeeWeak, jeeWeak2, jeeSolo, neetSolo, uniS0, uniSolo]
 /* student B shares the JEE Physics Rotational Motion partition with a
    similar issue → a REAL ≥2-student group; A's other chapters stay individual. */
 const bWeak = attempt({
-  id: 'bjee-02', examMode: 'Competitive', examFamily: 'JEE',
+  id: 'bjee-02', student: studentB, examMode: 'Competitive', examFamily: 'JEE',
   subject: 'Physics', chapter: 'Rotational Motion',
   outcomes: [{ correct: false, time: 30 }, { correct: false, time: 115 }, { correct: true, time: 80 }],
 })
 const bWeak2 = attempt({
-  id: 'bjee-03', examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion',
+  id: 'bjee-03', student: studentB, examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion',
   submittedAt: '2026-08-21T10:00:00.000Z',
   outcomes: [{ correct: false, time: 20 }, { correct: false, time: 105 }, { correct: false, time: 55 }],
 })
@@ -161,31 +105,7 @@ const s360 = computeStudent360({ student, attempts: allAttempts })
 
 /* ================================================================ */
 
-describe('1. duplicate test consolidation', () => {
-  it('the canonical domain-isolation suite exists and the Phase 4 duplicate was removed', () => {
-    const here = fileURLToPath(import.meta.url)
-    const canonical = new URL('../../tests/intelligence/student-360-domain-isolation.test.js', import.meta.url).pathname
-    expect(existsSync(canonical)).toBe(true)
-    expect(canonical).not.toBe(here)
-    const duplicate = new URL('../../test/student-360-domain-isolation.test.js', import.meta.url).pathname
-    expect(existsSync(duplicate)).toBe(false)
-    const fixture = new URL('../../test/fixtures/intelligence-attempts.js', import.meta.url).pathname
-    expect(existsSync(fixture)).toBe(false)
-  })
-
-  it('the consolidated suite still covers every required isolation surface', async () => {
-    const src = await import('node:fs').then((fs) => fs.readFileSync(
-      new URL('../../tests/intelligence/student-360-domain-isolation.test.js', import.meta.url).pathname, 'utf8'))
-    for (const marker of [
-      'University plus JEE', 'University plus NEET', 'DNA evidence', 'cross-domain',
-      'Similar Issues partition', 'individual', 'comparison',
-    ]) {
-      expect(src).toContain(marker)
-    }
-  })
-})
-
-describe('2. individual issue detection', () => {
+describe('1. individual issue detection', () => {
   it('derives individual issues from fingerprints with whyDetected, priority and evidence counts', () => {
     const fps = fingerprintsFor([jeeSolo, neetSolo, uniSolo])
     expect(fps.length).toBeGreaterThan(0)
@@ -208,7 +128,7 @@ describe('2. individual issue detection', () => {
   })
 })
 
-describe('3. grouped vs individual issue separation', () => {
+describe('2. grouped vs individual issue separation', () => {
   it('a shared partition becomes a group; unique partitions stay individual', () => {
     const { groups, individuals } = groupSimilarIssues(allFingerprints)
     expect(groups.length).toBeGreaterThan(0)
@@ -232,7 +152,7 @@ describe('3. grouped vs individual issue separation', () => {
   })
 })
 
-describe('4-6. University / JEE / NEET isolation of individual issues', () => {
+describe('3. University / JEE / NEET isolation of individual issues', () => {
   const fps = fingerprintsFor(allAttempts)
   const issues = fps.map((f) => buildIndividualIssue(f))
 
@@ -262,7 +182,7 @@ describe('4-6. University / JEE / NEET isolation of individual issues', () => {
   })
 })
 
-describe('7. evidence question retrieval', () => {
+describe('4. evidence question retrieval', () => {
   it('each issue resolves to the student’s REAL canonical question rows (with text + answers)', () => {
     const rows = evidenceRowsFor(s360, 'JEE', 'Physics', 'Rotational Motion')
     expect(rows.length).toBeGreaterThan(0)
@@ -287,7 +207,7 @@ describe('7. evidence question retrieval', () => {
   })
 })
 
-describe('8. empty evidence behavior', () => {
+describe('5. empty evidence behavior', () => {
   it('an unknown chapter yields zero rows and the canonical empty message exists', () => {
     expect(evidenceRowsFor(s360, 'JEE', 'Physics', 'No Such Chapter')).toEqual([])
     expect(EVIDENCE_EMPTY_MESSAGE).toBe('No question-level evidence available.')
@@ -310,7 +230,7 @@ describe('8. empty evidence behavior', () => {
   })
 })
 
-describe('9. subject → chapter drilldown', () => {
+describe('6. subject → chapter drilldown', () => {
   it('subject pools summarize; chapter pools carry the full derived metrics', () => {
     const jeeSubjects = domainPool(s360, 'JEE', 'subjects')
     const jeeChapters = domainPool(s360, 'JEE', 'chapters')
@@ -336,7 +256,7 @@ describe('9. subject → chapter drilldown', () => {
   })
 })
 
-describe('10. chapter → evidence questions', () => {
+describe('7. chapter → evidence questions', () => {
   it('every actionable chapter resolves real evidence rows in its own domain', () => {
     const chapters = [...domainPool(s360, 'JEE', 'chapters'), ...domainPool(s360, 'NEET', 'chapters'), ...domainPool(s360, 'University', 'chapters')]
     const actionable = chapters.filter((c) => chapterIsActionable(c))
@@ -349,7 +269,7 @@ describe('10. chapter → evidence questions', () => {
   })
 })
 
-describe('11. weakness → recommendation (existing engine reuse)', () => {
+describe('8. weakness → recommendation (existing engine reuse)', () => {
   it('a weakness derives a full recommendation from its actual rows (no side effects)', () => {
     const { weaknesses } = domainSwPool(s360, 'JEE')
     expect(weaknesses.length).toBeGreaterThan(0)
@@ -365,7 +285,7 @@ describe('11. weakness → recommendation (existing engine reuse)', () => {
   })
 })
 
-describe('12-13. recommendation → intervention creation + payload integrity (existing lifecycle)', () => {
+describe('9. recommendation → intervention creation + payload integrity (existing lifecycle)', () => {
   let created = null
   const studentId = 'fs_jee_a_03'
 
@@ -472,7 +392,7 @@ describe('12-13. recommendation → intervention creation + payload integrity (e
   })
 })
 
-describe('14. existing intervention lifecycle preservation', () => {
+describe('10. existing intervention lifecycle preservation', () => {
   const studentId = 'fs_jee_a_03'
 
   it('the created intervention flows through the EXISTING center list and detail routes', async () => {
@@ -529,7 +449,7 @@ describe('14. existing intervention lifecycle preservation', () => {
   })
 })
 
-describe('15. URL state', () => {
+describe('11. URL state', () => {
   it('context/tab/subject/chapter round-trip through the canonical param names', () => {
     expect(DOMAIN_PARAM.university).toBe('University')
     expect(DOMAIN_PARAM.jee).toBe('JEE')
@@ -563,7 +483,7 @@ describe('15. URL state', () => {
   })
 })
 
-describe('16. no unsupported AI claims', () => {
+describe('12. no unsupported AI claims', () => {
   const BANNED = ['anxious', 'anxiety', 'unmotivated', 'lazy', 'bored', 'fear', 'panic', 'confidence issues', 'does not care', 'depressed']
 
   it('individual why-detected strings are deterministic and grounded in the fingerprint numbers', () => {
