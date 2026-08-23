@@ -74,7 +74,7 @@ import {
   formatClock, formatPace, computeLiveExamStats, buildExamAgentReport,
   buildDemoSimulationPlan, demoTimeScale,
   buildCanonicalExamAttempt, buildCanonicalQuestionAttempts,
-  normalizeExamAttempt, filterExamAttempts,
+  normalizeExamAttempt, filterExamAttempts, classifyAttemptContext,
 } from './engine/exam-agent.js'
 import {
   buildAttemptSignals, buildExamEvidence, buildAttemptAnalysisVariant,
@@ -239,6 +239,7 @@ export {
   buildCanonicalQuestionAttempts,
   normalizeExamAttempt,
   filterExamAttempts,
+  classifyAttemptContext,
   /* Exam-attempt intelligence adapter (Phase 2) */
   buildAttemptSignals,
   buildExamEvidence,

@@ -25,7 +25,7 @@
  */
 
 import { round1, avg, clamp } from './scores.js'
-import { classifyAttempt, ATTEMPT_CLASSIFICATIONS, SPEED_THRESHOLDS } from './exam-agent.js'
+import { classifyAttempt, classifyAttemptContext as resolveCanonicalAttemptContext, ATTEMPT_CLASSIFICATIONS, SPEED_THRESHOLDS } from './exam-agent.js'
 
 /* ------------------------------------------------------------------ */
 /* Small helpers                                                      */
@@ -55,10 +55,22 @@ function levelOf(acc) {
   return 'Weak'
 }
 
+/**
+ * Context view for intelligence consumers. It deliberately rejects a
+ * competitive record with no recognized exam family rather than guessing
+ * from subject text. University is represented as its own family label for
+ * partition consumers; the canonical normalized attempt retains null there.
+ */
+export function classifyAttemptContext(attempt) {
+  const context = resolveCanonicalAttemptContext(attempt)
+  if (context.domain === 'university') return { domain: 'university', examFamily: 'University' }
+  if (!context.examFamily) return { domain: null, examFamily: null }
+  return { domain: 'competitive', examFamily: context.examFamily }
+}
+
 const asDomain = (attempt) => {
-  const mode = attempt?.examMode ?? attempt?.category
-  if (mode === 'Competitive') return attempt?.examFamily ?? null
-  return 'university'
+  const context = classifyAttemptContext(attempt)
+  return context.domain === 'university' ? 'university' : context.examFamily
 }
 
 /** Question rows of a canonical attempt, in question order. */
@@ -96,6 +108,7 @@ const qRows = (attempt) => (attempt?.questionAttempts ?? []).map((qa, i) => {
 })
 
 const chapterKey = (subject, chapter) => `${subject ?? '?'}·${chapter ?? '?'}`
+const domainChapterKey = (domain, subject, chapter) => `${domain}|${chapterKey(subject, chapter)}`
 
 /* ------------------------------------------------------------------ */
 /* § Longitudinal trend classification (deterministic)                 */
@@ -163,7 +176,7 @@ export function buildAttemptSignals(attempts = []) {
 
     const byChapter = new Map()
     rows.forEach((r) => {
-      const k = chapterKey(r.subject, r.chapter)
+      const k = domainChapterKey(domain, r.subject, r.chapter)
       if (!byChapter.has(k)) byChapter.set(k, { subject: r.subject, chapter: r.chapter, correct: 0, incorrect: 0, skipped: 0, attempted: 0, time: 0 })
       const c = byChapter.get(k)
       if (r.isCorrect) c.correct += 1
@@ -246,7 +259,7 @@ export function buildAttemptSignals(attempts = []) {
       /* aggregate totals across attempts */
       let questions = 0, correct = 0, incorrect = 0, skipped = 0, attempted = 0, time = 0
       domains[domain].forEach(({ rows }) => {
-        rows.filter((r) => chapterKey(r.subject, r.chapter) === key).forEach((r) => {
+        rows.filter((r) => domainChapterKey(domain, r.subject, r.chapter) === key).forEach((r) => {
           questions += 1
           if (r.isCorrect) correct += 1
           else if (r.isSkipped) skipped += 1

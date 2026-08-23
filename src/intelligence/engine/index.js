@@ -58,6 +58,7 @@ export {
   buildCanonicalQuestionAttempts,
   normalizeExamAttempt,
   filterExamAttempts,
+  classifyAttemptContext,
 } from './exam-agent.js'
 
 /* Exam-attempt intelligence adapter (Phase 2) */

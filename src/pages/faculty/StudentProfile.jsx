@@ -100,9 +100,13 @@ function StudentProfile() {
         breadcrumbs={[{ label: 'Faculty' }, { label: 'My Students', to: '/faculty/my-students' }, { label: s.name ?? 'Profile' }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {data?.uniCount > 0 && data?.compCount > 0 && (
-              <div className="flex rounded-2xl border border-slate-200/80 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
-                {['University', 'Competitive'].map((d) => (
+            {(data?.uniCount > 0 || data?.jeeCount > 0 || data?.neetCount > 0) && (
+              <div className="flex flex-wrap rounded-2xl border border-slate-200/80 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
+                {[
+                  data?.uniCount > 0 && 'University',
+                  data?.jeeCount > 0 && 'JEE',
+                  data?.neetCount > 0 && 'NEET',
+                ].filter(Boolean).map((d) => (
                   <button key={d} onClick={() => setDomain(d)}
                     className={`rounded-xl px-3.5 py-1.5 text-[11.5px] font-bold transition-all ${activeDomain === d ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/25' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}>
                     {d}
@@ -237,7 +241,7 @@ function StudentProfile() {
 
         {/* ============ Time & Behaviour ============ */}
         <TabsContent value="time">
-          <TimeBehaviourPanel s360={data} />
+          <TimeBehaviourPanel s360={data} domain={activeDomain} />
         </TabsContent>
 
         {/* ============ Trends ============ */}
