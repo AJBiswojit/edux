@@ -55,10 +55,25 @@ function levelOf(acc) {
   return 'Weak'
 }
 
+/**
+ * Canonical attempt context used by every intelligence consumer.  Domain is
+ * determined only from attempt metadata; subject/course labels are content,
+ * not routing hints. Invalid or incomplete competitive metadata is excluded
+ * rather than guessed into a family.
+ */
+export function classifyAttemptContext(attempt) {
+  const examMode = attempt?.examMode ?? attempt?.category
+  const examFamily = attempt?.examFamily ?? attempt?.examType ?? null
+  if (examMode === 'University') return { domain: 'university', examFamily: 'University' }
+  if (examMode === 'Competitive' && (examFamily === 'JEE' || examFamily === 'NEET')) {
+    return { domain: 'competitive', examFamily }
+  }
+  return { domain: null, examFamily: null }
+}
+
 const asDomain = (attempt) => {
-  const mode = attempt?.examMode ?? attempt?.category
-  if (mode === 'Competitive') return attempt?.examFamily ?? null
-  return 'university'
+  const context = classifyAttemptContext(attempt)
+  return context.domain === 'university' ? 'university' : context.examFamily
 }
 
 /** Question rows of a canonical attempt, in question order. */
@@ -95,7 +110,7 @@ const qRows = (attempt) => (attempt?.questionAttempts ?? []).map((qa, i) => {
   }
 })
 
-const chapterKey = (subject, chapter) => `${subject ?? '?'}·${chapter ?? '?'}`
+const chapterKey = (domain, subject, chapter) => `${domain ?? '?'}·${subject ?? '?'}·${chapter ?? '?'}`
 
 /* ------------------------------------------------------------------ */
 /* § Longitudinal trend classification (deterministic)                 */
@@ -163,7 +178,7 @@ export function buildAttemptSignals(attempts = []) {
 
     const byChapter = new Map()
     rows.forEach((r) => {
-      const k = chapterKey(r.subject, r.chapter)
+      const k = chapterKey(domain, r.subject, r.chapter)
       if (!byChapter.has(k)) byChapter.set(k, { subject: r.subject, chapter: r.chapter, correct: 0, incorrect: 0, skipped: 0, attempted: 0, time: 0 })
       const c = byChapter.get(k)
       if (r.isCorrect) c.correct += 1

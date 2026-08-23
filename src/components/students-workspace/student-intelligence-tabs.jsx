@@ -43,13 +43,13 @@ function Breadcrumb({ items, onNavigate }) {
 function SubjectIntelligencePanel({ s360, domain, onSelectSubject }) {
   const questionRows = useMemo(() => {
     return (s360?.question?.rows ?? []).filter((r) =>
-      domain === 'Competitive' ? r.examMode === 'Competitive' : r.examMode === 'University'
+      domain === 'University' ? r.examMode === 'University' : r.examFamily === domain
     )
   }, [s360, domain])
 
   const subjects = useMemo(() => {
-    const pools = domain === 'Competitive'
-      ? [...(s360?.subjects?.competitive?.JEE ?? []), ...(s360?.subjects?.competitive?.NEET ?? [])]
+    const pools = domain !== 'University'
+      ? (s360?.subjects?.competitive?.[domain] ?? [])
       : s360?.subjects?.university ?? []
     return computeSubjectDiagnostics(questionRows, pools)
   }, [s360, domain, questionRows])
@@ -109,7 +109,7 @@ function SubjectIntelligencePanel({ s360, domain, onSelectSubject }) {
 function SubjectDrilldownPanel({ s360, domain, subject, onSelectChapter, onBack }) {
   const questionRows = useMemo(() => {
     return (s360?.question?.rows ?? []).filter((r) =>
-      r.subject === subject && (domain === 'Competitive' ? r.examMode === 'Competitive' : r.examMode === 'University')
+      r.subject === subject && (domain === 'University' ? r.examMode === 'University' : r.examFamily === domain)
     )
   }, [s360, domain, subject])
 
@@ -205,7 +205,7 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
 
   const questionRows = useMemo(() => {
     const rows = (s360?.question?.rows ?? []).filter((r) =>
-      domain === 'Competitive' ? r.examMode === 'Competitive' : r.examMode === 'University'
+      domain === 'University' ? r.examMode === 'University' : r.examFamily === domain
     )
     if (context?.subject) return rows.filter((r) => r.subject === context.subject)
     return rows
@@ -375,7 +375,7 @@ function QuestionAnalysisPanel({ s360, domain, context }) {
 
   const allRows = useMemo(() => {
     return (s360?.question?.rows ?? []).filter((r) =>
-      domain === 'Competitive' ? r.examMode === 'Competitive' : r.examMode === 'University'
+      domain === 'University' ? r.examMode === 'University' : r.examFamily === domain
     )
   }, [s360, domain])
 

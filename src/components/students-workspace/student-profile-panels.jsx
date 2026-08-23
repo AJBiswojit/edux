@@ -75,8 +75,8 @@ function TimeBehaviourPanel({ s360 }) {
 }
 
 function TrendsPanel({ s360, domain }) {
-  const series = (s360?.longitudinal?.series ?? []).filter((s) => (domain === 'Competitive' ? s.examMode !== 'University' : s.examMode === 'University'))
-  const issues = (s360?.longitudinal?.issues ?? []).filter((i) => (domain === 'Competitive' ? i.domain !== 'university' : i.domain === 'university'))
+  const series = (s360?.longitudinal?.series ?? []).filter((s) => (domain === 'University' ? s.examMode === 'University' : s.examFamily === domain))
+  const issues = (s360?.longitudinal?.issues ?? []).filter((i) => (domain === 'University' ? i.domain === 'university' : i.domain === domain))
   return (
     <div className="space-y-4">
       <Card className="p-5">
@@ -122,8 +122,8 @@ function TrendsPanel({ s360, domain }) {
 
 function DnaPanel({ s360, domain }) {
   const sw = s360?.strengthsWeaknesses
-  const pools = domain === 'Competitive'
-    ? { strengths: [...(sw?.competitive?.JEE?.strengths ?? []), ...(sw?.competitive?.NEET?.strengths ?? [])], weaknesses: [...(sw?.competitive?.JEE?.weaknesses ?? []), ...(sw?.competitive?.NEET?.weaknesses ?? [])] }
+  const pools = domain !== 'University'
+    ? (sw?.competitive?.[domain] ?? { strengths: [], weaknesses: [] })
     : sw?.university ?? { strengths: [], weaknesses: [] }
   return (
     <Card className="p-5">

@@ -63,6 +63,7 @@ export {
 /* Exam-attempt intelligence adapter (Phase 2) */
 export {
   buildAttemptSignals,
+  classifyAttemptContext,
   buildExamEvidence,
   buildAttemptAnalysisVariant,
   classifyChapterTrend,

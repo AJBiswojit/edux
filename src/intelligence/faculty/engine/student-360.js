@@ -25,7 +25,7 @@
  */
 
 import { round1, avg } from './scores.js'
-import { buildExamEvidence, buildAttemptSignals } from '@/intelligence/engine/exam-attempt-intelligence.js'
+import { buildExamEvidence, buildAttemptSignals, classifyAttemptContext } from '@/intelligence/engine/exam-attempt-intelligence.js'
 import { ATTEMPT_CLASSIFICATIONS } from '@/intelligence/engine/exam-agent.js'
 import { computeStudentProfileBundle } from './students-directory.js'
 
@@ -151,11 +151,7 @@ export function computeStudentSubjectIntelligence({ attempts = [] }) {
 export function computeStudentChapterIntelligence({ attempts = [] }) {
   const manual = (attempts ?? []).filter((a) => a?.mode !== 'demo')
   const signals = buildAttemptSignals(manual)
-  const chapters = [
-    ...signals.university.chapters,
-    ...signals.competitive.JEE.chapters,
-    ...signals.competitive.NEET.chapters,
-  ].map((c) => ({
+  const enrich = (chapters) => chapters.map((c) => ({
     ...c,
     evidence: {
       attempts: c.attempts,
@@ -169,11 +165,14 @@ export function computeStudentChapterIntelligence({ attempts = [] }) {
     priority: c.accuracy != null && c.accuracy < 55 ? 'High' : c.accuracy < 70 ? 'Medium' : 'Low',
     highTime: c.avgTime != null && c.avgTime >= 100,
   }))
+  // The adapter has already partitioned canonical attempts. Do not reclassify
+  // chapters from their subject labels: Physics/Chemistry are valid in both
+  // families and must remain in their originating family.
   return {
-    university: chapters.filter((c) => c.subject?.includes('Data Structures') || c.subject?.includes('Operating') || c.subject?.includes('Machine') || c.subject?.includes('Database') || c.subject?.includes('Networks') || c.subject?.includes('Theory')),
+    university: enrich(signals.university.chapters),
     competitive: {
-      JEE: chapters.filter((c) => ['Physics', 'Chemistry', 'Mathematics'].includes(c.subject) && !c.subject.includes('NEET')),
-      NEET: chapters.filter((c) => ['Physics', 'Chemistry', 'Biology'].includes(c.subject) && c.subject.includes('Biology') || c.subject === 'Physics' || c.subject === 'Chemistry'),
+      JEE: enrich(signals.competitive.JEE.chapters),
+      NEET: enrich(signals.competitive.NEET.chapters),
     },
   }
 }
@@ -191,6 +190,8 @@ export function computeStudentQuestionIntelligence({ attempts = [] }) {
   const errorCounts = { 'Conceptual': 0, 'Calculation': 0, 'Misread': 0, 'Careless': 0, 'Time-related': 0, 'Unattempted': 0, 'Guessing': 0, 'Unclassified': 0 }
 
   ;(manual ?? []).forEach((attempt) => {
+    const context = classifyAttemptContext(attempt)
+    if (!context.domain) return
     const date = (attempt.submittedAt ?? attempt.completedAt ?? '').slice(0, 10)
     ;(attempt.questionAttempts ?? []).forEach((qa, qi) => {
       const status = qa.evaluation?.isCorrect ? 'Correct' : qa.response?.status === 'skipped' || qa.evaluation?.isSkipped ? 'Skipped' : 'Incorrect'
@@ -217,8 +218,8 @@ export function computeStudentQuestionIntelligence({ attempts = [] }) {
         attemptId: attempt.id,
         date,
         examName: attempt.examName ?? attempt.examTitle ?? attempt.examId,
-        examMode: attempt.examMode ?? attempt.category,
-        examFamily: attempt.examFamily ?? null,
+        examMode: context.domain === 'university' ? 'University' : 'Competitive',
+        examFamily: context.examFamily === 'University' ? null : context.examFamily,
         questionNumber: qi + 1,
         id: qa.questionId,
         subject: qa.academicContext?.subject ?? null,
@@ -329,6 +330,8 @@ export function computeStudentLongitudinal({ attempts = [] }) {
   const series = sorted.map((a) => ({
     attemptId: a.id,
     examId: a.examId,
+    examMode: classifyAttemptContext(a).domain === 'university' ? 'University' : 'Competitive',
+    examFamily: classifyAttemptContext(a).examFamily === 'University' ? null : classifyAttemptContext(a).examFamily,
     examName: a.examName ?? a.examTitle ?? a.examId,
     shortTitle: a.shortTitle ?? null,
     date: (a.submittedAt ?? a.completedAt ?? '').slice(0, 10),

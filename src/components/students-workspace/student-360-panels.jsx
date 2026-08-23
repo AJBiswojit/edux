@@ -237,8 +237,8 @@ function SubjectCard({ s }) {
 }
 
 function SubjectsPanel({ s360, domain }) {
-  const pools = domain === 'Competitive'
-    ? [...(s360.subjects.competitive?.JEE ?? []), ...(s360.subjects.competitive?.NEET ?? [])]
+  const pools = domain !== 'University'
+    ? (s360.subjects.competitive?.[domain] ?? [])
     : s360.subjects.university ?? []
   return (
     <ChartCard title={`Subject intelligence — ${domain}`} subtitle="Accuracy · attempt rate · avg time · correct/incorrect/skipped · strength score" actions={<Badge variant="gradient">{pools.length} subjects</Badge>}>
@@ -253,8 +253,8 @@ function SubjectsPanel({ s360, domain }) {
 
 /* ================= Chapters ================= */
 function ChaptersPanel({ s360, domain }) {
-  const chapters = domain === 'Competitive'
-    ? [...(s360.chapters.competitive?.JEE ?? []), ...(s360.chapters.competitive?.NEET ?? [])]
+  const chapters = domain !== 'University'
+    ? (s360.chapters.competitive?.[domain] ?? [])
     : s360.chapters.university ?? []
   return (
     <ChartCard title={`Chapter intelligence — ${domain}`} subtitle="Attempted · accuracy · avg time · trend · evidence" actions={<Badge variant="gradient">{chapters.length} chapters</Badge>}>
@@ -303,7 +303,7 @@ function ChaptersPanel({ s360, domain }) {
 const RESULT_STYLE = { Correct: 'success', Incorrect: 'danger', Skipped: 'warning' }
 
 function QuestionsPanel({ s360, studentId, domain }) {
-  const rows = (s360.question.rows ?? []).filter((r) => (domain === 'Competitive' ? r.examMode === 'Competitive' : r.examMode === 'University'))
+  const rows = (s360.question.rows ?? []).filter((r) => (domain === 'University' ? r.examMode === 'University' : r.examFamily === domain))
   return (
     <ChartCard title={`Question-level evidence — ${domain}`} subtitle="Every question across attempts: time · result · answer changes · revisits · AI observation" actions={<Badge variant="gradient">{rows.length} questions</Badge>}>
       {rows.length ? (
@@ -440,9 +440,9 @@ function ErrorsPanel({ s360 }) {
 
 /* ================= Trends ================= */
 function TrendsPanel({ s360, domain }) {
-  const series = (s360.longitudinal.series ?? []).filter((s) => (domain === 'Competitive' ? s.examMode !== 'University' : s.examMode === 'University'))
+  const series = (s360.longitudinal.series ?? []).filter((s) => (domain === 'University' ? s.examMode === 'University' : s.examFamily === domain))
   const chartData = series.map((s) => ({ label: s.shortTitle ?? s.examName ?? s.examId, accuracy: s.accuracy, attemptRate: s.attemptRate, avgTime: s.avgTime }))
-  const issues = (s360.longitudinal.issues ?? []).filter((i) => (domain === 'Competitive' ? i.domain !== 'university' : i.domain === 'university'))
+  const issues = (s360.longitudinal.issues ?? []).filter((i) => (domain === 'University' ? i.domain === 'university' : i.domain === domain))
   return (
     <div className="space-y-4">
       <ChartCard title={`Performance trend — ${domain}`} subtitle="Accuracy · attempt rate · avg time across assessments" actions={<Badge variant="gradient">{series.length} assessments</Badge>}>
@@ -515,8 +515,8 @@ function ComparisonPanel({ s360 }) {
 /* ================= DNA ================= */
 function DnaPanel({ s360, domain }) {
   const sw = s360.strengthsWeaknesses
-  const pools = domain === 'Competitive'
-    ? { strengths: [...(sw.competitive?.JEE?.strengths ?? []), ...(sw.competitive?.NEET?.strengths ?? [])], weaknesses: [...(sw.competitive?.JEE?.weaknesses ?? []), ...(sw.competitive?.NEET?.weaknesses ?? [])] }
+  const pools = domain !== 'University'
+    ? (sw.competitive?.[domain] ?? { strengths: [], weaknesses: [] })
     : sw.university
   return (
     <ChartCard title={`AI Academic DNA — ${domain}`} subtitle="Reused from the Student AI Academic DNA engine (no duplicate calculation)" actions={<Badge variant="gradient"><BrainCircuit className="h-3 w-3" /> DNA</Badge>}>
