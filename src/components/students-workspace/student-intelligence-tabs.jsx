@@ -17,6 +17,9 @@ import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 import { EvidenceQuestionCard, InterventionRecommendationCard, QuestionDetailDialog } from './student-evidence'
 
 const LETTERS = QUESTION_OPTION_LABELS
+const matchesContext = (item, context) => context === 'University'
+  ? item.examMode === 'University'
+  : item.examMode === 'Competitive' && item.examFamily === context
 
 function Breadcrumb({ items, onNavigate }) {
   return (
@@ -43,14 +46,14 @@ function Breadcrumb({ items, onNavigate }) {
 function SubjectIntelligencePanel({ s360, domain, onSelectSubject }) {
   const questionRows = useMemo(() => {
     return (s360?.question?.rows ?? []).filter((r) =>
-      domain === 'University' ? r.examMode === 'University' : r.examFamily === domain
+      matchesContext(r, domain)
     )
   }, [s360, domain])
 
   const subjects = useMemo(() => {
-    const pools = domain !== 'University'
-      ? (s360?.subjects?.competitive?.[domain] ?? [])
-      : s360?.subjects?.university ?? []
+    const pools = domain === 'University'
+      ? s360?.subjects?.university ?? []
+      : s360?.subjects?.competitive?.[domain] ?? []
     return computeSubjectDiagnostics(questionRows, pools)
   }, [s360, domain, questionRows])
 
@@ -109,7 +112,7 @@ function SubjectIntelligencePanel({ s360, domain, onSelectSubject }) {
 function SubjectDrilldownPanel({ s360, domain, subject, onSelectChapter, onBack }) {
   const questionRows = useMemo(() => {
     return (s360?.question?.rows ?? []).filter((r) =>
-      r.subject === subject && (domain === 'University' ? r.examMode === 'University' : r.examFamily === domain)
+      r.subject === subject && (matchesContext(r, domain))
     )
   }, [s360, domain, subject])
 
@@ -205,7 +208,7 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
 
   const questionRows = useMemo(() => {
     const rows = (s360?.question?.rows ?? []).filter((r) =>
-      domain === 'University' ? r.examMode === 'University' : r.examFamily === domain
+      matchesContext(r, domain)
     )
     if (context?.subject) return rows.filter((r) => r.subject === context.subject)
     return rows
@@ -375,7 +378,7 @@ function QuestionAnalysisPanel({ s360, domain, context }) {
 
   const allRows = useMemo(() => {
     return (s360?.question?.rows ?? []).filter((r) =>
-      domain === 'University' ? r.examMode === 'University' : r.examFamily === domain
+      matchesContext(r, domain)
     )
   }, [s360, domain])
 

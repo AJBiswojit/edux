@@ -25,7 +25,8 @@
  */
 
 import { round1, avg } from './scores.js'
-import { buildExamEvidence, buildAttemptSignals, classifyAttemptContext } from '@/intelligence/engine/exam-attempt-intelligence.js'
+import { buildExamEvidence, buildAttemptSignals } from '@/intelligence/engine/exam-attempt-intelligence.js'
+import { classifyAttemptContext } from '@/intelligence/engine/exam-agent.js'
 import { ATTEMPT_CLASSIFICATIONS } from '@/intelligence/engine/exam-agent.js'
 import { computeStudentProfileBundle } from './students-directory.js'
 
@@ -151,7 +152,7 @@ export function computeStudentSubjectIntelligence({ attempts = [] }) {
 export function computeStudentChapterIntelligence({ attempts = [] }) {
   const manual = (attempts ?? []).filter((a) => a?.mode !== 'demo')
   const signals = buildAttemptSignals(manual)
-  const enrich = (chapters) => chapters.map((c) => ({
+  const withEvidence = (chapters) => chapters.map((c) => ({
     ...c,
     evidence: {
       attempts: c.attempts,
@@ -165,14 +166,14 @@ export function computeStudentChapterIntelligence({ attempts = [] }) {
     priority: c.accuracy != null && c.accuracy < 55 ? 'High' : c.accuracy < 70 ? 'Medium' : 'Low',
     highTime: c.avgTime != null && c.avgTime >= 100,
   }))
-  // The adapter has already partitioned canonical attempts. Do not reclassify
-  // chapters from their subject labels: Physics/Chemistry are valid in both
-  // families and must remain in their originating family.
+
+  // buildAttemptSignals already partitions by canonical attempt context.
+  // Do not reclassify chapters from subject labels here.
   return {
-    university: enrich(signals.university.chapters),
+    university: withEvidence(signals.university.chapters),
     competitive: {
-      JEE: enrich(signals.competitive.JEE.chapters),
-      NEET: enrich(signals.competitive.NEET.chapters),
+      JEE: withEvidence(signals.competitive.JEE.chapters),
+      NEET: withEvidence(signals.competitive.NEET.chapters),
     },
   }
 }
@@ -190,9 +191,8 @@ export function computeStudentQuestionIntelligence({ attempts = [] }) {
   const errorCounts = { 'Conceptual': 0, 'Calculation': 0, 'Misread': 0, 'Careless': 0, 'Time-related': 0, 'Unattempted': 0, 'Guessing': 0, 'Unclassified': 0 }
 
   ;(manual ?? []).forEach((attempt) => {
-    const context = classifyAttemptContext(attempt)
-    if (!context.domain) return
     const date = (attempt.submittedAt ?? attempt.completedAt ?? '').slice(0, 10)
+    const context = classifyAttemptContext(attempt)
     ;(attempt.questionAttempts ?? []).forEach((qa, qi) => {
       const status = qa.evaluation?.isCorrect ? 'Correct' : qa.response?.status === 'skipped' || qa.evaluation?.isSkipped ? 'Skipped' : 'Incorrect'
       const timeSpent = qa.timing?.timeSpent ?? 0
@@ -218,8 +218,9 @@ export function computeStudentQuestionIntelligence({ attempts = [] }) {
         attemptId: attempt.id,
         date,
         examName: attempt.examName ?? attempt.examTitle ?? attempt.examId,
-        examMode: context.domain === 'university' ? 'University' : 'Competitive',
-        examFamily: context.examFamily === 'University' ? null : context.examFamily,
+        examMode: context.examMode,
+        examFamily: context.examFamily,
+        domain: context.domain,
         questionNumber: qi + 1,
         id: qa.questionId,
         subject: qa.academicContext?.subject ?? null,
@@ -330,10 +331,11 @@ export function computeStudentLongitudinal({ attempts = [] }) {
   const series = sorted.map((a) => ({
     attemptId: a.id,
     examId: a.examId,
-    examMode: classifyAttemptContext(a).domain === 'university' ? 'University' : 'Competitive',
-    examFamily: classifyAttemptContext(a).examFamily === 'University' ? null : classifyAttemptContext(a).examFamily,
     examName: a.examName ?? a.examTitle ?? a.examId,
     shortTitle: a.shortTitle ?? null,
+    examMode: classifyAttemptContext(a).examMode,
+    examFamily: classifyAttemptContext(a).examFamily,
+    domain: classifyAttemptContext(a).domain,
     date: (a.submittedAt ?? a.completedAt ?? '').slice(0, 10),
     pct: a.scoring?.pct ?? a.summary?.pct ?? 0,
     accuracy: a.scoring?.accuracy ?? a.summary?.accuracy ?? 0,
@@ -419,19 +421,32 @@ export function computeStudent360({ student, batches = [], attempts = [] }) {
   const sw = computeStudentStrengthsWeaknesses({ attempts: manual })
   const subjects = computeStudentSubjectIntelligence({ attempts: manual })
   const chapters = computeStudentChapterIntelligence({ attempts: manual })
-  const question = computeStudentQuestionIntelligence({ attempts: manual })
+  const contextAttempts = {
+    University: manual.filter((a) => classifyAttemptContext(a).domain === 'university'),
+    JEE: manual.filter((a) => classifyAttemptContext(a).examFamily === 'JEE'),
+    NEET: manual.filter((a) => classifyAttemptContext(a).examFamily === 'NEET'),
+  }
+  const question = {
+    ...computeStudentQuestionIntelligence({ attempts: manual }),
+    byContext: Object.fromEntries(Object.entries(contextAttempts).map(([context, scopedAttempts]) => [
+      context,
+      computeStudentQuestionIntelligence({ attempts: scopedAttempts }),
+    ])),
+  }
   const longitudinal = computeStudentLongitudinal({ attempts: manual })
   const sorted = [...manual].sort((a, b) => String(a.submittedAt ?? '').localeCompare(String(b.submittedAt ?? '')))
 
   /* dominant domain for the top view */
-  const uniCount = manual.filter((a) => (a.examMode ?? a.category) === 'University').length
-  const compCount = manual.length - uniCount
-  const defaultDomain = compCount > uniCount ? 'Competitive' : 'University'
+  const uniCount = manual.filter((a) => classifyAttemptContext(a).domain === 'university').length
+  const jeeCount = manual.filter((a) => classifyAttemptContext(a).examFamily === 'JEE').length
+  const neetCount = manual.filter((a) => classifyAttemptContext(a).examFamily === 'NEET').length
+  const compCount = jeeCount + neetCount
+  const defaultDomain = uniCount >= compCount ? 'University' : jeeCount >= neetCount ? 'JEE' : 'NEET'
 
   /* strengths/weaknesses for the summary (dominant domain pool) */
-  const topPool = defaultDomain === 'Competitive'
-    ? { strengths: [...(sw.competitive?.JEE?.strengths ?? []), ...(sw.competitive?.NEET?.strengths ?? [])], weaknesses: [...(sw.competitive?.JEE?.weaknesses ?? []), ...(sw.competitive?.NEET?.weaknesses ?? [])] }
-    : sw.university
+  const topPool = defaultDomain === 'University'
+    ? sw.university
+    : sw.competitive?.[defaultDomain] ?? { strengths: [], weaknesses: [] }
 
   const aiSummary = buildStudentAiSummary({
     overview,
@@ -455,9 +470,15 @@ export function computeStudent360({ student, batches = [], attempts = [] }) {
     question,
     longitudinal,
     comparison: sorted.length >= 2 ? computeStudentExamComparison(sorted[0], sorted[sorted.length - 1]) : null,
+    comparisonByContext: Object.fromEntries(Object.entries(contextAttempts).map(([context, scopedAttempts]) => [
+      context,
+      scopedAttempts.length >= 2 ? computeStudentExamComparison(scopedAttempts[0], scopedAttempts[scopedAttempts.length - 1]) : null,
+    ])),
     defaultDomain,
     uniCount,
     compCount,
+    jeeCount,
+    neetCount,
   }
 }
 

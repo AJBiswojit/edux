@@ -7,9 +7,10 @@
 import { BrainCircuit } from 'lucide-react'
 import { Badge, Card } from '@/components/ui'
 
-function TimeBehaviourPanel({ s360 }) {
-  const t = s360?.question?.time ?? {}
-  const b = s360?.question?.behaviour ?? {}
+function TimeBehaviourPanel({ s360, domain = 'University' }) {
+  const question = s360?.question?.byContext?.[domain] ?? s360?.question ?? {}
+  const t = question.time ?? {}
+  const b = question.behaviour ?? {}
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="p-5">
@@ -61,22 +62,26 @@ function TimeBehaviourPanel({ s360 }) {
         </div>
         <div className="mt-4">
           <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Error intelligence</p>
-          {(s360?.question?.errors ?? []).map((e) => (
+          {(question.errors ?? []).map((e) => (
             <div key={e.category} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-1.5 text-[12px] dark:bg-slate-800/60">
               <span className="font-semibold text-slate-600 dark:text-slate-300">{e.category}</span>
               <span className="ml-auto font-bold text-slate-800 dark:text-slate-100">{e.count} · {e.percentage}%</span>
             </div>
           ))}
-          {!(s360?.question?.errors ?? []).length && <p className="text-[11px] text-slate-400">No error data yet.</p>}
+          {!(question.errors ?? []).length && <p className="text-[11px] text-slate-400">No error data yet.</p>}
         </div>
       </Card>
     </div>
   )
 }
 
+const matchesContext = (item, context) => context === 'University'
+  ? item.examMode === 'University'
+  : item.examMode === 'Competitive' && item.examFamily === context
+
 function TrendsPanel({ s360, domain }) {
-  const series = (s360?.longitudinal?.series ?? []).filter((s) => (domain === 'University' ? s.examMode === 'University' : s.examFamily === domain))
-  const issues = (s360?.longitudinal?.issues ?? []).filter((i) => (domain === 'University' ? i.domain === 'university' : i.domain === domain))
+  const series = (s360?.longitudinal?.series ?? []).filter((s) => matchesContext(s, domain))
+  const issues = (s360?.longitudinal?.issues ?? []).filter((i) => domain === 'University' ? i.domain === 'university' : i.domain === domain)
   return (
     <div className="space-y-4">
       <Card className="p-5">
@@ -122,9 +127,9 @@ function TrendsPanel({ s360, domain }) {
 
 function DnaPanel({ s360, domain }) {
   const sw = s360?.strengthsWeaknesses
-  const pools = domain !== 'University'
-    ? (sw?.competitive?.[domain] ?? { strengths: [], weaknesses: [] })
-    : sw?.university ?? { strengths: [], weaknesses: [] }
+  const pools = domain === 'University'
+    ? sw?.university ?? { strengths: [], weaknesses: [] }
+    : sw?.competitive?.[domain] ?? { strengths: [], weaknesses: [] }
   return (
     <Card className="p-5">
       <h3 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">

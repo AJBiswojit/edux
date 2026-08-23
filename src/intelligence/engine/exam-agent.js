@@ -851,6 +851,24 @@ export function buildCanonicalExamAttempt({
   }
 }
 
+/**
+ * Resolves the canonical academic context for an attempt. Explicit attempt
+ * metadata is authoritative: a University attempt is never competitive,
+ * even when a legacy record happens to carry a family value. Legacy records
+ * without an explicit mode may use their explicit JEE/NEET exam type.
+ */
+export function classifyAttemptContext(attempt = {}) {
+  const mode = attempt.examMode ?? attempt.category ?? null
+  const family = attempt.examFamily ?? attempt.examType ?? null
+  if (mode === 'University') return { domain: 'university', examMode: 'University', examFamily: null }
+  if (mode === 'Competitive') {
+    const examFamily = family === 'JEE' || family === 'NEET' ? family : null
+    return { domain: 'competitive', examMode: 'Competitive', examFamily }
+  }
+  if (family === 'JEE' || family === 'NEET') return { domain: 'competitive', examMode: 'Competitive', examFamily: family }
+  return { domain: 'university', examMode: 'University', examFamily: null }
+}
+
 /** Deterministic normalizer: converts OLD and NEW attempt records into the
     canonical shape for intelligence consumers. Idempotent for canonical
     records. Legacy records (no questionAttempts/exam snapshot) are upgraded
@@ -863,10 +881,11 @@ export function normalizeExamAttempt(raw, examLookup = null) {
   /* canonical record → idempotent passthrough with consistency fills */
   if (Array.isArray(raw.questionAttempts)) {
     const submittedAt = raw.submittedAt ?? raw.completedAt ?? null
+    const context = classifyAttemptContext(raw)
     return {
       ...raw,
-      examMode: raw.examMode ?? (raw.category === 'University' ? 'University' : 'Competitive'),
-      examFamily: raw.examFamily ?? (raw.examType === 'JEE' || raw.examType === 'NEET' ? raw.examType : null),
+      examMode: context.examMode,
+      examFamily: context.examFamily,
       source: raw.source ?? 'exam-agent',
       submittedAt,
       completedAt: raw.completedAt ?? submittedAt,
@@ -882,8 +901,9 @@ export function normalizeExamAttempt(raw, examLookup = null) {
   const exam = Array.isArray(examLookup)
     ? (examLookup.find((e) => e.id === raw.examId) ?? null)
     : (examLookup && examLookup.id === raw.examId ? examLookup : null)
-  const family = raw.examType === 'JEE' || raw.examType === 'NEET' ? raw.examType : null
-  const examMode = raw.category ?? (family ? 'Competitive' : 'University')
+  const context = classifyAttemptContext(raw)
+  const family = context.examFamily
+  const examMode = context.examMode
   const summary = raw.summary ?? {}
   const questionAttempts = exam
     ? buildCanonicalQuestionAttempts({ exam, interactions: raw.interactions ?? {} })

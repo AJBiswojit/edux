@@ -25,7 +25,7 @@
  */
 
 import { round1, avg, clamp } from './scores.js'
-import { classifyAttempt, ATTEMPT_CLASSIFICATIONS, SPEED_THRESHOLDS } from './exam-agent.js'
+import { classifyAttempt, classifyAttemptContext, ATTEMPT_CLASSIFICATIONS, SPEED_THRESHOLDS } from './exam-agent.js'
 
 /* ------------------------------------------------------------------ */
 /* Small helpers                                                      */
@@ -53,22 +53,6 @@ function levelOf(acc) {
   if (acc >= 75) return 'Strong'
   if (acc >= 55) return 'Developing'
   return 'Weak'
-}
-
-/**
- * Canonical attempt context used by every intelligence consumer.  Domain is
- * determined only from attempt metadata; subject/course labels are content,
- * not routing hints. Invalid or incomplete competitive metadata is excluded
- * rather than guessed into a family.
- */
-export function classifyAttemptContext(attempt) {
-  const examMode = attempt?.examMode ?? attempt?.category
-  const examFamily = attempt?.examFamily ?? attempt?.examType ?? null
-  if (examMode === 'University') return { domain: 'university', examFamily: 'University' }
-  if (examMode === 'Competitive' && (examFamily === 'JEE' || examFamily === 'NEET')) {
-    return { domain: 'competitive', examFamily }
-  }
-  return { domain: null, examFamily: null }
 }
 
 const asDomain = (attempt) => {
@@ -110,7 +94,8 @@ const qRows = (attempt) => (attempt?.questionAttempts ?? []).map((qa, i) => {
   }
 })
 
-const chapterKey = (domain, subject, chapter) => `${domain ?? '?'}·${subject ?? '?'}·${chapter ?? '?'}`
+const chapterKey = (subject, chapter) => `${subject ?? '?'}·${chapter ?? '?'}`
+const domainChapterKey = (domain, subject, chapter) => `${domain}|${chapterKey(subject, chapter)}`
 
 /* ------------------------------------------------------------------ */
 /* § Longitudinal trend classification (deterministic)                 */
@@ -178,7 +163,7 @@ export function buildAttemptSignals(attempts = []) {
 
     const byChapter = new Map()
     rows.forEach((r) => {
-      const k = chapterKey(domain, r.subject, r.chapter)
+      const k = domainChapterKey(domain, r.subject, r.chapter)
       if (!byChapter.has(k)) byChapter.set(k, { subject: r.subject, chapter: r.chapter, correct: 0, incorrect: 0, skipped: 0, attempted: 0, time: 0 })
       const c = byChapter.get(k)
       if (r.isCorrect) c.correct += 1
@@ -261,7 +246,7 @@ export function buildAttemptSignals(attempts = []) {
       /* aggregate totals across attempts */
       let questions = 0, correct = 0, incorrect = 0, skipped = 0, attempted = 0, time = 0
       domains[domain].forEach(({ rows }) => {
-        rows.filter((r) => chapterKey(r.subject, r.chapter) === key).forEach((r) => {
+        rows.filter((r) => domainChapterKey(domain, r.subject, r.chapter) === key).forEach((r) => {
           questions += 1
           if (r.isCorrect) correct += 1
           else if (r.isSkipped) skipped += 1
