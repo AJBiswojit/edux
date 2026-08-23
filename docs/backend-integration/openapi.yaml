@@ -189,12 +189,12 @@ paths:
                   type: "string"
                   format: "password"
                   description: "New password string"
-                  example: "aurora123"
+                  example: "Edux12345"
                 confirmPassword:
                   type: "string"
                   format: "password"
                   description: "Confirmation matching password"
-                  example: "aurora123"
+                  example: "Edux12345"
                 token:
                   type: "string"
                   description: "OTP verification token"
@@ -416,7 +416,7 @@ paths:
                   type: "string"
                   format: "password"
                   description: "Account password"
-                  example: "aurora123"
+                  example: "Edux12345"
                 category:
                   type: "string"
                   description: "Student category"

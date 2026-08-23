@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
 
 // Honor the app-level reduced-motion preference before first paint.
 try {
-  if (window.localStorage.getItem('aurora_reduced_motion') === 'true') {
+  if (window.localStorage.getItem('EduX_reduced_motion') === 'true') {
     document.documentElement.classList.add('reduced-motion')
   }
 } catch {

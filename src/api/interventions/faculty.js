@@ -511,7 +511,7 @@ defineRoute('get', '/faculty/students/:id/interventions', async ({ params }) => 
  *     fabricates evidence;
  *   · the record is built by the EXISTING buildInterventionFromGroup() from
  *     a synthetic single-student group and stored in the EXISTING
- *     aurora_faculty_interventions map;
+ *     EduX_faculty_interventions map;
  *   · it enters the lifecycle at 'Recommended' (faculty already reviewed);
  *     every later transition goes through the validated /status route.
  * Nothing is assigned automatically.

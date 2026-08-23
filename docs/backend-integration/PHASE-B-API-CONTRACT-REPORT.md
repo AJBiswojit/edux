@@ -88,8 +88,8 @@ Response contracts span 4 primary archetypes:
 - Prototype manages tokens in `localStorage` (`medixo_auth_token`, `medixo_refresh_token`, `medixo_user_profile`).
 - `src/api/axios.js` attaches `Bearer <token>` and implements token refresh via `POST /auth/refresh` on 401.
 - Role gating is enforced on the frontend by `src/routes/ProtectedRoute.jsx`.
-- Demo directory (`DEMO_USERS`) provides instant sign-in with demo password `aurora123`.
-- Student self-registration writes verified student records to `aurora_registered_students` in localStorage.
+- Demo directory (`DEMO_USERS`) provides instant sign-in with demo password `Edux12345`.
+- Student self-registration writes verified student records to `EduX_registered_students` in localStorage.
 - Production authentication backend (JWT, OAuth2, RBAC database models) will be designed in Phase D.
 
 ## Error Contracts
@@ -130,7 +130,7 @@ Documented all active query parameters across 145 endpoints:
 - Universal Question Schema documented in Section 9 of `02-API-CONTRACT.md` preserving all fields across Question Bank, PYQs, Competitive Questions, and Question Studio.
 
 ## Paper Contract
-- Documented Question Paper Generator blueprint, question list, Blooms taxonomy, marks, negative marking, and sharing registry (`aurora_faculty_paper_shares`).
+- Documented Question Paper Generator blueprint, question list, Blooms taxonomy, marks, negative marking, and sharing registry (`EduX_faculty_paper_shares`).
 
 ## Intervention Contract
 - Full 9-state lifecycle state machine documented in Section 11 of `02-API-CONTRACT.md` (Detection → Recommended → Planned → Assigned → In Progress → Completed → Re-test Pending → Evaluating → Resolved / Improving / Persistent).

@@ -18,7 +18,7 @@ Key facts as implemented:
 - React 18 + Vite SPA (`vite.config.js`, `src/main.jsx`), React Router v6 (`src/routes/index.jsx`), TanStack Query v5, Axios, Tailwind CSS, Recharts, framer-motion.
 - 4 user roles: **Student, Faculty, Admin (Administrator), Parent/Guardian** (`ROLES` in `src/config/index.js`).
 - The **Parent portal is currently disabled** by feature flag (`FEATURE_FLAGS.parentPortal = false`). Its pages, routes and API endpoints remain in the codebase for a future version; a parent login is redirected back to `/auth/login?role=parent` (see `ParentGate` in `src/routes/index.jsx`).
-- Auth is a **prototype**: login is validated client-side in `src/contexts/auth-context.jsx` against a demo user directory (`DEMO_USERS`, `src/datasets/platform/users.js`; all demo passwords `aurora123`) plus an in-browser registration registry (`aurora_registered_students` in localStorage). There is **no `POST /auth/login` API endpoint in the current prototype adapter** — this is a gap the future backend will fill (see §5 Authentication flows).
+- Auth is a **prototype**: login is validated client-side in `src/contexts/auth-context.jsx` against a demo user directory (`DEMO_USERS`, `src/datasets/platform/users.js`; all demo passwords `Edux12345`) plus an in-browser registration registry (`EduX_registered_students` in localStorage). There is **no `POST /auth/login` API endpoint in the current prototype adapter** — this is a gap the future backend will fill (see §5 Authentication flows).
 - The README labels the dataset a **fictional institution** (Meridian Institute of Technology, Pune) — all people, marks and analytics are demo data.
 
 ### 1.2 Major user roles
@@ -83,9 +83,9 @@ One intervention system, one store, one lifecycle (comments in `src/api/interven
 - **Question Intelligence** (faculty Assessment Intelligence tab): University | Competitive toggle; the university bank lives in `src/datasets/faculty/workspace.js` (`questionBank`); competitive questions (JEE P/M/C + NEET P/C/B, stable `CQ-*`-style ids, full metadata) live in `src/intelligence/faculty/datasets/competitive-questions.js`; approved AI Question Studio questions sync into the same bank (`source: 'AI Question Studio'`).
 - **PYQ Intelligence**: actual previous-year questions in both modes, linked to the bank via stable identities (`UPYQ-*` bankId links; competitive questions ARE the PYQ records) — `src/api/faculty/pyq-analysis.js` endpoints over `src/datasets/faculty/pyq-analysis.js`.
 - **AI Question Paper Generator** ("Question Paper Studio"): 5-section generation flow, deterministic generation from the existing question foundation, respects mode/exam/subject/chapter/topic/difficulty/types/marks/count/PYQ preference, honest "Available vs Required + Broaden filters" insufficiency state, review (edit/replace/remove), quality panel, save to library.
-- **Paper Library**: single library of University + Competitive (JEE/NEET) papers with filters, search, edit-from-library, print/preview, share + share history (prototype persistence: `aurora_faculty_paper_shares` in localStorage).
+- **Paper Library**: single library of University + Competitive (JEE/NEET) papers with filters, search, edit-from-library, print/preview, share + share history (prototype persistence: `EduX_faculty_paper_shares` in localStorage).
 - **AI Question Studio** (faculty tab; Phase 42): Source Library (12 original demo sources) → Source analysis ("Prototype Content Intelligence") → deterministic generation from a 305-question curated pool → Draft→Approved review workflow → approved questions sync into the existing Question Bank and feed the Paper Generator.
-- **AI Exam Conducting Agent** (student): 9 practice papers (3 University: CS501/CS503/CS505; 3 JEE: 2 full mocks + Physics; 3 NEET: 2 full mocks + Biology) in `src/datasets/exams/exam-agent.js`; flow Home → Instructions → Live exam (manual, or "Demo Monitoring" simulation) → deterministic analysis → AI Exam Performance Report (`buildExamAgentReport`); completed attempts persisted as canonical ExamAttempts to localStorage (`aurora_student_exam_attempts`) via `POST /student/exam-agent/attempts`.
+- **AI Exam Conducting Agent** (student): 9 practice papers (3 University: CS501/CS503/CS505; 3 JEE: 2 full mocks + Physics; 3 NEET: 2 full mocks + Biology) in `src/datasets/exams/exam-agent.js`; flow Home → Instructions → Live exam (manual, or "Demo Monitoring" simulation) → deterministic analysis → AI Exam Performance Report (`buildExamAgentReport`); completed attempts persisted as canonical ExamAttempts to localStorage (`EduX_student_exam_attempts`) via `POST /student/exam-agent/attempts`.
 
 ---
 
@@ -263,7 +263,7 @@ For each domain: purpose · primary frontend pages · primary services · primar
 ### 4.15 Paper Library
 - **Purpose:** the single library of generated + seeded papers (University + Competitive) with filters, edit-from-library, print/preview, share history; "Intervention re-test" badges.
 - **Pages:** library tab of `QuestionIntelligence`.
-- **Services/API:** same paper-generator endpoints; shares persisted to `aurora_faculty_paper_shares`.
+- **Services/API:** same paper-generator endpoints; shares persisted to `EduX_faculty_paper_shares`.
 - **Datasets:** `paperGenerator.generatedPapers` (incl. 6 pre-generated competitive papers).
 - **Intelligence:** none beyond generator selection.
 
@@ -286,12 +286,12 @@ For each domain: purpose · primary frontend pages · primary services · primar
 ### 4.18 Practice
 - **Purpose:** targeted practice sets generated for an intervention, selected from existing question datasets (`selectPracticeQuestions`), with honest insufficiency handling + broaden levels.
 - **Pages/API:** student practice runner inside `Interventions` page; `GET /student/interventions/:id/practice`, `POST /student/interventions/:id/practice-attempts` (`kind: 'practice'`).
-- **Persistence:** `aurora_intervention_practice_attempts`.
+- **Persistence:** `EduX_intervention_practice_attempts`.
 
 ### 4.19 Re-tests
 - **Purpose:** post-practice verification exam for an intervention — same chapter, different questions, linked by `interventionId`; created by faculty (optionally via the Paper Studio prefill) and run by the student through the same runner/Exam Agent storage (`mode: 'intervention-retest'`).
 - **API:** `POST /faculty/interventions/:groupId/retest`, `GET /student/interventions/:id/retest`, attempts via `POST /student/interventions/:id/practice-attempts` (`kind: 'retest'`).
-- **Persistence:** `aurora_intervention_retests` + practice-attempts store.
+- **Persistence:** `EduX_intervention_retests` + practice-attempts store.
 
 ### 4.20 Effectiveness
 - **Purpose:** deterministic before/practice/retest outcome computation (accuracy +pp · time −s · incorrect −n) with documented outcome rules; surfaced on both faculty and student intervention surfaces.
@@ -320,7 +320,7 @@ Student
  ↓  (login: AuthContext → session user; identity from GET /intelligence/profile)
 Exam Agent                     /student/exam-agent — pick paper (manual or Demo Monitoring)
  ↓  buildCanonicalExamAttempt(...) in the page → POST /student/exam-agent/attempts
-ExamAttempt (canonical)        persisted to localStorage 'aurora_student_exam_attempts'
+ExamAttempt (canonical)        persisted to localStorage 'EduX_student_exam_attempts'
  ↓                              (seeds from attempt-seeds.js join for longitudinal views)
 Exam Analysis                  GET /student/exam-analysis/options|:id — buildAttemptAnalysisVariant
  ↓                              (per-attempt analysis from embedded question metadata)
@@ -379,10 +379,10 @@ The backend MUST preserve the meaning of these frontend contracts (shapes as the
 | Academic DNA | Derived strength/weakness graph with evidence pools + trends (`derived.academicDna`, `dnaWorkspace`) | `src/intelligence/engine/dna.js` + `exam-attempt-intelligence.js` |
 | Similar Issue | Issue fingerprint + similarity group (domain/family/subject/chapter scoped) | `src/intelligence/faculty/engine/similar-issues.js` |
 | Intervention | Lifecycle record (status machine, evidence-locked, practiceConfig, students, effectiveness) | `intervention-lifecycle.js` + `src/api/interventions/store.js` |
-| Practice Attempt | Student practice run for an intervention (`kind:'practice'`) | `aurora_intervention_practice_attempts` |
-| Re-test | Linked verification exam entity + its attempt (`kind:'retest'`, `mode:'intervention-retest'`) | `aurora_intervention_retests` + practice store |
+| Practice Attempt | Student practice run for an intervention (`kind:'practice'`) | `EduX_intervention_practice_attempts` |
+| Re-test | Linked verification exam entity + its attempt (`kind:'retest'`, `mode:'intervention-retest'`) | `EduX_intervention_retests` + practice store |
 | Effectiveness | Deterministic outcome (before/practice/retest deltas; Resolved/Improving/Persistent) | `computeEffectiveness` |
-| Paper Share | Prototype share record (audience, recipients, message, status "Sent (prototype)") | `aurora_faculty_paper_shares` via `/faculty/paper-generator/papers/:id/share` |
+| Paper Share | Prototype share record (audience, recipients, message, status "Sent (prototype)") | `EduX_faculty_paper_shares` via `/faculty/paper-generator/papers/:id/share` |
 
 ---
 
@@ -414,16 +414,16 @@ Everything persists **in the browser** today. Nothing is migrated or redesigned 
 
 | Key | Owner module | Contents |
 |---|---|---|
-| `aurora_access_token` / `aurora_refresh_token` | `AuthContext`, `src/api/axios.js` (keys from `APP_CONFIG`) | prototype tokens |
-| `aurora_user` | `AuthContext` | session user JSON |
-| `aurora_theme` | `src/contexts/theme-context.jsx` | theme preference |
-| `aurora_reduced_motion` | `src/main.jsx` + theme context | reduced-motion preference |
-| `aurora_student_exam_attempts` | `src/api/exam/exam-agent.js`, `src/api/core/exam-attempts-store.js` | canonical ExamAttempts produced by the Exam Agent (Exam Agent's own endpoints read only this store — seeds never appear in the student's own history list) |
-| `aurora_faculty_interventions` | `src/api/interventions/store.js` | groupId → intervention status record |
-| `aurora_intervention_practice_attempts` | same store | practice/re-test attempts (`kind` discriminator) |
-| `aurora_intervention_retests` | same store | re-test entities |
-| `aurora_faculty_paper_shares` | `src/api/faculty/papers.js` | paper share records |
-| `aurora_registered_students` | `src/api/auth/session.js` (+ AuthContext) | verified registration drafts (can sign back in) |
+| `EduX_access_token` / `EduX_refresh_token` | `AuthContext`, `src/api/axios.js` (keys from `APP_CONFIG`) | prototype tokens |
+| `EduX_user` | `AuthContext` | session user JSON |
+| `EduX_theme` | `src/contexts/theme-context.jsx` | theme preference |
+| `EduX_reduced_motion` | `src/main.jsx` + theme context | reduced-motion preference |
+| `EduX_student_exam_attempts` | `src/api/exam/exam-agent.js`, `src/api/core/exam-attempts-store.js` | canonical ExamAttempts produced by the Exam Agent (Exam Agent's own endpoints read only this store — seeds never appear in the student's own history list) |
+| `EduX_faculty_interventions` | `src/api/interventions/store.js` | groupId → intervention status record |
+| `EduX_intervention_practice_attempts` | same store | practice/re-test attempts (`kind` discriminator) |
+| `EduX_intervention_retests` | same store | re-test entities |
+| `EduX_faculty_paper_shares` | `src/api/faculty/papers.js` | paper share records |
+| `EduX_registered_students` | `src/api/auth/session.js` (+ AuthContext) | verified registration drafts (can sign back in) |
 
 ### 8.2 In-memory stores (session-only, lost on reload)
 

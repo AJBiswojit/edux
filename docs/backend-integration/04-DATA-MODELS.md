@@ -96,7 +96,7 @@ Below is the exhaustive catalog of all 32 major data entities discovered across 
 |---|---|---|---|---|---|
 | `id` | `string` | Yes | No | `users.js / session.js` | Unique user ID (e.g. 'u1', 'u_stu_001', 'u_stu_1724425200000') |
 | `email` | `string (email)` | Yes | No | `session.js` | Unique normalized email address for login and notifications |
-| `password` | `string (hash)` | Yes | No | `auth-context.jsx` | Password (plaintext 'aurora123' in prototype; bcrypt hash in backend) |
+| `password` | `string (hash)` | Yes | No | `auth-context.jsx` | Password (plaintext 'Edux12345' in prototype; bcrypt hash in backend) |
 | `role` | `string (enum)` | Yes | No | `config/index.js` | 'student' | 'faculty' | 'admin' | 'parent' |
 | `name` | `string` | Yes | No | `users.js` | Full user name (e.g. 'Dr. Sarah Jenkins', 'Aarav Sharma') |
 | `firstName` | `string` | No | Yes | `auth-context.jsx` | Derived first name for greetings |
@@ -650,7 +650,7 @@ Below is the exhaustive catalog of all 32 major data entities discovered across 
 **Current Consumers:** Paper Library, Student notifications.
 **Future Backend Ownership:** PostgreSQL 'paper_shares' table.
 **Validation / Invariants:** Valid paper ID.
-**Migration Notes:** Migrate from 'aurora_faculty_paper_shares' localStorage array.
+**Migration Notes:** Migrate from 'EduX_faculty_paper_shares' localStorage array.
 
 ---
 
@@ -792,7 +792,7 @@ Below is the exhaustive catalog of all 32 major data entities discovered across 
 **Current Consumers:** InterventionCenter, Student Dashboard, Student 360, Similar Issues.
 **Future Backend Ownership:** PostgreSQL 'interventions' + 'intervention_students' tables.
 **Validation / Invariants:** Follows 9-state machine transition rules; cannot assign dismissed.
-**Migration Notes:** Migrate from 'aurora_faculty_interventions' localStorage key.
+**Migration Notes:** Migrate from 'EduX_faculty_interventions' localStorage key.
 
 ---
 
@@ -829,7 +829,7 @@ Below is the exhaustive catalog of all 32 major data entities discovered across 
 **Current Consumers:** InterventionCenter effectiveness calculation, Student Practice runner.
 **Future Backend Ownership:** PostgreSQL 'intervention_attempts' table.
 **Validation / Invariants:** Must link to valid Intervention; MUST NOT pollute official exam transcripts.
-**Migration Notes:** Migrate from 'aurora_intervention_practice_attempts' localStorage array.
+**Migration Notes:** Migrate from 'EduX_intervention_practice_attempts' localStorage array.
 
 ---
 
@@ -862,7 +862,7 @@ Below is the exhaustive catalog of all 32 major data entities discovered across 
 **Current Consumers:** InterventionCenter, Student Interventions re-test launcher.
 **Future Backend Ownership:** PostgreSQL 'intervention_retests' table.
 **Validation / Invariants:** Must link to Intervention in 'Completed' or 'Re-test Pending' state.
-**Migration Notes:** Migrate from 'aurora_intervention_retests' localStorage array.
+**Migration Notes:** Migrate from 'EduX_intervention_retests' localStorage array.
 
 ---
 
@@ -1432,19 +1432,19 @@ erDiagram
 
 | Data Domain | Current Prototype Owner | Future Production Backend Owner |
 |---|---|---|
-| **User Authentication** | `localStorage` (`aurora_user`) + `DEMO_USERS` | PostgreSQL `users` table + Redis session cache |
+| **User Authentication** | `localStorage` (`EduX_user`) + `DEMO_USERS` | PostgreSQL `users` table + Redis session cache |
 | **Student Profiles** | Static `masterStudentProfile` dataset | PostgreSQL `students` table |
-| **Exam Attempts** | `localStorage` (`aurora_student_exam_attempts`) | PostgreSQL `exam_attempts` + `question_attempts` |
+| **Exam Attempts** | `localStorage` (`EduX_student_exam_attempts`) | PostgreSQL `exam_attempts` + `question_attempts` |
 | **Academic DNA** | Computed dynamically by `dna.js` | Computed dynamically by Python intelligence service |
 | **Student 360** | Computed dynamically by `student-360.js` | Computed dynamically by Python intelligence service |
 | **Similar Issues** | Computed dynamically by `similar-issues.js` | Computed dynamically by Python intelligence service |
-| **Interventions** | `localStorage` (`aurora_faculty_interventions`) | PostgreSQL `interventions` + `intervention_students` |
-| **Remedial Practice** | `localStorage` (`aurora_intervention_practice_attempts`) | PostgreSQL `intervention_attempts` table |
-| **Diagnostic Re-tests** | `localStorage` (`aurora_intervention_retests`) | PostgreSQL `intervention_retests` table |
+| **Interventions** | `localStorage` (`EduX_faculty_interventions`) | PostgreSQL `interventions` + `intervention_students` |
+| **Remedial Practice** | `localStorage` (`EduX_intervention_practice_attempts`) | PostgreSQL `intervention_attempts` table |
+| **Diagnostic Re-tests** | `localStorage` (`EduX_intervention_retests`) | PostgreSQL `intervention_retests` table |
 | **Question Bank** | Static `questionBank` dataset | PostgreSQL `questions` table |
 | **Question Papers** | In-memory `paperGenerator.generatedPapers` | PostgreSQL `question_papers` + `paper_questions` |
-| **Paper Shares** | `localStorage` (`aurora_faculty_paper_shares`) | PostgreSQL `paper_shares` table |
-| **Question Studio** | `localStorage` (`aurora_question_studio_sessions`) | PostgreSQL `question_studio_sessions` table |
+| **Paper Shares** | `localStorage` (`EduX_faculty_paper_shares`) | PostgreSQL `paper_shares` table |
+| **Question Studio** | `localStorage` (`EduX_question_studio_sessions`) | PostgreSQL `question_studio_sessions` table |
 
 ---
 

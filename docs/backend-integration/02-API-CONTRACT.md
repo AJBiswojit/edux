@@ -240,13 +240,13 @@ Below is the canonical catalog of all 145 endpoints registered in the codebase.
       "type": "string",
       "format": "password",
       "description": "New password string",
-      "example": "aurora123"
+      "example": "Edux12345"
     },
     "confirmPassword": {
       "type": "string",
       "format": "password",
       "description": "Confirmation matching password",
-      "example": "aurora123"
+      "example": "Edux12345"
     },
     "token": {
       "type": "string",
@@ -566,7 +566,7 @@ None (No request body)
       "type": "string",
       "format": "password",
       "description": "Account password",
-      "example": "aurora123"
+      "example": "Edux12345"
     },
     "category": {
       "type": "string",
@@ -661,11 +661,11 @@ None (No request body)
 - **Service Consumer:** `useRegister (src/services/auth.js)`
 - **Page Consumer:** `Register (src/pages/auth/Register.jsx)`
 - **Component Consumer:** `RegistrationWizard`
-- **Current Persistence:** localStorage key 'aurora_registered_students'
+- **Current Persistence:** localStorage key 'EduX_registered_students'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `E. Authentication/session`
 - **Future Python Backend Route:** `backend/app/api/auth/router.py -> POST /api/auth/register`
-- **Implementation Notes:** Persists unverified draft with verified=false in 'aurora_registered_students' array.
+- **Implementation Notes:** Persists unverified draft with verified=false in 'EduX_registered_students' array.
 
 ---
 
@@ -736,11 +736,11 @@ None (No request body)
 - **Service Consumer:** `useRegisterVerifyOtp (src/services/auth.js)`
 - **Page Consumer:** `Register (src/pages/auth/Register.jsx)`
 - **Component Consumer:** `RegistrationWizard OTP step`
-- **Current Persistence:** Mutates verified=true in localStorage key 'aurora_registered_students'
+- **Current Persistence:** Mutates verified=true in localStorage key 'EduX_registered_students'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `E. Authentication/session`
 - **Future Python Backend Route:** `backend/app/api/auth/router.py -> POST /api/auth/register/verify`
-- **Implementation Notes:** After verification, the user can log in with demo password 'aurora123' via AuthContext.
+- **Implementation Notes:** After verification, the user can log in with demo password 'Edux12345' via AuthContext.
 
 ---
 
@@ -2077,7 +2077,7 @@ None (No request body)
 - **Service Consumer:** `useExamAnalysisOptions (src/services/extra.js)`
 - **Page Consumer:** `ExamAnalysis (src/pages/student/ExamAnalysis.jsx)`
 - **Component Consumer:** `ExamAnalysisSelector`
-- **Current Persistence:** Deterministic datasets + localStorage ('aurora_student_exam_attempts')
+- **Current Persistence:** Deterministic datasets + localStorage ('EduX_student_exam_attempts')
 - **Intelligence Dependency:** normalizeExamAttempt, filterExamAttempts (src/intelligence/)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/exam/analysis/router.py -> GET /api/student/exam-analysis/options`
@@ -2563,7 +2563,7 @@ None (No request body)
 - **Service Consumer:** `useIntelligenceExamAttempts (src/services/intelligence.js)`
 - **Page Consumer:** `Student Academic DNA, Faculty Intelligence, Exam Analysis`
 - **Component Consumer:** `AttemptEvidenceTable, AttemptFilterBar`
-- **Current Persistence:** localStorage key 'aurora_student_exam_attempts' + examAttemptSeeds
+- **Current Persistence:** localStorage key 'EduX_student_exam_attempts' + examAttemptSeeds
 - **Intelligence Dependency:** normalizeExamAttempt, filterExamAttempts (src/intelligence/)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/intelligence/router.py -> GET /api/intelligence/exam-attempts`
@@ -3078,7 +3078,7 @@ None (No request body)
 - **Service Consumer:** `useExamAgentAttempts (src/services/exam-agent.js)`
 - **Page Consumer:** `ExamAgent (src/pages/student/ExamAgent.jsx)`
 - **Component Consumer:** `ExamAgentHistoryList`
-- **Current Persistence:** localStorage key 'aurora_student_exam_attempts'
+- **Current Persistence:** localStorage key 'EduX_student_exam_attempts'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/exam/agent/router.py -> GET /api/student/exam-agent/attempts`
@@ -3156,7 +3156,7 @@ None (No request body)
 - **Service Consumer:** `useExamAgentAttempt (src/services/exam-agent.js)`
 - **Page Consumer:** `ExamAgent (src/pages/student/ExamAgent.jsx)`
 - **Component Consumer:** `ExamAgentResultsView, QuestionReviewModal`
-- **Current Persistence:** localStorage key 'aurora_student_exam_attempts'
+- **Current Persistence:** localStorage key 'EduX_student_exam_attempts'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/exam/agent/router.py -> GET /api/student/exam-agent/attempts/{id}`
@@ -3425,7 +3425,7 @@ None (No request body)
 - **Service Consumer:** `useSaveExamAgentAttempt (src/services/exam-agent.js)`
 - **Page Consumer:** `ExamAgent (src/pages/student/ExamAgent.jsx)`
 - **Component Consumer:** `ExamConductorFinishStep`
-- **Current Persistence:** Prepends attempt to localStorage key 'aurora_student_exam_attempts'
+- **Current Persistence:** Prepends attempt to localStorage key 'EduX_student_exam_attempts'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/exam/agent/router.py -> POST /api/student/exam-agent/attempts`
@@ -5233,11 +5233,11 @@ None (No request body)
 - **Service Consumer:** `usePaperShare (src/services/extra.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx)`
 - **Component Consumer:** `SharePaperDialog`
-- **Current Persistence:** Persists share to localStorage key 'aurora_faculty_paper_shares' and updates paper status to 'Shared'
+- **Current Persistence:** Persists share to localStorage key 'EduX_faculty_paper_shares' and updates paper status to 'Shared'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/papers/router.py -> POST /api/faculty/paper-generator/papers/{id}/share`
-- **Implementation Notes:** Persists share record to 'aurora_faculty_paper_shares' localStorage array.
+- **Implementation Notes:** Persists share record to 'EduX_faculty_paper_shares' localStorage array.
 
 ---
 
@@ -5610,7 +5610,7 @@ None (No request body)
 - **Service Consumer:** `useQuestionStudioSummary (src/services/question-studio.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx) / Question Studio tab`
 - **Component Consumer:** `QuestionStudioOverview`
-- **Current Persistence:** localStorage key 'aurora_question_studio_sessions' + questionStudioSources
+- **Current Persistence:** localStorage key 'EduX_question_studio_sessions' + questionStudioSources
 - **Intelligence Dependency:** computeStudioMetrics, syncStudioQuestionsToBank (src/intelligence/faculty)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/faculty/question_studio/router.py -> GET /api/faculty/question-studio`
@@ -6124,7 +6124,7 @@ None (No request body)
 - **Service Consumer:** `useGenerateStudioQuestions (src/services/question-studio.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx)`
 - **Component Consumer:** `QuestionGenerationWizard`
-- **Current Persistence:** Persists session to localStorage key 'aurora_question_studio_sessions'
+- **Current Persistence:** Persists session to localStorage key 'EduX_question_studio_sessions'
 - **Intelligence Dependency:** generateQuestions (src/intelligence/faculty)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/faculty/question_studio/router.py -> POST /api/faculty/question-studio/generate`
@@ -6214,7 +6214,7 @@ None (No request body)
 - **Service Consumer:** `useStudioSessions (src/services/question-studio.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx)`
 - **Component Consumer:** `StudioSessionsList`
-- **Current Persistence:** localStorage key 'aurora_question_studio_sessions'
+- **Current Persistence:** localStorage key 'EduX_question_studio_sessions'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/question_studio/router.py -> GET /api/faculty/question-studio/sessions`
@@ -6273,7 +6273,7 @@ None (No request body)
 - **Service Consumer:** `useStudioQuestionAction (src/services/question-studio.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx)`
 - **Component Consumer:** `QuestionCard regenerate button`
-- **Current Persistence:** Mutates session in localStorage key 'aurora_question_studio_sessions'
+- **Current Persistence:** Mutates session in localStorage key 'EduX_question_studio_sessions'
 - **Intelligence Dependency:** regenerateQuestion (src/intelligence/faculty)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/faculty/question_studio/router.py -> POST /api/faculty/question-studio/sessions/{id}/questions/{qid}/regenerate`
@@ -6370,7 +6370,7 @@ None (No request body)
 - **Service Consumer:** `useStudioQuestionAction (src/services/question-studio.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx)`
 - **Component Consumer:** `QuestionEditDialog`
-- **Current Persistence:** Mutates question fields in localStorage key 'aurora_question_studio_sessions'
+- **Current Persistence:** Mutates question fields in localStorage key 'EduX_question_studio_sessions'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/question_studio/router.py -> POST /api/faculty/question-studio/sessions/{id}/questions/{qid}/edit`
@@ -6421,7 +6421,7 @@ None (No request body)
 - **Service Consumer:** `useStudioQuestionAction (src/services/question-studio.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx)`
 - **Component Consumer:** `QuestionCard delete button`
-- **Current Persistence:** Filters question out of localStorage key 'aurora_question_studio_sessions'
+- **Current Persistence:** Filters question out of localStorage key 'EduX_question_studio_sessions'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/question_studio/router.py -> POST /api/faculty/question-studio/sessions/{id}/questions/{qid}/delete`
@@ -6552,7 +6552,7 @@ None (No request body)
 - **Service Consumer:** `useStudioQuestionAction (src/services/question-studio.js)`
 - **Page Consumer:** `QuestionIntelligence (src/pages/faculty/QuestionIntelligence.jsx)`
 - **Component Consumer:** `QuestionCard reject button`
-- **Current Persistence:** Mutates approved=false and reviewStatus='Rejected' in localStorage key 'aurora_question_studio_sessions'
+- **Current Persistence:** Mutates approved=false and reviewStatus='Rejected' in localStorage key 'EduX_question_studio_sessions'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/question_studio/router.py -> POST /api/faculty/question-studio/sessions/{id}/questions/{qid}/reject`
@@ -7120,7 +7120,7 @@ None (No request body)
 - **Service Consumer:** `useSimilarIssues (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Dashboard (src/pages/faculty/Dashboard.jsx) / Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `SimilarIssuesClusterGrid, GroupInterventionCard`
-- **Current Persistence:** Derived from canonical attempt fingerprints + localStorage ('aurora_faculty_interventions')
+- **Current Persistence:** Derived from canonical attempt fingerprints + localStorage ('EduX_faculty_interventions')
 - **Intelligence Dependency:** groupSimilarIssues, presentGroup, fingerprintsForAll (src/intelligence/faculty)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> GET /api/faculty/similar-issues`
@@ -7410,7 +7410,7 @@ None (No request body)
 - **Service Consumer:** `useCreateGroupInterventions (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `CreateGroupInterventionModal`
-- **Current Persistence:** Persists record in localStorage key 'aurora_faculty_interventions'
+- **Current Persistence:** Persists record in localStorage key 'EduX_faculty_interventions'
 - **Intelligence Dependency:** buildInterventionFromGroup (src/intelligence/faculty)
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> POST /api/faculty/similar-issues/{groupId}/interventions`
@@ -7537,7 +7537,7 @@ None (No request body)
 - **Service Consumer:** `useInterventions (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `InterventionCenterTable, ActiveInterventionsKanban`
-- **Current Persistence:** localStorage key 'aurora_faculty_interventions' + practice & retest attempts
+- **Current Persistence:** localStorage key 'EduX_faculty_interventions' + practice & retest attempts
 - **Intelligence Dependency:** persistedInterventions, groupOutcome (src/intelligence/faculty)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> GET /api/faculty/interventions`
@@ -7611,7 +7611,7 @@ None (No request body)
 - **Service Consumer:** `useIntervention (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `InterventionDetailDrawer, StudentOutcomeList`
-- **Current Persistence:** localStorage key 'aurora_faculty_interventions'
+- **Current Persistence:** localStorage key 'EduX_faculty_interventions'
 - **Intelligence Dependency:** interventionFor (src/intelligence/faculty)
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> GET /api/faculty/interventions/{id}`
@@ -7690,7 +7690,7 @@ None (No request body)
 - **Service Consumer:** `useInterventionStatus (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `InterventionStatusDropdown, LifecycleActionButtons`
-- **Current Persistence:** Mutates status in localStorage key 'aurora_faculty_interventions'
+- **Current Persistence:** Mutates status in localStorage key 'EduX_faculty_interventions'
 - **Intelligence Dependency:** buildInterventionFromGroup (src/intelligence/faculty)
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> POST /api/faculty/interventions/{groupId}/status`
@@ -7785,7 +7785,7 @@ None (No request body)
 - **Service Consumer:** `useInterventionModify (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `EditInterventionModal`
-- **Current Persistence:** Mutates overrides in localStorage key 'aurora_faculty_interventions'
+- **Current Persistence:** Mutates overrides in localStorage key 'EduX_faculty_interventions'
 - **Intelligence Dependency:** interventionFor (src/intelligence/faculty)
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> POST /api/faculty/interventions/{groupId}/modify`
@@ -7845,7 +7845,7 @@ None (No request body)
 - **Service Consumer:** `useInterventionAssign (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `AssignInterventionButton`
-- **Current Persistence:** Mutates status='Assigned' and assignedAt in localStorage key 'aurora_faculty_interventions'
+- **Current Persistence:** Mutates status='Assigned' and assignedAt in localStorage key 'EduX_faculty_interventions'
 - **Intelligence Dependency:** interventionFor (src/intelligence/faculty)
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> POST /api/faculty/interventions/{groupId}/assign`
@@ -8020,7 +8020,7 @@ None (No request body)
 - **Service Consumer:** `useCreateRetest (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/faculty/Interventions.jsx)`
 - **Component Consumer:** `CreateRetestModal`
-- **Current Persistence:** Persists retest to localStorage key 'aurora_intervention_retests' and sets status='Re-test Pending' in 'aurora_faculty_interventions'
+- **Current Persistence:** Persists retest to localStorage key 'EduX_intervention_retests' and sets status='Re-test Pending' in 'EduX_faculty_interventions'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> POST /api/faculty/interventions/{groupId}/retest`
@@ -8094,7 +8094,7 @@ None (No request body)
 - **Service Consumer:** `useFacultyStudentInterventions (src/services/faculty-interventions.js)`
 - **Page Consumer:** `StudentProfile (src/pages/faculty/StudentProfile.jsx) / Student 360 Interventions tab`
 - **Component Consumer:** `StudentInterventionsTable`
-- **Current Persistence:** localStorage key 'aurora_faculty_interventions'
+- **Current Persistence:** localStorage key 'EduX_faculty_interventions'
 - **Intelligence Dependency:** persistedInterventions (src/intelligence/faculty)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/faculty/interventions/router.py -> GET /api/faculty/students/{id}/interventions`
@@ -8233,7 +8233,7 @@ None (No request body)
 - **Service Consumer:** `useCreateStudent360Intervention (src/services/faculty-interventions.js)`
 - **Page Consumer:** `StudentProfile (src/pages/faculty/StudentProfile.jsx) / Weaknesses tab`
 - **Component Consumer:** `WeaknessCard 'Create Intervention' button`
-- **Current Persistence:** Persists record in localStorage key 'aurora_faculty_interventions' with status='Recommended'
+- **Current Persistence:** Persists record in localStorage key 'EduX_faculty_interventions' with status='Recommended'
 - **Intelligence Dependency:** computeStudentIssueFingerprints, buildRecommendation (src/intelligence/faculty)
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/faculty/students/router.py -> POST /api/faculty/students/{studentId}/interventions`
@@ -8431,7 +8431,7 @@ None (No request body)
 - **Service Consumer:** `useStudentInterventions (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Dashboard (src/pages/student/Dashboard.jsx) / Interventions tab`
 - **Component Consumer:** `StudentInterventionTaskCardList`
-- **Current Persistence:** localStorage key 'aurora_faculty_interventions' + practice & retests
+- **Current Persistence:** localStorage key 'EduX_faculty_interventions' + practice & retests
 - **Intelligence Dependency:** persistedInterventions, postExamOutcomeFor (src/intelligence/faculty)
 - **Backend Ownership:** `B. Computed intelligence`
 - **Future Python Backend Route:** `backend/app/api/student/interventions/router.py -> GET /api/student/interventions`
@@ -8657,7 +8657,7 @@ None (No request body)
 - **Service Consumer:** `useSubmitInterventionAttempt (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/student/Interventions.jsx)`
 - **Component Consumer:** `PracticeTestRunner submit handler`
-- **Current Persistence:** Appends attempt to localStorage key 'aurora_intervention_practice_attempts' and transitions intervention status
+- **Current Persistence:** Appends attempt to localStorage key 'EduX_intervention_practice_attempts' and transitions intervention status
 - **Intelligence Dependency:** computeEffectiveness (src/intelligence/faculty)
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/student/interventions/router.py -> POST /api/student/interventions/{id}/practice-attempts`
@@ -8753,7 +8753,7 @@ None (No request body)
 - **Service Consumer:** `useStudentInterventionRetest (src/services/faculty-interventions.js)`
 - **Page Consumer:** `Interventions (src/pages/student/Interventions.jsx)`
 - **Component Consumer:** `RetestLauncherModal`
-- **Current Persistence:** localStorage key 'aurora_intervention_retests'
+- **Current Persistence:** localStorage key 'EduX_intervention_retests'
 - **Intelligence Dependency:** None
 - **Backend Ownership:** `A. Database-backed`
 - **Future Python Backend Route:** `backend/app/api/student/interventions/router.py -> GET /api/student/interventions/{id}/retest`
@@ -11893,7 +11893,7 @@ The platform endpoints are organized into 22 cohesive functional domains:
 - **HTTP Interceptor:** `src/api/axios.js` automatically attaches `Authorization: Bearer <token>` to every outgoing request.
 - **Automatic Token Refresh:** On receiving a `401 Unauthorized` response, the Axios response interceptor queues pending requests, issues `POST /auth/refresh` with `{ refreshToken }`, updates storage with `{ accessToken, refreshToken }`, and replays failed requests once. If refresh fails, it purges tokens and redirects to `/auth/login`.
 - **Route Guards:** `src/routes/ProtectedRoute.jsx` checks `isAuthenticated` and verifies `user.role` against allowed roles (`student`, `faculty`, `admin`, `parent`). Unauthorized access redirects to `/403 Forbidden`.
-- **Demo Sign-In:** Credentials are validated against `DEMO_USERS` (`@/datasets/platform/users.js`) with demo password `aurora123` or against registered student identity in `aurora_registered_students`.
+- **Demo Sign-In:** Credentials are validated against `DEMO_USERS` (`@/datasets/platform/users.js`) with demo password `Edux12345` or against registered student identity in `EduX_registered_students`.
 
 ### 4.2 Auth Endpoints Inventory (8 Endpoints)
 1. `POST /auth/forgot-password` — Initiates password reset (returns demo verificationId & demoOtp `482193`).
@@ -11902,7 +11902,7 @@ The platform endpoints are organized into 22 cohesive functional domains:
 4. `POST /auth/verify-email` — Verifies email code against `731205`.
 5. `POST /auth/resend-otp` — Re-issues verification code (demoOtp `731205`).
 6. `GET /auth/registration/options` — Returns catalog options for degrees, branches, semesters, categories.
-7. `POST /auth/register` — Validates uniqueness, saves draft student to `aurora_registered_students` in localStorage.
+7. `POST /auth/register` — Validates uniqueness, saves draft student to `EduX_registered_students` in localStorage.
 8. `POST /auth/register/verify` — Verifies registration OTP `482193` and marks student record verified.
 
 > **Future Backend Identity:** Authentication backend implementation (JWT issuance, password hashing, OAuth2, RBAC database tables) will be formally designed in **Phase D** (`09-AUTH-RBAC-SECURITY.md`).
@@ -12167,7 +12167,7 @@ Question papers generated by faculty via `POST /faculty/paper-generator/papers` 
 ### 10.2 Paper Sharing & Distribution Contract
 - Endpoint: `POST /faculty/paper-generator/papers/:id/share`
 - Request Body: `{ "audience": "Batch CSE-A", "recipients": ["u_stu_001"], "message": "Mock exam" }`
-- Persistence: Appends share record to `aurora_faculty_paper_shares` in localStorage and updates paper status to `"Shared"`.
+- Persistence: Appends share record to `EduX_faculty_paper_shares` in localStorage and updates paper status to `"Shared"`.
 
 ---
 
@@ -12216,16 +12216,16 @@ The following table catalogs all endpoints whose prototype persistence utilizes 
 
 | Endpoint | Method | Prototype Storage Target | Future Backend Storage | Migration Priority |
 |---|---|---|---|---|
-| `/auth/register` | POST | `localStorage.getItem('aurora_registered_students')` | PostgreSQL `users` table | High |
-| `/student/exam-agent/attempts` | GET/POST | `localStorage.getItem('aurora_student_exam_attempts')` | PostgreSQL `exam_attempts` + `question_attempts` | Critical |
+| `/auth/register` | POST | `localStorage.getItem('EduX_registered_students')` | PostgreSQL `users` table | High |
+| `/student/exam-agent/attempts` | GET/POST | `localStorage.getItem('EduX_student_exam_attempts')` | PostgreSQL `exam_attempts` + `question_attempts` | Critical |
 | `/faculty/paper-generator/papers` | GET/POST/DEL | In-memory `paperGenerator.generatedPapers` | PostgreSQL `question_papers` | High |
-| `/faculty/paper-generator/papers/:id/share` | POST | `localStorage.getItem('aurora_faculty_paper_shares')` | PostgreSQL `paper_shares` | Medium |
-| `/faculty/question-studio/sessions` | GET/POST | `localStorage.getItem('aurora_question_studio_sessions')` | PostgreSQL `question_studio_sessions` | High |
-| `/faculty/similar-issues/:id/interventions` | POST | `localStorage.getItem('aurora_faculty_interventions')` | PostgreSQL `interventions` | Critical |
-| `/faculty/interventions/:id/status` | POST | `localStorage.getItem('aurora_faculty_interventions')` | PostgreSQL `interventions` | Critical |
-| `/faculty/interventions/:id/retest` | POST | `localStorage.getItem('aurora_intervention_retests')` | PostgreSQL `intervention_retests` | Critical |
-| `/student/interventions/:id/practice-attempts` | POST | `localStorage.getItem('aurora_intervention_practice_attempts')` | PostgreSQL `intervention_attempts` | Critical |
-| `/faculty/students/:id/interventions` | POST | `localStorage.getItem('aurora_faculty_interventions')` | PostgreSQL `interventions` | Critical |
+| `/faculty/paper-generator/papers/:id/share` | POST | `localStorage.getItem('EduX_faculty_paper_shares')` | PostgreSQL `paper_shares` | Medium |
+| `/faculty/question-studio/sessions` | GET/POST | `localStorage.getItem('EduX_question_studio_sessions')` | PostgreSQL `question_studio_sessions` | High |
+| `/faculty/similar-issues/:id/interventions` | POST | `localStorage.getItem('EduX_faculty_interventions')` | PostgreSQL `interventions` | Critical |
+| `/faculty/interventions/:id/status` | POST | `localStorage.getItem('EduX_faculty_interventions')` | PostgreSQL `interventions` | Critical |
+| `/faculty/interventions/:id/retest` | POST | `localStorage.getItem('EduX_intervention_retests')` | PostgreSQL `intervention_retests` | Critical |
+| `/student/interventions/:id/practice-attempts` | POST | `localStorage.getItem('EduX_intervention_practice_attempts')` | PostgreSQL `intervention_attempts` | Critical |
+| `/faculty/students/:id/interventions` | POST | `localStorage.getItem('EduX_faculty_interventions')` | PostgreSQL `interventions` | Critical |
 | `/faculty/reports` | POST/DEL | In-memory `facultyReports` array | PostgreSQL `faculty_reports` + S3 PDF | Medium |
 | `/faculty/ai-studio/save` | POST | In-memory `aiStudioHistory`, `savedLessonPlans` | PostgreSQL `ai_studio_artifacts` | Medium |
 | `/ai/assistant/respond` | POST | In-memory `aiTeachingAssistantThreads` | PostgreSQL `chat_threads` + `chat_messages` | Medium |
@@ -12561,7 +12561,7 @@ In accordance with Phase B rules, inconsistencies in the current implementation 
 
 1. **Frontend-Only Role Enforcement:** In prototype mode, role gating occurs in `ProtectedRoute.jsx` via React state. Backend must enforce server-side RBAC on all routes.
 2. **Missing Ownership Verification:** In prototype mode, endpoints like `/student/interventions` allow passing arbitrary `studentId` query parameters. Backend must enforce that students access only their own records.
-3. **Hardcoded Demo Secrets:** Demo OTPs (`482193`, `731205`) and password (`aurora123`) are hardcoded in prototype. Backend must implement cryptographically secure TOTP / SMS gateways.
+3. **Hardcoded Demo Secrets:** Demo OTPs (`482193`, `731205`) and password (`Edux12345`) are hardcoded in prototype. Backend must implement cryptographically secure TOTP / SMS gateways.
 
 ---
 

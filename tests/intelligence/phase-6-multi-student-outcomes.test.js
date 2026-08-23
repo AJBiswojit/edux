@@ -120,7 +120,7 @@ describe('1-10. selection, isolation, evidence, availability, and per-student cr
     const result = await createFor(jeeGroup, selected)
     expect(result.createdCount).toBe(2)
     expect(new Set(result.created.map((item) => item.interventionId)).size).toBe(2)
-    const store = JSON.parse(storage.getItem('aurora_faculty_interventions'))
+    const store = JSON.parse(storage.getItem('EduX_faculty_interventions'))
     result.created.forEach((item) => {
       expect(store[item.interventionId].studentId).toBe(item.studentId)
       expect(store[item.interventionId].studentIds).toEqual([item.studentId])
@@ -144,7 +144,7 @@ describe('1-10. selection, isolation, evidence, availability, and per-student cr
     const second = await createFor(universityGroup, [member.studentId])
     expect(first.createdCount).toBe(1)
     expect(second.createdCount).toBe(0)
-    expect(JSON.parse(storage.getItem('aurora_faculty_interventions'))).toHaveProperty(first.created[0].interventionId)
+    expect(JSON.parse(storage.getItem('EduX_faculty_interventions'))).toHaveProperty(first.created[0].interventionId)
   })
 })
 
@@ -292,7 +292,7 @@ describe('21-25. effectiveness, privacy, and regressions', () => {
       practiceConfig: { count: 1, difficulty: 'Mixed', pyqPreference: 'Yes', selectionLevel: 'subject' },
     })
     expect(result.intervention).toMatchObject({ source: 'Student 360', status: 'Recommended', studentId: 'fs_jee_a_03' })
-    const store = JSON.parse(storage.getItem('aurora_faculty_interventions'))
+    const store = JSON.parse(storage.getItem('EduX_faculty_interventions'))
     expect(store[result.intervention.id].s360Group).toBeTruthy()
   })
 
@@ -300,7 +300,7 @@ describe('21-25. effectiveness, privacy, and regressions', () => {
     const member = jeeGroup.students[0]
     const result = await createFor(jeeGroup, [member.studentId])
     const interventionId = result.created[0].interventionId
-    storage.setItem('aurora_student_exam_attempts', JSON.stringify([
+    storage.setItem('EduX_student_exam_attempts', JSON.stringify([
       canonicalAttempt({
         id: 'stored-post-exam', studentId: member.studentId, interventionId,
         domain: 'Competitive', examFamily: 'JEE', subject: jeeGroup.subject, chapter: jeeGroup.chapter,

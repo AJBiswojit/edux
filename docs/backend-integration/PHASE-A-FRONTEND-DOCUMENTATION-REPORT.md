@@ -55,7 +55,7 @@ Also noted: `POST /auth/refresh` is expected by the axios layer for a real backe
 
 ## Persistence Mechanisms
 
-- **localStorage (10 keys):** `aurora_access_token`, `aurora_refresh_token`, `aurora_user`, `aurora_theme`, `aurora_reduced_motion`, `aurora_student_exam_attempts`, `aurora_faculty_interventions`, `aurora_intervention_practice_attempts`, `aurora_intervention_retests`, `aurora_faculty_paper_shares`, `aurora_registered_students` (11 including registry).
+- **localStorage (10 keys):** `EduX_access_token`, `EduX_refresh_token`, `EduX_user`, `EduX_theme`, `EduX_reduced_motion`, `EduX_student_exam_attempts`, `EduX_faculty_interventions`, `EduX_intervention_practice_attempts`, `EduX_intervention_retests`, `EduX_faculty_paper_shares`, `EduX_registered_students` (11 including registry).
 - **In-memory adapter state:** generated/duplicated/regenerated/archived papers, faculty reports CRUD, question-studio sessions/questions, memoized faculty/admin snapshots, fingerprint cache.
 - **Deterministic datasets:** 19 files in `src/datasets/**` + intelligence dataset modules — immutable reference/demo data.
 - **Client cache:** TanStack Query (staleTime 60 s).

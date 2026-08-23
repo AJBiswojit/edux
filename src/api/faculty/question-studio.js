@@ -3,7 +3,7 @@
  * Source Library · Source Analysis · Generation · Review · Approval ·
  * Sessions · simulated upload. Approved questions sync into the EXISTING
  * Question Bank / competitive foundation. All persistence is prototype
- * localStorage (`aurora_question_studio_sessions`).
+ * localStorage (`EduX_question_studio_sessions`).
  */
 import { defineRoute } from '../core/router'
 import { questionStudioSources } from '@/intelligence/faculty/datasets/question-studio-sources'
@@ -12,7 +12,7 @@ import {
   syncStudioQuestionsToBank,
 } from '@/intelligence/faculty'
 
-const SESSION_KEY = 'aurora_question_studio_sessions'
+const SESSION_KEY = 'EduX_question_studio_sessions'
 
 function readSessions() {
   try {

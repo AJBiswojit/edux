@@ -65,9 +65,9 @@ export function AuthProvider({ children }) {
 
     /* Phase 28 — a verified registration-draft user can sign back in:
        fall back to the in-browser registry (same storage as registration). */
-    if (!match || password !== 'aurora123') {
+    if (!match || password !== 'Edux12345') {
       let registry = []
-      try { registry = JSON.parse(window.localStorage.getItem('aurora_registered_students') || '[]') } catch { registry = [] }
+      try { registry = JSON.parse(window.localStorage.getItem('EduX_registered_students') || '[]') } catch { registry = [] }
       const draft = registry.find((r) => r.email?.toLowerCase() === normalized && r.verified && (role ? r.role === role : true))
       if (draft && password === draft.password) {
         const sessionUser = {
@@ -91,7 +91,7 @@ export function AuthProvider({ children }) {
       }
       throw new Error(
         match
-          ? 'Incorrect password. Hint: use the demo password “aurora123”.'
+          ? 'Incorrect password. Hint: use the demo password “Edux12345”.'
           : 'No account found for this email. Try one of the demo accounts.'
       )
     }

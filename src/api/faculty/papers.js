@@ -3,7 +3,7 @@
  *
  * Create / regenerate / duplicate / archive / delete / share. Papers mutate
  * the deterministic paper dataset in memory; shares persist to the prototype
- * localStorage registry (`aurora_faculty_paper_shares`).
+ * localStorage registry (`EduX_faculty_paper_shares`).
  * Endpoint contracts unchanged.
  */
 import { defineRoute } from '../core/router'
@@ -126,7 +126,7 @@ defineRoute('post', '/faculty/paper-generator/papers/:id/share', ({ params, body
     throw err
   }
   let shares = []
-  try { shares = JSON.parse(window.localStorage.getItem('aurora_faculty_paper_shares') || '[]') } catch { shares = [] }
+  try { shares = JSON.parse(window.localStorage.getItem('EduX_faculty_paper_shares') || '[]') } catch { shares = [] }
   const share = {
     id: `share_${Date.now()}`,
     paperId: paper.id,
@@ -138,7 +138,7 @@ defineRoute('post', '/faculty/paper-generator/papers/:id/share', ({ params, body
     status: 'Sent (prototype)',
   }
   shares.unshift(share)
-  try { window.localStorage.setItem('aurora_faculty_paper_shares', JSON.stringify(shares)) } catch { /* storage unavailable */ }
+  try { window.localStorage.setItem('EduX_faculty_paper_shares', JSON.stringify(shares)) } catch { /* storage unavailable */ }
   return { ok: true, share }
 })
 /* Phase 3 — retired the unread GET /faculty/paper-generator/shares list (the

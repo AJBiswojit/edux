@@ -2,18 +2,18 @@
  * Intervention prototype persistence (localStorage).
  *
  * Storage keys (UNCHANGED — Phase 7 is an architectural relocation):
- *   aurora_faculty_interventions          → groupId → intervention record
- *   aurora_intervention_practice_attempts → practice / re-test attempts
- *   aurora_intervention_retests           → re-test entities
+ *   EduX_faculty_interventions          → groupId → intervention record
+ *   EduX_intervention_practice_attempts → practice / re-test attempts
+ *   EduX_intervention_retests           → re-test entities
  *
  * CURRENT: per-browser prototype persistence (one store, one lifecycle).
  * FUTURE : backend-owned intervention persistence — this module is the single
  *          seam that has to change.
  */
 
-export const STATUS_KEY = 'aurora_faculty_interventions'
-export const PRACTICE_KEY = 'aurora_intervention_practice_attempts'
-export const RETEST_KEY = 'aurora_intervention_retests'
+export const STATUS_KEY = 'EduX_faculty_interventions'
+export const PRACTICE_KEY = 'EduX_intervention_practice_attempts'
+export const RETEST_KEY = 'EduX_intervention_retests'
 
 function readJSON(key, fallback) {
   try {

@@ -15,7 +15,7 @@ import { useChatAssistant } from '@/hooks/use-chat-assistant'
 
 /* Frontend-only persistence: new exchanges survive full reloads via
    localStorage (the deterministic dataset itself resets with the page). */
-const HISTORY_KEY = 'aurora_faculty_assistant_history'
+const HISTORY_KEY = 'EduX_faculty_assistant_history'
 const loadHistory = () => {
   try {
     return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')

@@ -37,9 +37,9 @@
 
 ### 1.1 Prototype Authentication Overview
 In the current frontend codebase, authentication operates through an in-browser deterministic prototype system managed by `src/contexts/auth-context.jsx`:
-- **Demo Sign-In:** Users can authenticate immediately by selecting any persona from `DEMO_USERS` (`@/datasets/platform/users.js`) and supplying the demo password `aurora123`.
+- **Demo Sign-In:** Users can authenticate immediately by selecting any persona from `DEMO_USERS` (`@/datasets/platform/users.js`) and supplying the demo password `Edux12345`.
 - **Student Self-Registration Flow (`src/api/auth/session.js`):**
-  - `POST /auth/register`: Accepts registration details, validates email/phone uniqueness against `DEMO_USERS` and local registry, and writes unverified draft student records to `localStorage.getItem('aurora_registered_students')`.
+  - `POST /auth/register`: Accepts registration details, validates email/phone uniqueness against `DEMO_USERS` and local registry, and writes unverified draft student records to `localStorage.getItem('EduX_registered_students')`.
   - `POST /auth/register/verify`: Validates OTP against hardcoded demo code `482193` and marks student draft as `verified: true`.
   - Login integration: Once verified, the student can log in via `AuthContext.login()` using the same credentials.
 - **Password Reset Flow (`src/api/auth/session.js`):**
@@ -53,8 +53,8 @@ In the current frontend codebase, authentication operates through an in-browser 
 ### 1.2 Dual-Mode API Client (`src/api/client.js` & `src/api/axios.js`)
 - While `APP_CONFIG.USE_MOCK_API === true`, calls dispatch to the in-browser router (`src/api/core/router.js`) with simulated 380–780ms latency.
 - When `APP_CONFIG.USE_MOCK_API === false`, requests dispatch over HTTP using an Axios instance configured with:
-  - **Request Interceptor:** Automatically attaches `Authorization: Bearer <token>` from `localStorage.getItem(APP_CONFIG.TOKEN_KEY)` (`aurora_access_token`).
-  - **Response Interceptor:** Automatically traps `401 Unauthorized` responses, queues in-flight requests, calls `POST /auth/refresh` with `{ refreshToken }` from `localStorage.getItem(APP_CONFIG.REFRESH_TOKEN_KEY)` (`aurora_refresh_token`), updates stored tokens, and retries the failed requests.
+  - **Request Interceptor:** Automatically attaches `Authorization: Bearer <token>` from `localStorage.getItem(APP_CONFIG.TOKEN_KEY)` (`EduX_access_token`).
+  - **Response Interceptor:** Automatically traps `401 Unauthorized` responses, queues in-flight requests, calls `POST /auth/refresh` with `{ refreshToken }` from `localStorage.getItem(APP_CONFIG.REFRESH_TOKEN_KEY)` (`EduX_refresh_token`), updates stored tokens, and retries the failed requests.
 
 ---
 
@@ -62,7 +62,7 @@ In the current frontend codebase, authentication operates through an in-browser 
 
 ```
 ┌────────────────┐     Credentials      ┌───────────────────┐     Reads DEMO_USERS /      ┌─────────────────────────┐
-│  Login Dialog  │ ───────────────────> │  auth-context.jsx │ ──────────────────────────> │  aurora_registered_     │
+│  Login Dialog  │ ───────────────────> │  auth-context.jsx │ ──────────────────────────> │  EduX_registered_     │
 │  (/auth/login) │                      │      (login)      │     localStorage registry   │  students (localStorage)│
 └────────────────┘                      └───────────────────┘                             └─────────────────────────┘
                                                   │
@@ -70,9 +70,9 @@ In the current frontend codebase, authentication operates through an in-browser 
                                                   ▼
                                         ┌─────────────────────────┐
                                         │  Browser LocalStorage:  │
-                                        │  - aurora_access_token  │
-                                        │  - aurora_refresh_token │
-                                        │  - aurora_user          │
+                                        │  - EduX_access_token  │
+                                        │  - EduX_refresh_token │
+                                        │  - EduX_user          │
                                         └─────────────────────────┘
                                                   │
                                                   │ State: status='authenticated'
@@ -98,10 +98,10 @@ The following storage keys govern authentication state in the browser:
 
 | Storage Key Constant | Actual Literal Key | Stored Data | Writer | Reader | Security Classification |
 |---|---|---|---|---|---|
-| `APP_CONFIG.TOKEN_KEY` | `'aurora_access_token'` | Bearer access token string | `AuthContext.login`, `axios.js` refresh | `src/api/axios.js` request interceptor | **Confidential** |
-| `APP_CONFIG.REFRESH_TOKEN_KEY` | `'aurora_refresh_token'` | Refresh token string | `AuthContext.login`, `axios.js` refresh | `src/api/axios.js` response 401 interceptor | **Sensitive** |
-| `APP_CONFIG.USER_KEY` | `'aurora_user'` | User JSON identity object (`id`, `name`, `email`, `role`, `department`, `institution`) | `AuthContext.login`, `updateUser` | `AuthContext` (page load / cross-tab sync) | **Internal** |
-| Literal | `'aurora_registered_students'` | Array of registered student user objects | `POST /auth/register`, `POST /auth/register/verify` | `AuthContext.login`, `POST /auth/register` | **Sensitive** |
+| `APP_CONFIG.TOKEN_KEY` | `'EduX_access_token'` | Bearer access token string | `AuthContext.login`, `axios.js` refresh | `src/api/axios.js` request interceptor | **Confidential** |
+| `APP_CONFIG.REFRESH_TOKEN_KEY` | `'EduX_refresh_token'` | Refresh token string | `AuthContext.login`, `axios.js` refresh | `src/api/axios.js` response 401 interceptor | **Sensitive** |
+| `APP_CONFIG.USER_KEY` | `'EduX_user'` | User JSON identity object (`id`, `name`, `email`, `role`, `department`, `institution`) | `AuthContext.login`, `updateUser` | `AuthContext` (page load / cross-tab sync) | **Internal** |
+| Literal | `'EduX_registered_students'` | Array of registered student user objects | `POST /auth/register`, `POST /auth/register/verify` | `AuthContext.login`, `POST /auth/register` | **Sensitive** |
 
 ---
 

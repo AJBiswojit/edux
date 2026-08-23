@@ -357,7 +357,7 @@ Behavioral cognitive indicators captured during test delivery:
 
 ## 27. PERSISTENCE REQUIREMENTS
 
-- **Current Prototype:** Persisted in `localStorage` under key `'aurora_student_exam_attempts'` (unshifts latest attempt to head of array).
+- **Current Prototype:** Persisted in `localStorage` under key `'EduX_student_exam_attempts'` (unshifts latest attempt to head of array).
 - **Future Backend Database:**
   - Header record persisted in `exam_attempts` PostgreSQL table.
   - Child question records persisted in `question_attempts` table referencing `exam_attempt_id`.

@@ -12,7 +12,7 @@ import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFo
 import { EmptyState } from '@/components/shared/empty-state'
 import { formatDate } from '@/utils/format'
 
-const LIBRARY_KEY = 'aurora_admin_report_library'
+const LIBRARY_KEY = 'EduX_admin_report_library'
 
 const loadLibrary = () => {
   try { return JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]') } catch { return [] }

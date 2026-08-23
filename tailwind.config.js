@@ -75,7 +75,7 @@ export default {
           '0%, 100%': { transform: 'translateX(0px)' },
           '50%': { transform: 'translateX(10px)' },
         },
-        aurora: {
+        EduX: {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
         },
@@ -126,7 +126,7 @@ export default {
         float: 'float 6s ease-in-out infinite',
         'float-slow': 'float 9s ease-in-out infinite',
         'float-x': 'float-x 7s ease-in-out infinite',
-        aurora: 'aurora 12s ease infinite',
+        EduX: 'EduX 12s ease infinite',
         shimmer: 'shimmer 2.4s linear infinite',
         marquee: 'marquee 36s linear infinite',
         'gradient-x': 'gradient-x 8s ease infinite',

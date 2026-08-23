@@ -78,7 +78,7 @@ function OTPVerify() {
       object; it becomes the session user the same way demo logins do. */
   async function createStudentSession(email) {
     let registry = []
-    try { registry = JSON.parse(window.localStorage.getItem('aurora_registered_students') || '[]') } catch { registry = [] }
+    try { registry = JSON.parse(window.localStorage.getItem('EduX_registered_students') || '[]') } catch { registry = [] }
     const draft = registry.find((r) => r.email?.toLowerCase() === email)
     if (!draft) throw new Error('Registration profile not found — please register again.')
     await login({

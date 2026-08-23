@@ -12,7 +12,7 @@
 - **Scope of Security Audit:** All 123 routes, 145 API endpoints, 16 localStorage persistence keys, 4 primary roles, and 3 academic tracks.
 
 ## 2. Authentication Audit
-- **Current Mechanism:** In-browser deterministic prototype managed by `AuthContext.jsx` with demo persona logins (`aurora123`) and student registration registry (`aurora_registered_students`).
+- **Current Mechanism:** In-browser deterministic prototype managed by `AuthContext.jsx` with demo persona logins (`Edux12345`) and student registration registry (`EduX_registered_students`).
 - **Axios Refresh Contract:** `src/api/axios.js` implements request interceptor (`Authorization: Bearer <token>`) and automatic `POST /auth/refresh` on HTTP 401.
 
 ## 3. Current Roles

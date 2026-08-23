@@ -174,7 +174,7 @@ UI
 - **Purpose:** question intelligence, PYQ intelligence, paper generator (studio), paper library, assessment analytics, AI question studio.
 - **Entry points:** `/faculty/question-intelligence` (+ legacy redirects `question-bank`, `paper-generator`, `pyq-analysis`); tabs via `?tab=`.
 - **Services/API/Datasets/Intelligence:** see domain map §4.12–4.15 of the master doc.
-- **Persistence:** in-memory papers + `aurora_faculty_paper_shares`; question-studio sessions in adapter memory.
+- **Persistence:** in-memory papers + `EduX_faculty_paper_shares`; question-studio sessions in adapter memory.
 
 ### 4.6 Question Intelligence module
 - Covered under Assessment; university bank + competitive foundation + studio approvals; deep-link pre-filters `?subject=&chapter=&family=`.
@@ -188,7 +188,7 @@ UI
 
 ### 4.9 Exam Agent module
 - **Entry point:** `/student/exam-agent`; query deep links `?exam=&attempt=&mode=demo|manual`.
-- **Services:** `services/exam-agent.js`; **API:** 4 endpoints; **Datasets:** 9 papers + seeds; **Intelligence:** exam-agent engine; **Persistence:** `aurora_student_exam_attempts`.
+- **Services:** `services/exam-agent.js`; **API:** 4 endpoints; **Datasets:** 9 papers + seeds; **Intelligence:** exam-agent engine; **Persistence:** `EduX_student_exam_attempts`.
 
 ### 4.10 AI Intelligence module (conversation surfaces)
 - **Purpose:** AI Tutor (`/student/ai-tutor`), AI Copilot (`/student/ai-copilot`, global via layout), MediXO Mentor (`/student/mentor`), Learning Path (`/student/learning-path`), faculty AI Teaching Assistant (`/faculty/ai-assistant`), admin AI Workspace (`/admin/ai-workspace`).
@@ -282,17 +282,17 @@ No backend error contracts are invented here; anything not observable in code is
 | Derived student intelligence | Intelligence engine (derived state, recomputed) | Future backend ownership of durable analytics — **not implemented** |
 | Faculty/admin datasets & derived snapshots | Frontend datasets + engines | Same |
 | Exam papers (Exam Agent) | Frontend dataset (`src/datasets/exams/exam-agent.js`) | 9 papers |
-| ExamAttempts (real) | localStorage (`aurora_student_exam_attempts`) via API adapter | **Future backend ownership — not implemented** |
+| ExamAttempts (real) | localStorage (`EduX_student_exam_attempts`) via API adapter | **Future backend ownership — not implemented** |
 | ExamAttempt seeds (sample history) | Frontend dataset (`attempt-seeds.js`, `mock: true`) | Demo data — must not become real data |
 | Question banks (university + competitive + PYQ + studio) | Frontend datasets | Stable ids are part of the contract |
 | Question-studio sessions/questions | API adapter in-memory store | **Future backend ownership — not implemented** |
 | Generated papers / library | API adapter in-memory (dataset-seeded) | **Future backend ownership — not implemented** |
-| Paper shares | localStorage (`aurora_faculty_paper_shares`) | **Future backend ownership — not implemented** |
-| Interventions / practice / re-tests | localStorage (`aurora_*` intervention keys) via one store | **Future backend ownership — not implemented** |
+| Paper shares | localStorage (`EduX_faculty_paper_shares`) | **Future backend ownership — not implemented** |
+| Interventions / practice / re-tests | localStorage (`EduX_*` intervention keys) via one store | **Future backend ownership — not implemented** |
 | Effectiveness | Derived (computed on read) | Semantics must remain stable |
-| Users / session / tokens | `DEMO_USERS` dataset + localStorage (`aurora_user`, tokens) + registered-students registry | Real auth — **Future backend ownership — not implemented** |
+| Users / session / tokens | `DEMO_USERS` dataset + localStorage (`EduX_user`, tokens) + registered-students registry | Real auth — **Future backend ownership — not implemented** |
 | Platform content (blog/careers/…) | Frontend dataset | |
-| Theme / preferences | localStorage (`aurora_theme`, `aurora_reduced_motion`) + settings endpoints | |
+| Theme / preferences | localStorage (`EduX_theme`, `EduX_reduced_motion`) + settings endpoints | |
 | Query cache | TanStack Query (client state) | Never a source of truth |
 
 ---

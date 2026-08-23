@@ -43,8 +43,8 @@ function Login() {
 
   const fillDemo = () => {
     setValue('email', roleMeta.demoEmail)
-    setValue('password', 'aurora123')
-    toast.info('Demo credentials filled', `Password for all demos: aurora123`)
+    setValue('password', 'Edux12345')
+    toast.info('Demo credentials filled', `Password for all demos: Edux12345`)
   }
 
   const onSubmit = async (values) => {
@@ -186,7 +186,7 @@ function Login() {
               <KeyRound className="h-3.5 w-3.5" /> Try the {roleMeta.label} demo
             </p>
             <p className="mt-1 text-[11px] leading-relaxed text-indigo-600/80 dark:text-indigo-400/80">
-              {roleMeta.demoEmail} · password <code className="rounded bg-white/70 px-1 py-0.5 font-mono dark:bg-slate-900">aurora123</code>
+              {roleMeta.demoEmail} · password <code className="rounded bg-white/70 px-1 py-0.5 font-mono dark:bg-slate-900">Edux12345</code>
             </p>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={fillDemo} className="shrink-0">

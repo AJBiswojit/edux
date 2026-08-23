@@ -28,7 +28,7 @@ export function ThemeProvider({ children }) {
 
   const [reducedMotion, setReducedMotion] = useState(() => {
     try {
-      return window.localStorage.getItem('aurora_reduced_motion') === 'true'
+      return window.localStorage.getItem('EduX_reduced_motion') === 'true'
     } catch {
       return false
     }
@@ -39,7 +39,7 @@ export function ThemeProvider({ children }) {
     if (reducedMotion) root.classList.add('reduced-motion')
     else root.classList.remove('reduced-motion')
     try {
-      window.localStorage.setItem('aurora_reduced_motion', String(reducedMotion))
+      window.localStorage.setItem('EduX_reduced_motion', String(reducedMotion))
     } catch {
       /* noop */
     }

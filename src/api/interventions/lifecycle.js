@@ -59,7 +59,7 @@ export const slug = (v) => String(v ?? '').toLowerCase().replace(/[^a-z0-9]+/g, 
 
 /**
  * Student-360-created interventions are stored in the SAME
- * aurora_faculty_interventions record map. Their override entry carries the
+ * EduX_faculty_interventions record map. Their override entry carries the
  * full synthetic single-student group (`s360Group`) so they flow through the
  * EXISTING lifecycle routes (detail/status/assign/practice/retest/student)
  * unchanged — one intervention system, one status machine.

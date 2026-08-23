@@ -14,7 +14,7 @@ import { Badge, Button } from '@/components/ui'
 import { EXEC_QUICK_PROMPTS, generateExecResponse } from '@/intelligence/admin/ai'
 import { cn } from '@/utils/cn'
 
-const HISTORY_KEY = 'aurora_admin_ai_history'
+const HISTORY_KEY = 'EduX_admin_ai_history'
 
 function MetricChip({ label, value }) {
   return (

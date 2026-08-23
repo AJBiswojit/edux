@@ -45,7 +45,7 @@ defineRoute('post', '/auth/resend-otp', () => ({ ok: true, message: 'OTP re-sent
    Deterministic prototype flow: register -> OTP (482193) -> profile -> session.
    Persistence follows the existing pattern: the AuthContext writes the user
    to localStorage (APP_CONFIG.USER_KEY); the registered identity is stored
-   under the dedicated aurora_registered_students key (prototype registry,
+   under the dedicated EduX_registered_students key (prototype registry,
    NOT a second auth architecture). Duplicate email/phone are validated
    against the demo user directory + the in-browser registry. */
 defineRoute('get', '/auth/registration/options', () => REGISTRATION_OPTIONS)
@@ -61,7 +61,7 @@ defineRoute('post', '/auth/register', ({ body }) => {
   }
 
   let registry = []
-  try { registry = JSON.parse(window.localStorage.getItem('aurora_registered_students') || '[]') } catch { registry = [] }
+  try { registry = JSON.parse(window.localStorage.getItem('EduX_registered_students') || '[]') } catch { registry = [] }
   const dupEmail = registry.find((r) => r.email?.toLowerCase() === email)
   if (dupEmail) {
     const err = new Error(dupEmail.verified ? 'An account already exists for this email — try signing in instead.' : 'This email is already registered — verify the OTP we sent earlier, or use a different email.')
@@ -84,7 +84,7 @@ defineRoute('post', '/auth/register', ({ body }) => {
     createdAt: new Date().toISOString(),
   }
   registry.push(draft)
-  try { window.localStorage.setItem('aurora_registered_students', JSON.stringify(registry)) } catch { /* storage unavailable */ }
+  try { window.localStorage.setItem('EduX_registered_students', JSON.stringify(registry)) } catch { /* storage unavailable */ }
 
   return { ok: true, verificationId: 'otp_demo_4821', demoOtp: '482193', draftId: draft.id }
 })
@@ -96,7 +96,7 @@ defineRoute('post', '/auth/register/verify', ({ body }) => {
   }
   const email = String(body?.email ?? '').toLowerCase().trim()
   let registry = []
-  try { registry = JSON.parse(window.localStorage.getItem('aurora_registered_students') || '[]') } catch { registry = [] }
+  try { registry = JSON.parse(window.localStorage.getItem('EduX_registered_students') || '[]') } catch { registry = [] }
   const draft = registry.find((r) => r.email?.toLowerCase() === email)
   if (!draft) {
     const err = new Error('Registration session not found — please register again.')
@@ -104,7 +104,7 @@ defineRoute('post', '/auth/register/verify', ({ body }) => {
     throw err
   }
   draft.verified = true
-  try { window.localStorage.setItem('aurora_registered_students', JSON.stringify(registry)) } catch { /* storage unavailable */ }
+  try { window.localStorage.setItem('EduX_registered_students', JSON.stringify(registry)) } catch { /* storage unavailable */ }
   return { ok: true, verified: true }
 })
 /* Phase 3 — retired GET /auth/registration/status (unused read view; the

@@ -2,7 +2,7 @@
  * Demo user directory (prototype sign-in accounts).
  *
  * DEMO_USERS are clearly-labelled demo credentials used by the prototype
- * auth flow — password for every demo account: aurora123.
+ * auth flow — password for every demo account: Edux12345.
  * STUDENT_ROSTER / FACULTY_LIST / ADMIN_USERS / DEPARTMENTS are the
  * deterministic institution directory consumed by the intelligence layer.
  *
@@ -14,7 +14,7 @@ export const DEMO_USERS = [
     id: 'u_stu_001',
     role: 'student',
     email: 'aarav.sharma@medixoedux.edu',
-    password: 'aurora123',
+    password: 'Edux12345',
     fullName: 'Aarav Sharma',
     firstName: 'Aarav',
     avatar: null,
@@ -35,7 +35,7 @@ export const DEMO_USERS = [
     id: 'u_fac_001',
     role: 'faculty',
     email: 'meera.krishnan@medixoedux.edu',
-    password: 'aurora123',
+    password: 'Edux12345',
     fullName: 'Dr. Meera Krishnan',
     firstName: 'Meera',
     avatar: null,
@@ -52,7 +52,7 @@ export const DEMO_USERS = [
     id: 'u_fac_002',
     role: 'faculty',
     email: 'vikram.rao@medixoedux.edu',
-    password: 'aurora123',
+    password: 'Edux12345',
     fullName: 'Prof. Vikram Rao',
     firstName: 'Vikram',
     avatar: null,
@@ -66,7 +66,7 @@ export const DEMO_USERS = [
     id: 'u_fac_003',
     role: 'faculty',
     email: 'priya.nair@medixoedux.edu',
-    password: 'aurora123',
+    password: 'Edux12345',
     fullName: 'Dr. Priya Nair',
     firstName: 'Priya',
     avatar: null,
@@ -80,7 +80,7 @@ export const DEMO_USERS = [
     id: 'u_par_001',
     role: 'parent',
     email: 'rajesh.sharma@medixoedux.edu',
-    password: 'aurora123',
+    password: 'Edux12345',
     fullName: 'Rajesh Sharma',
     firstName: 'Rajesh',
     avatar: null,
@@ -95,7 +95,7 @@ export const DEMO_USERS = [
     id: 'u_adm_001',
     role: 'admin',
     email: 'ananya.iyer@medixoedux.edu',
-    password: 'aurora123',
+    password: 'Edux12345',
     fullName: 'Ananya Iyer',
     firstName: 'Ananya',
     avatar: null,

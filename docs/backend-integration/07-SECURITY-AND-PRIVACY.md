@@ -196,7 +196,7 @@ Every data entity and intelligence output is classified into one of 5 sensitivit
 
 ## 18. ROLE ESCALATION RISKS & CLIENT MANIPULATION
 
-- **Risk:** Modifying `localStorage.getItem('aurora_user')` (`role='admin'`) unlocks frontend routes.
+- **Risk:** Modifying `localStorage.getItem('EduX_user')` (`role='admin'`) unlocks frontend routes.
 - **Backend Countermeasure:** Client-supplied role claims are completely ignored. The backend validates role strictly from cryptographically signed JWT claims signed by server private key.
 
 ---
@@ -232,7 +232,7 @@ Backend Pydantic validation schemas must enforce strict validation rules:
 
 ## 22. SECRETS & ENVIRONMENT CONFIGURATION AUDIT
 
-- **Audit Finding:** The prototype codebase contains mock passwords (`"aurora123"`), demo OTPs (`"482193"`, `"731205"`), and API base URLs in `src/config/index.js`.
+- **Audit Finding:** The prototype codebase contains mock passwords (`"Edux12345"`), demo OTPs (`"482193"`, `"731205"`), and API base URLs in `src/config/index.js`.
 - **Backend Security Rule:** Production secrets (JWT private keys, database passwords, S3 credentials, SMS gateway keys) MUST be loaded exclusively via environment variables (`.env` / AWS Secrets Manager) and never committed to source control.
 
 ---
@@ -271,7 +271,7 @@ All security-sensitive operations MUST be written to an immutable append-only `a
 
 | Gap ID | Area | Current Prototype State | Vulnerability Risk | Severity | Backend Mitigation Requirement |
 |---|---|---|---|---|---|
-| `GAP-01` | Authentication | Hardcoded password (`aurora123`) & OTPs (`482193`, `731205`) | Trivial unauthorized sign-in | **Critical** | Implement bcrypt password hashing & live SMS/Email TOTP |
+| `GAP-01` | Authentication | Hardcoded password (`Edux12345`) & OTPs (`482193`, `731205`) | Trivial unauthorized sign-in | **Critical** | Implement bcrypt password hashing & live SMS/Email TOTP |
 | `GAP-02` | Authorization | Client-side role checking (`ProtectedRoute.jsx`) | Role escalation via localStorage tampering | **Critical** | Server-side JWT signature & RBAC route dependencies |
 | `GAP-03` | IDOR | Client supplies arbitrary `studentId` in query params | Cross-student data exposure | **Critical** | Server-side session ownership enforcement |
 | `GAP-04` | Persistence | Exam attempts stored in browser `localStorage` | Client tampering with scorecards | **Critical** | Server-side evaluation & PostgreSQL ACID storage |

@@ -689,7 +689,7 @@ export function ShareHistoryList({ paperId }) {
   const [shares, setShares] = useState([])
   useEffect(() => {
     try {
-      const all = JSON.parse(window.localStorage.getItem('aurora_faculty_paper_shares') || '[]')
+      const all = JSON.parse(window.localStorage.getItem('EduX_faculty_paper_shares') || '[]')
       setShares(all.filter((s) => s.paperId === paperId).slice(0, 4))
     } catch { setShares([]) }
   }, [paperId])

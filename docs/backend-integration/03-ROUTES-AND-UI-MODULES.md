@@ -43,7 +43,7 @@ Legend used below:
 | `/auth/register` | `auth/Register` | 2-step student registration (university + competitive context) | `useRegistrationOptions`, `useRegister`, `useRegisterVerifyOtp` | `GET /auth/registration/options`, `POST /auth/register`, `POST /auth/register/verify` |
 | `/auth/profile-setup` | `auth/ProfileSetup` | Profile completion placeholder (auth flow runs through AuthContext + OTP mutations; `useProfileSetup` retired in Phase 3) | AuthContext | — |
 
-> **Login note (source of truth):** there is **no `POST /auth/login` endpoint** in the prototype adapter. Login validates client-side against `DEMO_USERS` (`src/datasets/platform/users.js`, password `aurora123`) and the `aurora_registered_students` localStorage registry. The axios layer *does* already implement `POST /auth/refresh` expectations for a real backend (`src/api/axios.js`). A future backend must add real login/logout — currently **NOT CURRENTLY DEFINED**.
+> **Login note (source of truth):** there is **no `POST /auth/login` endpoint** in the prototype adapter. Login validates client-side against `DEMO_USERS` (`src/datasets/platform/users.js`, password `Edux12345`) and the `EduX_registered_students` localStorage registry. The axios layer *does* already implement `POST /auth/refresh` expectations for a real backend (`src/api/axios.js`). A future backend must add real login/logout — currently **NOT CURRENTLY DEFINED**.
 
 ### 1.3 Student portal (25 = index + 24) — `/student` + `ProtectedRoute[student]` + `AppLayout`
 
@@ -402,7 +402,7 @@ No other query parameters exist in the app (verified by grep over `searchParams.
 ### 9.1 Student Exam Journey
 Login (`/auth/login` → AuthContext session)
 → **Exam Agent** `/student/exam-agent` (UI: `ExamAgent` page + `components/exam-workspace/exam-agent/*`; service: `services/exam-agent.js`; API: `GET /student/exam-agent/exams`; data: `datasets/exams/exam-agent.js`)
-→ **Exam Attempt** (live exam; `buildCanonicalExamAttempt` in page; API: `POST /student/exam-agent/attempts`; data: canonical ExamAttempt → localStorage `aurora_student_exam_attempts`)
+→ **Exam Attempt** (live exam; `buildCanonicalExamAttempt` in page; API: `POST /student/exam-agent/attempts`; data: canonical ExamAttempt → localStorage `EduX_student_exam_attempts`)
 → **Exam Analysis** `/student/exam-analysis` (service: `useExamAnalysisOptions/ById`; API: `GET /student/exam-analysis/:id`; engine: `buildAttemptAnalysisVariant`)
 → **Academic DNA** (API: `GET /intelligence/summary` with attempt evidence; engines: `buildExamEvidence` → `computeAcademicDna`; data: evidence pools with trends).
 
@@ -428,7 +428,7 @@ Question Intelligence (`GET /faculty/question-bank`; datasets: bank + competitiv
 → PYQ (`GET /faculty/pyq-analysis*`; `UPYQ-*` bank links)
 → Generator (`POST /faculty/paper-generator/papers`; deterministic selection; insufficiency → Available vs Required + Broaden)
 → Paper Library (`GET /faculty/paper-generator`; edit-from-library; print/preview)
-→ Share (`POST …/papers/:id/share`; localStorage `aurora_faculty_paper_shares`).
+→ Share (`POST …/papers/:id/share`; localStorage `EduX_faculty_paper_shares`).
 
 ## 10. BACKEND IMPORTANCE (route classification)
 

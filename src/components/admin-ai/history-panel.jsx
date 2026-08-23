@@ -9,7 +9,7 @@ import { MessageSquare, Save, Trash2 } from 'lucide-react'
 import { Badge, Button, Card } from '@/components/ui'
 import {  } from '@/utils/format'
 
-const INSIGHTS_KEY = 'aurora_admin_ai_insights'
+const INSIGHTS_KEY = 'EduX_admin_ai_insights'
 
 function HistoryPanel({ history, onOpenConversation, onClear }) {
   const [confirmClear, setConfirmClear] = useState(false)

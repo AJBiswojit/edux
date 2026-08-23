@@ -8,7 +8,7 @@
 import { defineRoute } from '../core/router'
 import { EXAM_AGENT_EXAMS } from '@/datasets/exams/exam-agent.js'
 
-const STORAGE_KEY = 'aurora_student_exam_attempts'
+const STORAGE_KEY = 'EduX_student_exam_attempts'
 
 function readAttempts() {
   try {

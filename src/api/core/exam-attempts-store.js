@@ -13,7 +13,7 @@
  */
 import { examAttemptSeeds } from '@/datasets/exams/attempt-seeds.js'
 
-export const ATTEMPTS_STORAGE_KEY = 'aurora_student_exam_attempts'
+export const ATTEMPTS_STORAGE_KEY = 'EduX_student_exam_attempts'
 
 export function readStoredAttempts() {
   try {
