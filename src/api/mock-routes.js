@@ -4,7 +4,7 @@
  * file directly, so switching to a real backend requires zero code changes.
  */
 import { mockRoute, setMockLatency } from './mock-server'
-import { MOCK_USERS, STUDENT_ROSTER, FACULTY_LIST, ADMIN_USERS, DEPARTMENTS } from '@/mock-data/users'
+import { MOCK_USERS, STUDENT_ROSTER, ADMIN_USERS, DEPARTMENTS } from '@/mock-data/users'
 import { REGISTRATION_OPTIONS } from '@/mock-data/registration'
 import {
   studentProfile, studentDashboard, studentAttendance, studentAssignments,
@@ -237,9 +237,10 @@ mockRoute('post', '/ai/generate-exam', ({ body }) => ({ exam: examGeneratorSampl
 mockRoute('get', '/ai/stats', () => aiConversationStats)
 
 /* ---------------- Shared lookup ---------------- */
-mockRoute('get', '/directory/faculty', () => ({ items: FACULTY_LIST }))
-mockRoute('get', '/directory/students', () => ({ items: STUDENT_ROSTER }))
-mockRoute('get', '/directory/users', () => ({ items: ADMIN_USERS }))
+/* Phase 2 cleanup: the legacy `/directory/*` endpoints had no service, hook,
+   page or component consumer (they predate the services layer). The datasets
+   they served (STUDENT_ROSTER, FACULTY_LIST, ADMIN_USERS) remain authoritative
+   via direct imports in the intelligence datasets. */
 
 /* ---------------- AI reply generators ---------------- */
 
