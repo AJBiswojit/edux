@@ -297,6 +297,76 @@ function buildWhyDetected(first, fps) {
   return parts.join(', ') + '.'
 }
 
+/**
+ * Why this SINGLE-student issue exists — deterministic template grounded only
+ * in the fingerprint's own numbers (no psychological claims, no inference
+ * beyond observable status/trend/time/skip facts).
+ */
+export function buildIndividualWhyDetected(f = {}) {
+  const attempts = f.persistence ?? f.evidence?.attempts ?? 1
+  const questions = f.questions ?? f.evidence?.questions ?? 0
+  const incorrect = f.incorrect ?? f.evidence?.incorrect ?? 0
+  const skipped = f.skipped ?? f.evidence?.skipped ?? 0
+  const accuracy = f.accuracy ?? f.evidence?.accuracy ?? null
+  const avgTime = f.avgTime ?? f.evidence?.avgTime ?? null
+  const parts = []
+  if (f.status === 'persistent') {
+    parts.push(`Performance remained below the configured threshold across ${attempts} attempt${attempts === 1 ? '' : 's'} with ${incorrect} incorrect response${incorrect === 1 ? '' : 's'}`)
+  } else if (f.trend === 'declining') {
+    const first = (f.series ?? []).find((s) => s?.accuracy != null)?.accuracy
+    parts.push(first != null && accuracy != null
+      ? `Accuracy declined from ${first}% to ${accuracy}% across ${attempts} attempt${attempts === 1 ? '' : 's'}`
+      : `Accuracy declined across ${attempts} attempt${attempts === 1 ? '' : 's'} to ${accuracy ?? '—'}%`)
+  } else if (accuracy != null && accuracy < 55) {
+    parts.push(`Accuracy of ${accuracy}% across ${questions} question${questions === 1 ? '' : 's'} (${incorrect} incorrect) is below the 55% threshold`)
+  } else {
+    parts.push(`${incorrect} of ${questions} question${questions === 1 ? '' : 's'} were answered incorrectly (${accuracy ?? '—'}% accuracy)`)
+  }
+  if (f.highTime && avgTime != null) parts.push(`average time ${avgTime}s exceeds the 100s threshold`)
+  if ((f.skipRate ?? 0) >= 15 && questions > 0) parts.push(`${skipped} of ${questions} question${questions === 1 ? '' : 's'} were skipped`)
+  return `${parts.join(', ')}.`
+}
+
+/**
+ * Phase 5 hardening — canonical view of an INDIVIDUAL issue: a fingerprint
+ * that did not join any ≥2-student group. Reuses the SAME fingerprint fields,
+ * issue types, severity and priority rules (derivePriority with count 1) —
+ * this is a presentation view, NOT a second classifier.
+ */
+export function buildIndividualIssue(fingerprint = {}) {
+  const persistent = fingerprint.status === 'persistent'
+  const declining = fingerprint.trend === 'declining'
+  return {
+    studentId: fingerprint.studentId,
+    roll: fingerprint.roll,
+    name: fingerprint.name,
+    batchId: fingerprint.batchId,
+    domain: fingerprint.domain,
+    examFamily: fingerprint.examFamily ?? null,
+    subject: fingerprint.subject,
+    chapter: fingerprint.chapter,
+    issueType: fingerprint.issueType,
+    severity: fingerprint.severity,
+    priority: derivePriority({ severity: fingerprint.severity, count: 1, persistent, declining }),
+    accuracy: fingerprint.accuracy ?? null,
+    avgTime: fingerprint.avgTime ?? null,
+    trend: fingerprint.trend ?? null,
+    status: fingerprint.status ?? null,
+    persistence: fingerprint.persistence ?? fingerprint.evidence?.attempts ?? 1,
+    incorrect: fingerprint.incorrect ?? fingerprint.evidence?.incorrect ?? 0,
+    skipped: fingerprint.skipped ?? fingerprint.evidence?.skipped ?? 0,
+    questions: fingerprint.questions ?? fingerprint.evidence?.questions ?? 0,
+    skipRate: fingerprint.skipRate ?? null,
+    highTime: !!fingerprint.highTime,
+    evidence: fingerprint.evidence ?? null,
+    lastExam: fingerprint.lastExam ?? null,
+    whyDetected: buildIndividualWhyDetected(fingerprint),
+    evidenceQuestionCount: fingerprint.evidence?.questions
+      ?? (fingerprint.questions ?? 0),
+    grouped: false,
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Recommendations + priority                                         */
 /* ------------------------------------------------------------------ */
@@ -350,4 +420,4 @@ export function computeInterventions(groups = [], statusOverrides = {}) {
   })
 }
 
-export default { computeStudentIssueFingerprints, classifyIssueType, deriveIssueSeverity, similarityBetween, groupSimilarIssues, buildRecommendation, derivePriority, computeInterventions, SIMILARITY_WEIGHTS }
+export default { computeStudentIssueFingerprints, classifyIssueType, deriveIssueSeverity, similarityBetween, groupSimilarIssues, buildIndividualIssue, buildIndividualWhyDetected, buildRecommendation, derivePriority, computeInterventions, SIMILARITY_WEIGHTS }

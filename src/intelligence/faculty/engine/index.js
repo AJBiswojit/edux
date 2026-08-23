@@ -47,8 +47,8 @@ export {
 } from './student-360.js'
 export {
   computeStudentIssueFingerprints, classifyIssueType, deriveIssueSeverity,
-  similarityBetween, groupSimilarIssues, buildRecommendation,
-  derivePriority, computeInterventions, SIMILARITY_WEIGHTS,
+  similarityBetween, groupSimilarIssues, buildIndividualIssue, buildIndividualWhyDetected,
+  buildRecommendation, derivePriority, computeInterventions, SIMILARITY_WEIGHTS,
 } from './similar-issues.js'
 export {
   INTERVENTION_STATUSES, TRANSITIONS, canTransition, practiceTypeFor,

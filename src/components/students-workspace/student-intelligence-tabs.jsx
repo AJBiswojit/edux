@@ -4,9 +4,19 @@
  * (topics) · Question Analysis (filters + detail). Shared Breadcrumb helper.
  * Fed by the 360 bundle; topic/chapter drilldown uses the ground-level
  * question-intelligence helpers (canonical attempt rows — no second engine).
+ *
+ * Phase 5 hardening:
+ *   · Subject cards SUMMARIZE chapters (top concern + counts) instead of
+ *     repeating every chapter's full metrics.
+ *   · Chapter Intelligence is actionable: every weak/actionable chapter row
+ *     shows the DERIVED s360 chapter metrics (accuracy · attempts · correct/
+ *     incorrect/skipped · avg time · trend · evidence count · priority) with
+ *     [View Questions] (shared evidence dialog) and [Suggested Intervention].
+ *     No Similar-Issues logic is duplicated — issues come from the derived
+ *     fingerprint/chapter data only.
  */
 import { useMemo, useState } from 'react'
-import { ArrowLeft, ChevronRight, FileText, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, FileText, Target, X } from 'lucide-react'
 import { Badge, Button, Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import {
   computeSubjectDiagnostics,
@@ -14,12 +24,33 @@ import {
   generateInterventionRecommendation,
 } from '@/intelligence/faculty/engine/ground-level-intelligence'
 import { QUESTION_OPTION_LABELS } from '@/constants/ui'
-import { EvidenceQuestionCard, InterventionRecommendationCard, QuestionDetailDialog } from './student-evidence'
+import {
+  EvidenceQuestionCard, EvidenceQuestionsDialog,
+  SuggestedInterventionDialog, QuestionDetailDialog,
+} from './student-evidence'
 
 const LETTERS = QUESTION_OPTION_LABELS
+const TREND_STYLE = { improving: 'success', declining: 'danger', stable: 'secondary', new: 'info' }
 const matchesContext = (item, context) => context === 'University'
   ? item.examMode === 'University'
   : item.examMode === 'Competitive' && item.examFamily === context
+
+/** Canonical question rows for one subject+chapter inside ONE domain. */
+function evidenceRowsFor(s360, domain, subject, chapter) {
+  return (s360?.question?.rows ?? []).filter((r) =>
+    r.subject === subject && r.chapter === chapter && matchesContext(r, domain))
+}
+
+/** A chapter is actionable when its DERIVED metrics flag it (weak accuracy,
+ *  declining/persistent trend, or High/Medium priority from the engine). */
+export function chapterIsActionable(chapter) {
+  if (!chapter) return false
+  return (chapter.accuracy ?? 100) < 70
+    || chapter.trend === 'declining'
+    || chapter.status === 'persistent'
+    || chapter.status === 'weak'
+    || chapter.priority === 'High'
+}
 
 function Breadcrumb({ items, onNavigate }) {
   return (
@@ -62,48 +93,45 @@ function SubjectIntelligencePanel({ s360, domain, onSelectSubject }) {
   return (
     <Card className="p-5">
       <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Subject Intelligence — {domain}</h3>
-      <p className="mt-0.5 text-xs text-slate-400">Which subject is causing the problem? Click to drill into chapters.</p>
+      <p className="mt-0.5 text-xs text-slate-400">Which subject is causing the problem? Each card summarizes its chapters — open Chapter Intelligence for the full breakdown.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {subjects.map((s) => (
-          <button key={s.subject} onClick={() => onSelectSubject(s.subject)}
-            className="w-full rounded-2xl border border-slate-200/70 p-4 text-left transition-all hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:hover:border-indigo-500/40">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[13px] font-bold text-slate-900 dark:text-white">{s.subject}</p>
-              <Badge variant={s.accuracy >= 75 ? 'success' : s.accuracy >= 60 ? 'warning' : 'danger'} size="sm">
-                {s.accuracy >= 75 ? 'Strong' : s.accuracy >= 60 ? 'Developing' : 'Needs Attention'}
-              </Badge>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div><p className="text-[15px] font-bold text-slate-900 dark:text-white">{s.accuracy}%</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Accuracy</p></div>
-              <div><p className="text-[15px] font-bold text-slate-900 dark:text-white">{s.attemptRate}%</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Attempt</p></div>
-              <div><p className="text-[15px] font-bold text-slate-900 dark:text-white">{s.avgTime}s</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Avg time</p></div>
-            </div>
-            {/* Diagnostic info */}
-            {s.diagnostics?.weakChapters?.length > 0 && (
-              <div className="mt-3 border-t border-slate-100 pt-2.5 dark:border-slate-700">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Weak Chapters</p>
-                <div className="mt-1 space-y-0.5">
-                  {s.diagnostics.weakChapters.map((c) => (
-                    <p key={c.chapter} className="text-[11px] text-slate-600 dark:text-slate-300">{c.chapter} — <span className="font-bold text-rose-500">{c.accuracy}%</span></p>
-                  ))}
+        {subjects.map((s) => {
+          const weak = s.diagnostics?.weakChapters ?? []
+          const topConcern = weak[0] ?? s.diagnostics?.mostConcerning ?? null
+          return (
+            <button key={s.subject} onClick={() => onSelectSubject(s.subject)}
+              className="w-full rounded-2xl border border-slate-200/70 p-4 text-left transition-all hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:hover:border-indigo-500/40">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13px] font-bold text-slate-900 dark:text-white">{s.subject}</p>
+                <Badge variant={s.accuracy >= 75 ? 'success' : s.accuracy >= 60 ? 'warning' : 'danger'} size="sm">
+                  {s.accuracy >= 75 ? 'Strong' : s.accuracy >= 60 ? 'Developing' : 'Needs Attention'}
+                </Badge>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div><p className="text-[15px] font-bold text-slate-900 dark:text-white">{s.accuracy}%</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Accuracy</p></div>
+                <div><p className="text-[15px] font-bold text-slate-900 dark:text-white">{s.attemptRate}%</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Attempt</p></div>
+                <div><p className="text-[15px] font-bold text-slate-900 dark:text-white">{s.avgTime}s</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Avg time</p></div>
+              </div>
+              {/* summary — top concern + strongest only (no full chapter metrics here) */}
+              {topConcern && (
+                <div className="mt-3 border-t border-slate-100 pt-2.5 dark:border-slate-700">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Top concern</p>
+                  <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">
+                    {topConcern.chapter} — <span className="font-bold text-rose-500">{topConcern.accuracy}%</span>
+                    {weak.length > 1 && <span className="text-slate-400"> · +{weak.length - 1} more weak chapter{weak.length > 2 ? 's' : ''}</span>}
+                  </p>
                 </div>
-              </div>
-            )}
-            {s.diagnostics?.strongChapters?.length > 0 && (
-              <div className="mt-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Strongest</p>
-                <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">{s.diagnostics.strongChapters[0].chapter} — <span className="font-bold text-emerald-600">{s.diagnostics.strongChapters[0].accuracy}%</span></p>
-              </div>
-            )}
-            {s.diagnostics?.mostConcerning && (
-              <div className="mt-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Most Concerning</p>
-                <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">{s.diagnostics.mostConcerning.chapter}</p>
-              </div>
-            )}
-            <p className="mt-3 text-[10.5px] font-bold text-indigo-600 dark:text-indigo-400">View Chapter Intelligence →</p>
-          </button>
-        ))}
+              )}
+              {s.diagnostics?.strongChapters?.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Strongest</p>
+                  <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-300">{s.diagnostics.strongChapters[0].chapter} — <span className="font-bold text-emerald-600">{s.diagnostics.strongChapters[0].accuracy}%</span></p>
+                </div>
+              )}
+              <p className="mt-3 text-[10.5px] font-bold text-indigo-600 dark:text-indigo-400">View Chapter Intelligence →</p>
+            </button>
+          )
+        })}
       </div>
     </Card>
   )
@@ -202,9 +230,11 @@ function SubjectDrilldownPanel({ s360, domain, subject, onSelectChapter, onBack 
   )
 }
 
-function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
+function ChapterIntelligencePanel({ s360, domain, context, student, onInterventionCreated, onNavigate }) {
   const [selectedChapter, setSelectedChapter] = useState(context?.chapter ?? null)
   const [selectedTopic, setSelectedTopic] = useState(context?.topic ?? null)
+  const [evidence, setEvidence] = useState(null)
+  const [suggestion, setSuggestion] = useState(null)
 
   const questionRows = useMemo(() => {
     const rows = (s360?.question?.rows ?? []).filter((r) =>
@@ -213,6 +243,16 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
     if (context?.subject) return rows.filter((r) => r.subject === context.subject)
     return rows
   }, [s360, domain, context])
+
+  /* DERIVED chapter intelligence (Phase 2 engine output) — trend, status,
+     priority and evidence come from s360.chapters; the local aggregation
+     below only adds what the derived pool lacks (topics live on rows). */
+  const derivedChapters = useMemo(() => {
+    const pool = domain === 'University'
+      ? s360?.chapters?.university ?? []
+      : s360?.chapters?.competitive?.[domain] ?? []
+    return pool
+  }, [s360, domain])
 
   const chapters = useMemo(() => {
     const chapterMap = new Map()
@@ -227,12 +267,20 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
       if (r.status !== 'Skipped') c.attempted += 1
       c.time += r.timeSpent ?? 0
     })
-    return [...chapterMap.values()].map((c) => ({
-      ...c,
-      accuracy: c.attempted ? Math.round((c.correct / c.attempted) * 100) : 0,
-      avgTime: c.attempted ? Math.round(c.time / c.attempted) : 0,
-    })).sort((a, b) => a.accuracy - b.accuracy)
-  }, [questionRows])
+    return [...chapterMap.values()].map((c) => {
+      const derived = derivedChapters.find((d) => d.chapter === c.chapter && (context?.subject ? d.subject === context.subject : true))
+      return {
+        ...c,
+        accuracy: c.attempted ? Math.round((c.correct / c.attempted) * 100) : 0,
+        avgTime: c.attempted ? Math.round(c.time / c.attempted) : 0,
+        attempts: derived?.attempts ?? new Set(questionRows.filter((r) => (r.chapter ?? 'General') === c.chapter).map((r) => r.attemptId)).size,
+        trend: derived?.trend ?? null,
+        status: derived?.status ?? null,
+        priority: derived?.priority ?? (c.attempted && (c.correct / c.attempted) < 0.55 ? 'High' : c.accuracy < 70 ? 'Medium' : 'Low'),
+        evidence: derived?.evidence ?? null,
+      }
+    }).sort((a, b) => a.accuracy - b.accuracy)
+  }, [questionRows, derivedChapters, context])
 
   const chapterDrilldown = useMemo(() => {
     if (!selectedChapter) return null
@@ -253,6 +301,9 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
     })
   }, [topicRows, selectedChapter, selectedTopic, context])
 
+  const evidenceRows = useMemo(() => evidence ? evidenceRowsFor(s360, domain, evidence.subject, evidence.chapter) : [], [s360, domain, evidence])
+  const suggestionRows = useMemo(() => suggestion ? evidenceRowsFor(s360, domain, suggestion.subject, suggestion.chapter) : [], [s360, domain, suggestion])
+
   const breadcrumbItems = useMemo(() => {
     const items = [{ label: context?.subject ?? 'All Subjects', onClick: () => { setSelectedChapter(null); setSelectedTopic(null) } }]
     if (selectedChapter) items.push({ label: selectedChapter, onClick: () => setSelectedTopic(null) })
@@ -268,31 +319,50 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
         <div>
           <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Chapter Intelligence — {context?.subject ?? domain}</h3>
           <p className="mt-0.5 text-xs text-slate-400">
-            {!selectedChapter ? 'Which chapter is causing the problem?' : !selectedTopic ? 'Which topic is causing the problem?' : 'Which concept is causing the problem?'}
+            {!selectedChapter ? 'Which chapter is causing the problem? Weak chapters carry evidence questions + a suggested intervention.' : !selectedTopic ? 'Which topic is causing the problem?' : 'Which concept is causing the problem?'}
           </p>
         </div>
       </div>
 
       <Breadcrumb items={breadcrumbItems} onNavigate={() => { setSelectedChapter(null); setSelectedTopic(null) }} />
 
-      {/* Chapter list */}
+      {/* Chapter list — derived metrics + evidence + suggested intervention */}
       {!selectedChapter && (
         <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
-          {chapters.map((c) => (
-            <button key={c.chapter} onClick={() => setSelectedChapter(c.chapter)}
-              className="w-full rounded-2xl border border-slate-200/70 p-3.5 text-left transition-all hover:border-indigo-300 hover:shadow-sm dark:border-slate-800 dark:hover:border-indigo-500/40">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">{c.chapter}</p>
-                <span className={`text-[13px] font-bold ${c.accuracy >= 75 ? 'text-emerald-600' : c.accuracy >= 55 ? 'text-amber-600' : 'text-rose-500'}`}>{c.accuracy}%</span>
+          {chapters.map((c) => {
+            const actionable = chapterIsActionable(c)
+            return (
+              <div key={c.chapter}
+                className="w-full rounded-2xl border border-slate-200/70 p-3.5 text-left transition-all dark:border-slate-800">
+                <button onClick={() => setSelectedChapter(c.chapter)} className="w-full text-left">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">{c.chapter}</p>
+                    <span className={`text-[13px] font-bold ${c.accuracy >= 75 ? 'text-emerald-600' : c.accuracy >= 55 ? 'text-amber-600' : 'text-rose-500'}`}>{c.accuracy}%</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px]">
+                    <span className="text-slate-500">{c.attempts} attempt{c.attempts === 1 ? '' : 's'}</span>
+                    <span className="text-emerald-600">{c.correct} correct</span>
+                    <span className="text-rose-500">{c.incorrect} incorrect</span>
+                    <span className="text-amber-500">{c.skipped} skipped</span>
+                    <span className="text-slate-500">{c.avgTime}s avg</span>
+                    <span className="text-slate-500">{c.questions} questions</span>
+                    {c.trend && (
+                      <Badge variant={TREND_STYLE[c.trend] ?? 'secondary'} size="sm">{c.trend}</Badge>
+                    )}
+                    {c.priority && (
+                      <Badge variant={c.priority === 'High' ? 'danger' : c.priority === 'Medium' ? 'warning' : 'secondary'} size="sm">{c.priority} priority</Badge>
+                    )}
+                  </div>
+                </button>
+                {actionable && (
+                  <div className="mt-2 flex flex-wrap gap-2 border-t border-slate-100 pt-2 dark:border-slate-700">
+                    <Button size="sm" variant="outline" className="h-7 !px-2 text-[10.5px]" onClick={() => setEvidence(c)}><FileText className="h-3 w-3" /> View Questions</Button>
+                    <Button size="sm" variant="ghost" className="h-7 !px-2 text-[10.5px]" onClick={() => setSuggestion(c)}><Target className="h-3 w-3" /> Suggested Intervention</Button>
+                  </div>
+                )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px]">
-                <span className="text-slate-500">{c.questions} questions</span>
-                <span className="text-rose-500">{c.incorrect} incorrect</span>
-                <span className="text-amber-500">{c.skipped} skipped</span>
-                <span className="text-slate-500">{c.avgTime}s avg</span>
-              </div>
-            </button>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -359,12 +429,28 @@ function ChapterIntelligencePanel({ s360, domain, context, onNavigate }) {
             </div>
           </div>
 
-          {/* AI Intervention Recommendation */}
+          {/* Suggested Intervention (existing ground-level engine, faculty-reviewed) */}
           {intervention && intervention.issueType !== 'Strong Performance' && (
-            <InterventionRecommendationCard intervention={intervention} />
+            <InterventionRecommendationCard
+              intervention={intervention}
+              onReviewCreate={() => setSuggestion(chapters.find((c) => c.chapter === selectedChapter) ?? { subject: context?.subject, chapter: selectedChapter })}
+            />
           )}
         </div>
       )}
+
+      {/* shared evidence + suggested-intervention dialogs (chapter-level actions) */}
+      <EvidenceQuestionsDialog
+        open={!!evidence} onOpenChange={(v) => !v && setEvidence(null)}
+        title={`Chapter evidence — ${evidence?.chapter ?? ''}`}
+        rows={evidenceRows}
+        subject={evidence?.subject} chapter={evidence?.chapter} domain={domain}
+      />
+      <SuggestedInterventionDialog
+        open={!!suggestion} onOpenChange={(v) => !v && setSuggestion(null)}
+        issue={suggestion} domain={domain} student={student} rows={suggestionRows}
+        onCreated={onInterventionCreated}
+      />
     </Card>
   )
 }
