@@ -16,6 +16,7 @@ import {
   useInterventions, useIntervention, useInterventionPractice,
   useInterventionStatus, useInterventionModify, useInterventionAssign, useCreateRetest,
   useFacultyStudentInterventions, useCreateStudent360Intervention,
+  useGroupInterventionPreflight, useCreateGroupInterventions,
 } from '@/services/faculty-interventions'
 import { formatDate } from '@/utils/format'
 
@@ -61,18 +62,22 @@ function EffectivenessPanel({ iv }) {
     )
   }
   const d = eff.deltas ?? {}
+  const before = eff.before ?? iv.baseline ?? {}
+  const after = eff.postExam ?? eff.retest ?? {}
+  const show = (value, suffix = '') => value == null ? 'N/A' : `${value}${suffix}`
   return (
     <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">Prototype Intervention Effectiveness</p>
         <Badge variant={OUTCOME_STYLE[eff.outcome] ?? 'secondary'}>{eff.outcome}</Badge>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {[
-          { label: 'Baseline accuracy', value: `${iv.baseline?.accuracy ?? 0}%` },
-          { label: 'Re-test accuracy', value: `${eff.retest?.accuracy ?? 0}%` },
-          { label: 'Δ accuracy', value: `${d.accuracyDelta >= 0 ? '+' : '−'}${Math.abs(d.accuracyDelta ?? 0)}pp`, tone: d.accuracyDelta >= 0 ? 'text-emerald-600' : 'text-rose-500' },
-          { label: 'Δ time', value: `${d.timeDelta >= 0 ? '−' : '+'}${Math.abs(d.timeDelta ?? 0)}s`, tone: d.timeDelta >= 0 ? 'text-emerald-600' : 'text-rose-500' },
+          { label: 'Before accuracy', value: show(before.accuracy, '%') },
+          { label: `${eff.postExam ? 'Exam Agent' : 'Re-test'} accuracy`, value: show(after.accuracy, '%') },
+          { label: 'Δ accuracy', value: d.accuracyDelta == null ? 'N/A' : `${d.accuracyDelta >= 0 ? '+' : '−'}${Math.abs(d.accuracyDelta)} pp`, tone: d.accuracyDelta == null ? '' : d.accuracyDelta >= 0 ? 'text-emerald-600' : 'text-rose-500' },
+          { label: 'Δ time', value: d.timeDelta == null ? 'N/A' : `${d.timeDelta >= 0 ? '−' : '+'}${Math.abs(d.timeDelta)}s`, tone: d.timeDelta == null ? '' : d.timeDelta >= 0 ? 'text-emerald-600' : 'text-rose-500' },
+          { label: 'Δ incorrect', value: d.errorDelta == null ? 'N/A' : `${d.errorDelta >= 0 ? '−' : '+'}${Math.abs(d.errorDelta)}`, tone: d.errorDelta == null ? '' : d.errorDelta >= 0 ? 'text-emerald-600' : 'text-rose-500' },
         ].map((m) => (
           <div key={m.label} className="rounded-xl bg-slate-50 p-2.5 text-center dark:bg-slate-800/60">
             <p className={`text-[14px] font-bold text-slate-900 dark:text-white ${m.tone ?? ''}`}>{m.value}</p>
@@ -80,8 +85,14 @@ function EffectivenessPanel({ iv }) {
           </div>
         ))}
       </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {[
+          ['Before', before], ['Practice', eff.practice], ['Re-test', eff.retest],
+        ].map(([label, metrics]) => <div key={label} className="rounded-xl border border-slate-100 p-2.5 text-[10.5px] dark:border-slate-800"><p className="font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-slate-600 dark:text-slate-300">Accuracy {show(metrics?.accuracy, '%')} · Score {show(metrics?.score)} · Avg time {show(metrics?.avgTime, 's')}</p><p className="text-slate-500">Incorrect {show(metrics?.incorrect)} · Skipped {show(metrics?.skipped)} · Questions {show(metrics?.questions)}</p></div>)}
+      </div>
+      {iv.postExam && <div className="mt-3 rounded-2xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-500/25 dark:bg-sky-500/5"><p className="text-[10px] font-bold uppercase tracking-widest text-sky-700 dark:text-sky-300">Post-Intervention Exam Performance</p><p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-100">{iv.postExam.examName}</p><p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">Date {formatDate(iv.postExam.date, 'MMM d, yyyy')} · Attempt {iv.postExam.attemptId} · Score {show(iv.postExam.score)}{iv.postExam.maxScore != null ? `/${iv.postExam.maxScore}` : ''} · Accuracy {show(iv.postExam.accuracy, '%')} · Avg time {show(iv.postExam.avgTime, 's')}</p><p className="mt-1 text-[10.5px] text-slate-500">Comparison: before intervention vs after intervention · {iv.postExam.matchType}</p><Link to={`/faculty/my-students/${iv.studentId}/exams/${iv.postExam.attemptId}`}><Button size="sm" variant="outline" className="mt-2">View Exam Analysis</Button></Link></div>}
       <p className="mt-2.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">{eff.evidence}</p>
-      <p className="mt-1 text-[10px] font-medium text-slate-400">Deterministic prototype calculation — not a scientifically validated measure.</p>
+      <p className="mt-1 text-[10px] font-medium text-slate-400">Observed outcome after intervention. Deterministic prototype calculation — not a scientifically validated or causal measure.</p>
     </div>
   )
 }
@@ -203,6 +214,8 @@ function InterventionDetailDialog({ id, open, onOpenChange }) {
               <Badge variant={PRIORITY_STYLE[iv.priority] ?? 'secondary'}>{iv.priority}</Badge>
               <Badge variant={STATUS_STYLE[iv.status] ?? 'secondary'}>{iv.status}</Badge>
               {iv.examFamily && <Badge variant="outline" size="sm">{iv.examFamily} · {iv.domain}</Badge>}
+              {iv.source === 'Student 360' && <Badge variant="info" size="sm">Created from Student 360</Badge>}
+              {iv.source === 'Similar Issues' && iv.studentId && <Badge variant="info" size="sm">Created from Similar Issue · {iv.groupId}</Badge>}
             </DialogTitle>
           </DialogHeader>
 
@@ -438,43 +451,69 @@ function InterventionDetailDialog({ id, open, onOpenChange }) {
  * starts at 'Recommended'). Evidence is read-only; nothing is auto-assigned.
  */
 function ReviewCreateInterventionDialog({
-  open, onOpenChange, student, domain, subject, chapter, issueLabel, whyDetected,
+  open, onOpenChange, student, students = [], group = null,
+  domain, subject, chapter, issueLabel, whyDetected,
   evidenceSummary = [], defaults = {}, onCreated,
 }) {
   const toast = useToast()
-  const { mutateAsync, isPending } = useCreateStudent360Intervention()
+  const singleCreate = useCreateStudent360Intervention()
+  const groupCreate = useCreateGroupInterventions()
   const [form, setForm] = useState(null)
-  const f = form ?? {}
   const val = (key, fallback) => (form && form[key] != null ? form[key] : (defaults[key] ?? fallback))
   const set = (key) => (v) => setForm((prev) => ({ ...prev, [key]: v }))
   const examFamily = domain === 'University' ? 'University' : domain
+  const isGroup = !!group
+  const targetStudents = isGroup ? students : (student ? [student] : [])
+  const preflightConfig = {
+    count: Number(val('count', 8)) || 8,
+    difficulty: val('difficulty', 'Medium'),
+    questionType: val('questionType', 'Any'),
+    pyqPreference: val('pyqPreference', isGroup ? 'Preferred' : 'Yes'),
+    selectionLevel: val('selectionLevel', isGroup ? 'exact' : 'subject'),
+  }
+  const { data: groupPreflight, isFetching: preflightLoading } = useGroupInterventionPreflight(isGroup && open ? group.id : null, preflightConfig)
+  const availability = groupPreflight?.practiceAvailability ?? null
+  const isPending = singleCreate.isPending || groupCreate.isPending
 
   const create = async () => {
     try {
-      const res = await mutateAsync({
-        studentId: student?.id,
-        payload: {
-          title: val('title', `${chapter} Accuracy Recovery`),
-          domain: domain === 'University' ? 'University' : 'Competitive',
-          examFamily: domain === 'University' ? null : domain,
-          subject, chapter,
-          issueType: issueLabel?.split(' — ')[0] ?? 'Performance Gap',
-          priority: val('priority', 'Medium'),
-          objective: val('objective', `Improve accuracy on ${chapter} problems.`),
-          whyDetected,
-          practiceConfig: {
-            count: Number(val('count', 8)) || 8,
-            difficulty: val('difficulty', 'Medium'),
-            pyqPreference: val('pyqPreference', 'Yes'),
-          },
-          notes: val('notes', '') || '',
-          createdBy: 'Dr. Meera Krishnan',
+      const common = {
+        title: val('title', `${chapter} Accuracy Recovery`),
+        priority: val('priority', 'Medium'),
+        objective: val('objective', `Improve accuracy on ${chapter} problems.`),
+        practiceConfig: {
+          ...preflightConfig,
+          duration: Number(val('duration', 20)) || 20,
         },
-      })
-      toast.success('Intervention created', `${res?.intervention?.title ?? 'Intervention'} — status ${res?.intervention?.status ?? 'Recommended'}. Faculty approval is still required before assignment.`)
+        notes: val('notes', '') || '',
+        createdBy: 'Dr. Meera Krishnan',
+      }
+      if (isGroup && availability?.insufficient) {
+        toast.error('Not enough questions match this configuration.', `Available ${availability.availableQuestions} · required ${availability.requiredQuestions} · shortfall ${availability.shortfall}. Broaden filters before creating.`)
+        return
+      }
+      const res = isGroup
+        ? await groupCreate.mutateAsync({ groupId: group.id, payload: { ...common, studentIds: targetStudents.map((s) => s.studentId ?? s.id) } })
+        : await singleCreate.mutateAsync({
+            studentId: student?.id,
+            payload: {
+              ...common,
+              domain: domain === 'University' ? 'University' : 'Competitive',
+              examFamily: domain === 'University' ? null : domain,
+              subject, chapter,
+              issueType: issueLabel?.split(' — ')[0] ?? 'Performance Gap',
+              whyDetected,
+            },
+          })
+      toast.success(
+        isGroup ? `${res.createdCount} intervention${res.createdCount === 1 ? '' : 's'} created` : 'Intervention created',
+        isGroup
+          ? `${res.skippedCount} skipped. One Recommended record was created per eligible student; nothing was assigned.`
+          : `${res?.intervention?.title ?? 'Intervention'} — status ${res?.intervention?.status ?? 'Recommended'}. Faculty approval is still required before assignment.`
+      )
       setForm(null)
       onOpenChange(false)
-      onCreated?.(res?.intervention ?? null)
+      onCreated?.(isGroup ? res : (res?.intervention ?? null))
     } catch (e) {
       toast.error('Could not create intervention', e?.response?.data?.message ?? 'Please review the details and try again.')
     }
@@ -496,7 +535,7 @@ function ReviewCreateInterventionDialog({
           <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Context (read-only)</p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11.5px]">
-              <div><span className="text-slate-400">Student:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{student?.name ?? '—'}</span> <span className="text-slate-400">({student?.roll ?? '—'})</span></div>
+              <div><span className="text-slate-400">Target students:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{isGroup ? `${targetStudents.length} selected` : (student?.name ?? '—')}</span> {!isGroup && <span className="text-slate-400">({student?.roll ?? '—'})</span>}</div>
               <div><span className="text-slate-400">Domain:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{domain === 'University' ? 'University' : 'Competitive'}</span></div>
               <div><span className="text-slate-400">Exam family:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{examFamily}</span></div>
               <div><span className="text-slate-400">Subject:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{subject}</span></div>
@@ -516,6 +555,23 @@ function ReviewCreateInterventionDialog({
             ) : <p className="text-[11.5px] text-slate-400">Evidence summary unavailable — the server re-derives it from canonical attempts on creation.</p>}
           </div>
 
+          {isGroup && (
+            <div className={`rounded-2xl border p-4 ${availability?.insufficient ? 'border-rose-200 bg-rose-50/60 dark:border-rose-500/25 dark:bg-rose-500/5' : 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/5'}`}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Practice availability pre-flight</p>
+              {preflightLoading && !availability ? <p className="mt-2 text-xs text-slate-400">Checking the existing question datasets…</p> : (
+                <>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11.5px] font-bold">
+                    <Badge variant={availability?.insufficient ? 'danger' : 'success'}>Available: {availability?.availableQuestions ?? '—'}</Badge>
+                    <Badge variant="outline">Required: {availability?.requiredQuestions ?? preflightConfig.count}</Badge>
+                    {availability?.insufficient && <Badge variant="danger">Shortfall: {availability.shortfall}</Badge>}
+                    <Badge variant="secondary">Level: {availability?.selectionLevel ?? preflightConfig.selectionLevel}</Badge>
+                  </div>
+                  {availability?.insufficient && <p className="mt-2 text-[11.5px] font-semibold text-rose-700 dark:text-rose-300">Not enough questions match this configuration. Broaden filters; the requested count will not be reduced.</p>}
+                </>
+              )}
+            </div>
+          )}
+
           {/* editable configuration */}
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Practice configuration (editable)</p>
@@ -528,23 +584,37 @@ function ReviewCreateInterventionDialog({
               </Field>
               <Field label="Objective" className="sm:col-span-2"><Textarea defaultValue={defaults.objective ?? `Improve accuracy on ${chapter} problems.`} onChange={(e) => set('objective')(e.target.value)} /></Field>
               <Field label="Practice questions"><Input type="number" min={1} max={30} defaultValue={Number(defaults.count ?? 8) || 8} onChange={(e) => set('count')(e.target.value)} /></Field>
+              <Field label="Duration (minutes)"><Input type="number" min={5} max={120} defaultValue={Number(defaults.duration ?? 20) || 20} onChange={(e) => set('duration')(e.target.value)} /></Field>
               <Field label="Difficulty">
                 <Select value={val('difficulty', 'Medium')} onValueChange={set('difficulty')}>
                   {['Easy', 'Medium', 'Hard', 'Mixed'].map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </Select>
               </Field>
               <Field label="PYQ preference">
-                <Select value={val('pyqPreference', 'Yes')} onValueChange={set('pyqPreference')}>
-                  <SelectItem value="Yes">Preferred</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
+                <Select value={val('pyqPreference', isGroup ? 'Preferred' : 'Yes')} onValueChange={set('pyqPreference')}>
+                  {isGroup ? <SelectItem value="Preferred">Preferred</SelectItem> : <SelectItem value="Yes">Preferred</SelectItem>}
+                  <SelectItem value="Only">PYQ only</SelectItem>
+                  <SelectItem value="No">No preference</SelectItem>
                 </Select>
               </Field>
+              {isGroup && <Field label="Question type">
+                <Select value={val('questionType', 'Any')} onValueChange={set('questionType')}>
+                  {['Any', 'MCQ', 'Numerical'].map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                </Select>
+              </Field>}
+              {isGroup && <Field label="Filter breadth">
+                <Select value={val('selectionLevel', 'exact')} onValueChange={set('selectionLevel')}>
+                  <SelectItem value="exact">Exact chapter + difficulty</SelectItem>
+                  <SelectItem value="difficulty">Broaden difficulty</SelectItem>
+                  <SelectItem value="subject">Broaden to subject</SelectItem>
+                </Select>
+              </Field>}
               <Field label="Faculty notes"><Textarea defaultValue={defaults.notes ?? ''} onChange={(e) => set('notes')(e.target.value)} /></Field>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={create} disabled={isPending}>{isPending ? 'Creating…' : <><CheckCircle2 className="h-4 w-4" /> Create Intervention</>}</Button>
+            <Button onClick={create} disabled={isPending || (isGroup && (preflightLoading || !availability || availability.insufficient))}>{isPending ? 'Creating…' : <><CheckCircle2 className="h-4 w-4" /> Create Intervention</>}</Button>
             <Button variant="outline" onClick={() => { setForm(null); onOpenChange?.(false) }}>Cancel</Button>
             <p className="ml-auto max-w-[240px] text-[10px] font-medium text-slate-400">Enters the existing lifecycle at “Recommended” — approval, planning and assignment stay manual.</p>
           </div>
@@ -580,6 +650,7 @@ function StudentInterventionsPanel({ studentId, domain }) {
   const sorted = [...items].sort((a, b) =>
     ({ Critical: 0, High: 1, Medium: 2, Low: 3 }[a.priority] ?? 4) - ({ Critical: 0, High: 1, Medium: 2, Low: 3 }[b.priority] ?? 4))
   const createdCount = sorted.filter((iv) => iv.source === 'Student 360').length
+  const similarIssueCount = sorted.filter((iv) => iv.source === 'Similar Issues').length
 
   return (
     <div className="space-y-4">
@@ -591,6 +662,7 @@ function StudentInterventionsPanel({ studentId, domain }) {
           <p className="mt-0.5 text-xs text-slate-400">
             Existing practice &amp; re-test plans{domain ? ` · ${domain} only` : ''}. Faculty approval is mandatory — nothing is delivered automatically.
             {createdCount > 0 && ` ${createdCount} created from Student 360.`}
+            {similarIssueCount > 0 && ` ${similarIssueCount} created from Similar Issue.`}
           </p>
         </div>
         <Link to="/faculty/my-students?view=interventions">
@@ -612,12 +684,14 @@ function StudentInterventionsPanel({ studentId, domain }) {
                   <Badge variant={PRIORITY_STYLE[iv.priority] ?? 'secondary'} size="sm">{iv.priority}</Badge>
                   <Badge variant={STATUS_STYLE[iv.status] ?? 'secondary'} size="sm">{iv.status}</Badge>
                   {iv.source === 'Student 360' && <Badge variant="info" size="sm">Created from Student 360</Badge>}
+                  {iv.source === 'Similar Issues' && <Badge variant="info" size="sm">Created from Similar Issue</Badge>}
                 </p>
                 <p className="mt-0.5 text-[11.5px] font-medium text-slate-400">
                   {iv.subject} — {iv.chapter} · {iv.issueType} · {iv.examFamily ?? iv.domain}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {iv.source === 'Student 360' && iv.createdAt && <Badge variant="secondary" size="sm">Created {formatDate(iv.createdAt, 'MMM d, yyyy')}</Badge>}
+                  {iv.createdAt && <Badge variant="secondary" size="sm">Created {formatDate(iv.createdAt, 'MMM d, yyyy')}</Badge>}
+                  {iv.source === 'Similar Issues' && iv.groupId && <Badge variant="outline" size="sm">Group {iv.groupId}</Badge>}
                   <Badge variant="outline" size="sm">Practice: {iv.practiceStatus ?? '—'}{iv.practiceProgress != null && iv.practiceRequired != null ? ` (${iv.practiceProgress}/${iv.practiceRequired})` : ''}</Badge>
                   <Badge variant="outline" size="sm">Re-test: {iv.retestStatus ?? '—'}</Badge>
                   <Badge variant={(iv.effectivenessStatus && iv.effectivenessStatus !== 'Pending') ? OUTCOME_STYLE[iv.effectivenessStatus] ?? 'secondary' : 'secondary'} size="sm">Effectiveness: {iv.effectivenessStatus ?? 'Pending'}</Badge>
@@ -647,14 +721,21 @@ function InterventionCenterTab() {
   const { data, isLoading, isError, refetch } = useInterventions()
   const [statusFilter, setStatusFilter] = useState('All')
   const [priorityFilter, setPriorityFilter] = useState('All')
+  const [sourceFilter, setSourceFilter] = useState('All')
   const [selected, setSelected] = useState(null)
 
   if (isLoading) return <DashboardSkeleton cards={3} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
+  const statusMatches = (status) => statusFilter === 'All' || status === statusFilter
+    || (statusFilter === 'Pending approval' && ['Detected', 'Recommended'].includes(status))
+    || (statusFilter === 'Active' && ['Assigned', 'In Progress'].includes(status))
+    || (statusFilter === 'Needs re-test' && status === 'Completed')
+    || (statusFilter === 'Effective' && ['Resolved', 'Improving'].includes(status))
   const items = (data?.items ?? []).filter((i) =>
-    (statusFilter === 'All' || i.status === statusFilter) &&
-    (priorityFilter === 'All' || i.priority === priorityFilter))
+    statusMatches(i.status) &&
+    (priorityFilter === 'All' || i.priority === priorityFilter) &&
+    (sourceFilter === 'All' || i.source === sourceFilter))
     .sort((a, b) => ({ Critical: 0, High: 1, Medium: 2, Low: 3 }[a.priority] - { Critical: 0, High: 1, Medium: 2, Low: 3 }[b.priority]))
 
   const quickFilters = [
@@ -693,6 +774,12 @@ function InterventionCenterTab() {
             <option value="All">All priorities</option>
             {['Critical', 'High', 'Medium', 'Low'].map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
+          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+            <option value="All">All sources</option>
+            <option value="Student 360">Student 360</option>
+            <option value="Similar Issues">Similar Issues</option>
+          </select>
         </div>
       </div>
 
@@ -709,12 +796,14 @@ function InterventionCenterTab() {
                   {i.title}
                   <Badge variant={PRIORITY_STYLE[i.priority]} size="sm">{i.priority}</Badge>
                   <Badge variant={STATUS_STYLE[i.status]} size="sm">{i.status}</Badge>
+                  {i.source === 'Student 360' && <Badge variant="info" size="sm">Created from Student 360</Badge>}
+                  {i.source === 'Similar Issues' && i.studentId && <Badge variant="info" size="sm">Created from Similar Issue · {i.groupId}</Badge>}
                   {i.effectiveness?.completed && i.effectiveness.outcome !== 'Pending' && (
                     <Badge variant={OUTCOME_STYLE[i.effectiveness.outcome] ?? 'secondary'} size="sm">{i.effectiveness.outcome}</Badge>
                   )}
                 </p>
                 <p className="mt-0.5 text-[11.5px] font-medium text-slate-400">
-                  {i.studentIds?.length ?? 0} students · {i.issueType} · practice {i.practiceProgress ?? 0}/{i.practiceRequired ?? 8} · {i.retests ?? 0} re-test{i.retests === 1 ? '' : 's'}
+                  {i.studentIds?.length ?? 0} student{(i.studentIds?.length ?? 0) === 1 ? '' : 's'} · {i.issueType} · practice {i.practiceProgress ?? 0}/{i.practiceRequired ?? 8} · {i.retests ?? 0} re-test{i.retests === 1 ? '' : 's'}
                 </p>
               </div>
               <span className="shrink-0 text-[11px] font-bold text-indigo-600 dark:text-indigo-300">Review →</span>

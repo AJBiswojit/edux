@@ -12,12 +12,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertTriangle, BookOpen, CheckCircle2, FileText, Layers, ListChecks, Sparkles, Users, X,
+  AlertTriangle, BookOpen, CheckCircle2, FileText, Layers, ListChecks, Sparkles, Target, Users, X,
 } from 'lucide-react'
-import { Badge, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, useToast } from '@/components/ui'
+import { Badge, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
-import { useSimilarIssues, useInterventions, useInterventionStatus, useRelatedResources } from '@/services/faculty-interventions'
-import {  } from '@/utils/format'
+import {
+  useSimilarIssues, useInterventions, useInterventionStatus, useRelatedResources,
+  useSimilarIssueGroupEvidence, useGroupInterventionPreflight,
+} from '@/services/faculty-interventions'
+import { EvidenceQuestionsDialog } from './student-evidence'
+import { ReviewCreateInterventionDialog } from './intervention-center'
 
 const PRIORITY_STYLE = { Critical: 'danger', High: 'danger', Medium: 'warning', Low: 'secondary' }
 const STATUS_STYLE = { Detected: 'secondary', Recommended: 'warning', Planned: 'info', Dismissed: 'outline' }
@@ -72,7 +76,7 @@ function RelatedResourcesDialog({ open, onOpenChange, subject, chapter, examFami
 }
 
 /* ================= Group detail ================= */
-function GroupDetailDialog({ group, open, onOpenChange }) {
+function GroupDetailDialog({ group, open, onOpenChange, onApply }) {
   const toast = useToast()
   const { mutateAsync: setStatus } = useInterventionStatus()
   const [resourcesOpen, setResourcesOpen] = useState(false)
@@ -124,6 +128,10 @@ function GroupDetailDialog({ group, open, onOpenChange }) {
               </div>
             ))}
           </div>
+
+          {group.interventionOutcome?.received > 0 && <div className="rounded-2xl border border-teal-200 bg-teal-50/60 p-4 dark:border-teal-500/25 dark:bg-teal-500/5"><div className="flex flex-wrap items-center gap-2"><p className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">Intervention Outcome</p><Badge variant="info" size="sm">Prototype group outcome</Badge></div><p className="mt-1 text-[10.5px] text-teal-800 dark:text-teal-200">Observed outcome after intervention — not a causal claim.</p><div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">{[
+            ['Received', group.interventionOutcome.received], ['Completed', group.interventionOutcome.completed], ['Re-tested', group.interventionOutcome.retested], ['Improved', group.interventionOutcome.improved], ['Resolved', group.interventionOutcome.resolved], ['Improving', group.interventionOutcome.improving], ['Persistent', group.interventionOutcome.persistent], ['No change', group.interventionOutcome.noSignificantChange], ['Avg accuracy Δ', group.interventionOutcome.averageAccuracyChange == null ? 'N/A' : `${group.interventionOutcome.averageAccuracyChange >= 0 ? '+' : ''}${group.interventionOutcome.averageAccuracyChange} pp`], ['Avg time Δ', group.interventionOutcome.averageTimeChange == null ? 'N/A' : `${group.interventionOutcome.averageTimeChange >= 0 ? '−' : '+'}${Math.abs(group.interventionOutcome.averageTimeChange)}s`],
+          ].map(([label, value]) => <div key={label} className="rounded-xl bg-white/70 p-2 text-center dark:bg-slate-900/50"><p className="text-sm font-bold text-slate-800 dark:text-white">{value}</p><p className="text-[8.5px] font-bold uppercase text-slate-400">{label}</p></div>)}</div></div>}
 
           {/* recommendation */}
           <div className="rounded-2xl border border-emerald-100 p-4 dark:border-emerald-500/20">
@@ -185,9 +193,8 @@ function GroupDetailDialog({ group, open, onOpenChange }) {
             </Link>
             <Button size="sm" variant="outline" onClick={() => setResourcesOpen(true)}><FileText className="h-3.5 w-3.5" /> View PYQs</Button>
             <span className="ml-auto flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => act('Recommended')}><Sparkles className="h-3.5 w-3.5" /> Recommend</Button>
-              <Button size="sm" variant="success" onClick={() => act('Planned')}><CheckCircle2 className="h-3.5 w-3.5" /> Accept & plan</Button>
-              <Button size="sm" variant="ghost" className="text-rose-500" onClick={() => act('Dismissed')}><X className="h-3.5 w-3.5" /> Dismiss</Button>
+              <Button size="sm" onClick={() => { onOpenChange(false); onApply?.() }}><Target className="h-3.5 w-3.5" /> Apply Intervention</Button>
+              <Button size="sm" variant="ghost" className="text-rose-500" onClick={() => act('Dismissed')}><X className="h-3.5 w-3.5" /> Dismiss recommendation</Button>
             </span>
           </div>
           <p className="text-[10.5px] font-medium text-slate-400">Prototype state only — nothing is delivered to students automatically.</p>
@@ -204,10 +211,154 @@ function GroupDetailDialog({ group, open, onOpenChange }) {
   )
 }
 
-/* ================= Group card ================= */
-function GroupCard({ group, onOpen }) {
+/* ================= Multi-student intervention workflow ================= */
+function GroupInterventionWorkflow({ group, open, onOpenChange }) {
+  const [selectedIds, setSelectedIds] = useState(() => (group?.students ?? []).filter((s) => !s.existingIntervention).map((s) => s.studentId))
+  const [questionCount, setQuestionCount] = useState(8)
+  const [selectionLevel, setSelectionLevel] = useState('exact')
+  const [stage, setStage] = useState('select')
+  const [evidenceRows, setEvidenceRows] = useState(null)
+  const [result, setResult] = useState(null)
+  const config = { count: questionCount, difficulty: 'Mixed', questionType: 'Any', pyqPreference: 'Preferred', selectionLevel }
+  const evidenceQuery = useSimilarIssueGroupEvidence(open ? group?.id : null)
+  const preflight = useGroupInterventionPreflight(open ? group?.id : null, config)
+
+  if (!group) return null
+  const students = preflight.data?.students ?? group.students ?? []
+  const selectedStudents = students.filter((s) => selectedIds.includes(s.studentId))
+  const availability = preflight.data?.practiceAvailability
+  const domainLabel = group.domain === 'University' ? 'University' : group.examFamily
+  const close = () => {
+    setStage('select')
+    setResult(null)
+    setEvidenceRows(null)
+    onOpenChange?.(false)
+  }
+  const broaden = () => setSelectionLevel((current) => current === 'exact' ? 'difficulty' : 'subject')
+
+  if (stage === 'review') {
+    return (
+      <ReviewCreateInterventionDialog
+        open onOpenChange={(value) => { if (!value) setStage('select') }}
+        group={group} students={selectedStudents}
+        domain={domainLabel} subject={group.subject} chapter={group.chapter}
+        issueLabel={group.issueType} whyDetected={group.whyDetected}
+        evidenceSummary={[
+          `${group.evidence?.questions ?? 0} questions across ${group.evidence?.affectedExams ?? 0} assessments`,
+          `${group.studentCount} students · ${group.avgAccuracy}% average accuracy · ${group.avgTime}s average time`,
+          `Trend: ${group.trend ?? 'N/A'}`,
+        ]}
+        defaults={{
+          title: `${group.chapter} Accuracy Recovery`, priority: group.priority,
+          objective: `Improve ${group.chapter} accuracy.`, count: questionCount, difficulty: 'Mixed', duration: 20,
+          pyqPreference: 'Preferred', questionType: 'Any', selectionLevel,
+        }}
+        onCreated={(summary) => { setResult(summary); setStage('result') }}
+      />
+    )
+  }
+
+  if (stage === 'result') {
+    const first = result?.created?.[0]
+    return (
+      <Dialog open={open} onOpenChange={(v) => !v && close()}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>{result?.createdCount ?? 0} interventions created</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-500/25 dark:bg-emerald-500/5">
+              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200">One Recommended intervention record per student</p>
+              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">{result?.commonTarget} · Priority {result?.priority}. Nothing was assigned automatically.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-100 p-3 dark:border-slate-800">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Created students ({result?.createdCount ?? 0})</p>
+                {(result?.created ?? []).map((item) => <p key={item.studentId} className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-200">✓ {item.name} · {item.status}</p>)}
+              </div>
+              <div className="rounded-2xl border border-slate-100 p-3 dark:border-slate-800">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Skipped students ({result?.skippedCount ?? 0})</p>
+                {(result?.skipped ?? []).map((item) => <p key={item.studentId} className="mt-1 text-xs font-semibold text-rose-600">• {item.name}: {item.reason}</p>)}
+                {!result?.skippedCount && <p className="mt-1 text-xs text-slate-400">None</p>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/faculty/my-students?view=interventions"><Button>Open Intervention Center</Button></Link>
+              {first && <Link to={`/faculty/my-students/${first.studentId}?tab=interventions`}><Button variant="outline">View Student 360</Button></Link>}
+              <Button variant="ghost" onClick={close}>Close</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   return (
-    <button onClick={onOpen} className="group min-w-0 overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-lift dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500/40">
+    <>
+      <Dialog open={open} onOpenChange={(v) => !v && close()}>
+        <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
+          <DialogHeader><DialogTitle>Create Intervention for Students</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {[
+                ['Issue', group.issueType], ['Domain', group.domain], ['Exam family', group.examFamily ?? 'University'],
+                ['Subject', group.subject], ['Chapter', group.chapter], ['Issue type', group.issueType],
+                ['Group size', group.studentCount], ['Average accuracy', `${group.avgAccuracy}%`], ['Average time', `${group.avgTime}s`],
+                ['Trend', group.trend ?? 'N/A'], ['Evidence', group.evidence?.questions ?? 0], ['Assessments', group.evidence?.affectedExams ?? 0],
+              ].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60"><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-0.5 text-[11.5px] font-bold text-slate-800 dark:text-slate-100">{value}</p></div>)}
+            </div>
+
+            <div className="rounded-2xl border border-indigo-100 p-4 dark:border-indigo-500/20">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600">Group Evidence</p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{group.studentCount} students · {group.evidence?.affectedExams ?? 0} assessments · {group.evidence?.questions ?? 0} evidence questions · Average accuracy {group.avgAccuracy}% · Average time {group.avgTime}s · Trend {group.trend}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setEvidenceRows(evidenceQuery.data?.rows ?? [])}>View Group Evidence</Button>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Students ({selectedIds.length} selected)</p>
+                <div className="flex gap-1.5"><Button size="sm" variant="ghost" onClick={() => setSelectedIds(students.filter((s) => !s.existingIntervention).map((s) => s.studentId))}>Select All</Button><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear All</Button></div>
+              </div>
+              <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
+                <Table className="min-w-[900px]">
+                  <TableHeader><TableRow><TableHead>Select</TableHead><TableHead>Student</TableHead><TableHead>Batch</TableHead><TableHead>Accuracy</TableHead><TableHead>Avg time</TableHead><TableHead>Trend</TableHead><TableHead>Priority</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead>Evidence</TableHead></TableRow></TableHeader>
+                  <TableBody>{students.map((s) => {
+                    const blocked = !!s.existingIntervention
+                    return <TableRow key={s.studentId}>
+                      <TableCell><input type="checkbox" checked={selectedIds.includes(s.studentId)} disabled={blocked} onChange={(e) => setSelectedIds((ids) => e.target.checked ? [...ids, s.studentId] : ids.filter((id) => id !== s.studentId))} aria-label={`Select ${s.name}`} /></TableCell>
+                      <TableCell><p className="text-xs font-bold">{s.name}</p><p className="text-[10px] text-slate-400">{s.roll ?? s.studentId}</p></TableCell>
+                      <TableCell className="text-xs">{s.batchId}</TableCell><TableCell className="text-xs font-bold">{s.accuracy ?? 'N/A'}{s.accuracy != null ? '%' : ''}</TableCell><TableCell className="text-xs">{s.avgTime ?? 'N/A'}{s.avgTime != null ? 's' : ''}</TableCell>
+                      <TableCell><Badge size="sm" variant="secondary">{s.trend ?? 'N/A'}</Badge></TableCell><TableCell><Badge size="sm" variant={PRIORITY_STYLE[s.priority] ?? 'secondary'}>{s.priority ?? group.priority}</Badge></TableCell><TableCell className="text-xs">{s.evidenceCount ?? s.evidence?.questions ?? 0}</TableCell>
+                      <TableCell>{blocked ? <div><Badge variant="warning" size="sm">Existing intervention</Badge><p className="mt-1 text-[9.5px] text-slate-400">Cannot select: {s.exclusionReason ?? `${s.existingIntervention.status} intervention is active`}</p></div> : <Badge variant="success" size="sm">Eligible</Badge>}</TableCell>
+                      <TableCell><Button size="sm" variant="ghost" onClick={() => setEvidenceRows(evidenceQuery.data?.students?.find((row) => row.studentId === s.studentId)?.rows ?? s.evidenceRows ?? [])}>View Student Evidence</Button></TableCell>
+                    </TableRow>
+                  })}</TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className={`rounded-2xl border p-4 ${availability?.insufficient ? 'border-rose-200 bg-rose-50/60 dark:border-rose-500/25' : 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/25'}`}>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Practice availability pre-flight</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><label className="text-[10.5px] font-bold text-slate-500">Required questions <Input className="ml-1 inline-block h-8 w-20" type="number" min={1} max={30} value={questionCount} onChange={(e) => setQuestionCount(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} /></label>{preflight.isLoading ? <span className="text-xs text-slate-400">Checking existing question datasets…</span> : <><Badge variant={availability?.insufficient ? 'danger' : 'success'}>Available: {availability?.availableQuestions ?? '—'}</Badge><Badge variant="outline">Required: {availability?.requiredQuestions ?? questionCount}</Badge>{availability?.insufficient && <Badge variant="danger">Shortfall: {availability.shortfall}</Badge>}{availability?.insufficient && <Button size="sm" variant="outline" onClick={broaden} disabled={selectionLevel === 'subject'}>Broaden Filters</Button>}</>}</div>
+              {availability?.insufficient && <p className="mt-2 text-xs font-semibold text-rose-700 dark:text-rose-300">Not enough questions match this configuration. The requested count will not be reduced.</p>}
+            </div>
+
+            <div className="flex flex-wrap gap-2"><Button disabled={!selectedIds.length || preflight.isLoading || availability?.insufficient} onClick={() => setStage('review')}>Review &amp; Create</Button><Button variant="outline" onClick={close}>Cancel</Button></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <EvidenceQuestionsDialog open={evidenceRows !== null} onOpenChange={(v) => !v && setEvidenceRows(null)} title={`${evidenceRows?.[0]?.studentName ? `${evidenceRows[0].studentName} evidence` : 'Group Evidence'} — ${group.chapter}`} rows={evidenceRows ?? []} subject={group.subject} chapter={group.chapter} domain={domainLabel} />
+    </>
+  )
+}
+
+/* ================= Group card ================= */
+function GroupCard({ group, onOpen, onApply }) {
+  return (
+    <div className="group min-w-0 overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-lift dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500/40">
+      <button onClick={onOpen} className="w-full text-left">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[10.5px] font-bold uppercase tracking-wider text-indigo-500">{group.examFamily ? `${group.examFamily} · ${group.domain}` : group.domain}</p>
@@ -239,7 +390,13 @@ function GroupCard({ group, onOpen }) {
         {group.declining && <Badge variant="warning" size="sm">Declining</Badge>}
         {group.highTime && <Badge variant="warning" size="sm">High time</Badge>}
       </div>
-    </button>
+      {group.interventionOutcome?.received > 0 && <div className="mt-3 rounded-xl bg-teal-50 p-2 text-[10.5px] font-semibold text-teal-800 dark:bg-teal-500/10 dark:text-teal-200">Prototype group outcome · {group.interventionOutcome.received} received · {group.interventionOutcome.improved} improved · Average accuracy change {group.interventionOutcome.averageAccuracyChange == null ? 'N/A' : `${group.interventionOutcome.averageAccuracyChange >= 0 ? '+' : ''}${group.interventionOutcome.averageAccuracyChange} pp`}</div>}
+      </button>
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+        <Button size="sm" onClick={onApply}><Target className="h-3.5 w-3.5" /> Apply Intervention</Button>
+        <Button size="sm" variant="ghost" onClick={onOpen}>View group evidence</Button>
+      </div>
+    </div>
   )
 }
 
@@ -247,6 +404,7 @@ function GroupCard({ group, onOpen }) {
 function SimilarIssuesTab({ scope = 'all', onScopeChange }) {
   const { data, isLoading, isError, refetch } = useSimilarIssues(scope)
   const [selected, setSelected] = useState(null)
+  const [applyGroup, setApplyGroup] = useState(null)
   if (isLoading) return <DashboardSkeleton cards={3} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
   return (
@@ -268,7 +426,7 @@ function SimilarIssuesTab({ scope = 'all', onScopeChange }) {
 
       {data?.groups?.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {data.groups.map((g) => <GroupCard key={g.id} group={g} onOpen={() => setSelected(g)} />)}
+          {data.groups.map((g) => <GroupCard key={g.id} group={g} onOpen={() => setSelected(g)} onApply={() => setApplyGroup(g)} />)}
         </div>
       ) : (
         <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
@@ -300,7 +458,8 @@ function SimilarIssuesTab({ scope = 'all', onScopeChange }) {
         {data?.note} Demo attempts are excluded from all grouping.
       </p>
 
-      <GroupDetailDialog group={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} />
+      <GroupDetailDialog group={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} onApply={() => { setApplyGroup(selected); setSelected(null) }} />
+      <GroupInterventionWorkflow key={applyGroup?.id ?? 'none'} group={applyGroup} open={!!applyGroup} onOpenChange={(v) => !v && setApplyGroup(null)} />
     </div>
   )
 }

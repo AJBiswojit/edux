@@ -31,6 +31,37 @@ export const useInterventionPractice = (id) =>
     enabled: !!id,
   })
 
+export const useSimilarIssueGroupEvidence = (groupId) =>
+  useQuery({
+    queryKey: ['faculty', 'similar-issues', groupId, 'evidence'],
+    queryFn: () => request({ url: `/faculty/similar-issues/${groupId}/evidence` }).then((r) => r.data),
+    enabled: !!groupId,
+  })
+
+export const useGroupInterventionPreflight = (groupId, practiceConfig) =>
+  useQuery({
+    queryKey: ['faculty', 'similar-issues', groupId, 'intervention-preflight', practiceConfig],
+    queryFn: () => request({
+      url: `/faculty/similar-issues/${groupId}/intervention-preflight`,
+      params: practiceConfig,
+    }).then((r) => r.data),
+    enabled: !!groupId,
+  })
+
+export function useCreateGroupInterventions() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ groupId, payload }) =>
+      request({ method: 'post', url: `/faculty/similar-issues/${groupId}/interventions`, data: payload }).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['faculty', 'similar-issues'] })
+      queryClient.invalidateQueries({ queryKey: ['faculty', 'interventions'] })
+      queryClient.invalidateQueries({ queryKey: ['faculty', 'students'] })
+      queryClient.invalidateQueries({ queryKey: ['student', 'interventions'] })
+    },
+  })
+}
+
 export function useInterventionStatus() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -130,6 +161,7 @@ export const useFacultyStudentInterventions = (studentId) =>
 
 export default {
   useSimilarIssues, useInterventions, useIntervention, useInterventionPractice,
+  useSimilarIssueGroupEvidence, useGroupInterventionPreflight, useCreateGroupInterventions,
   useInterventionStatus, useInterventionModify, useInterventionAssign,
   useCreateStudent360Intervention, useCreateRetest, useRelatedResources, useStudentInterventions, useStudentInterventionPractice,
   useStudentInterventionRetest, useSubmitInterventionAttempt, useFacultyStudentInterventions,

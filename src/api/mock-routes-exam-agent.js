@@ -42,6 +42,7 @@ mockRoute('get', '/student/exam-agent/attempts', () => {
       mode: a.mode,
       source: a.source ?? 'exam-agent',
       studentId: a.studentId ?? null,
+      interventionId: a.interventionId ?? null,
       roll: a.roll ?? null,
       startedAt: a.startedAt ?? null,
       submittedAt: a.submittedAt ?? null,
@@ -75,6 +76,7 @@ mockRoute('post', '/student/exam-agent/attempts', ({ body }) => {
   const attempt = {
     id: body?.id ?? `ea-attempt-${Date.now()}`,
     studentId: body?.studentId ?? null,
+    interventionId: body?.interventionId ?? null,
     roll: body?.roll ?? null,
     examId: body?.examId,
     examName: body?.examName ?? body?.examTitle ?? null,
