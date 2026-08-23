@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { TRUSTED_BY } from '@/mock-data/platform'
+import { TRUSTED_BY } from '@/datasets/platform/content.js'
 
 function LogoCloud({ heading = 'Trusted by 850+ institutions across 40 countries' }) {
   return (

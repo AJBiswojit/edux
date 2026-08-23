@@ -1,7 +1,7 @@
 /**
  * Faculty — My Students / Batch foundation service hooks (Phase 3/4).
- * Components never read localStorage — they consume the mock API:
- *   Component → Service → Mock API → Student/Batch/Exam intelligence.
+ * Components never read localStorage — they consume the API layer:
+ *   Component → Service → API → Student/Batch/Exam intelligence.
  */
 import { useQuery } from '@tanstack/react-query'
 import request from '@/api/client'

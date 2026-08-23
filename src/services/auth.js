@@ -54,7 +54,7 @@ export function useRegisterVerifyOtp() {
 /* Phase 3 — retired unused hooks: useRegistrationStatus / useProfileSetup
    (the auth flow runs through AuthContext + register/OTP mutations), and the
    platform GET hooks for testimonials/pricing/faqs/stats (landing sections
-   read the same canonical datasets from @/mock-data/platform directly). */
+   read the same canonical datasets from @/datasets/platform/content.js directly). */
 
 /* ================= PLATFORM ================= */
 

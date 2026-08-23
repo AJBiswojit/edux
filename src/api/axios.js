@@ -6,7 +6,7 @@ import { APP_CONFIG } from '@/config'
  *
  * - Request interceptor attaches the bearer token from storage.
  * - Response interceptor transparently refreshes expired access tokens
- *   (mock refresh flow) and replays the original request once.
+ *   (prototype refresh flow) and replays the original request once.
  */
 export const api = axios.create({
   baseURL: APP_CONFIG.API_BASE_URL,

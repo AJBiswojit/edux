@@ -4,7 +4,7 @@ import { getQuery as get } from './query'
 /**
  * Admin (Institution) Intelligence Foundation — service hooks.
  * Consume the centralized profile / datasets / derived intelligence via the
- * mock API (swap to a real backend with VITE_USE_MOCK=false, zero code
+ * API layer (swap to a real backend with VITE_USE_MOCK=false, zero code
  * changes). Mirrors the faculty intelligence service layer.
  */
 

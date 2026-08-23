@@ -1,7 +1,7 @@
 /**
  * MediXO EduX — Faculty Command Center · 8. Students Requiring Attention.
  * Weak students with reason, priority, suggested action, view profile &
- * assign remedial work (mock) — derived from attentionStudents.
+ * assign remedial work (prototype) — derived from attentionStudents.
  */
 
 import { useState } from 'react'
@@ -25,7 +25,7 @@ function AttentionSection({ data }) {
 
   const assignWork = (e) => {
     e.preventDefault()
-    toast.success('Remedial work assigned', `${workType} assigned to ${remedial.name} with a ${remedial.estimatedImprovement} target (mock).`)
+    toast.success('Remedial work assigned', `${workType} assigned to ${remedial.name} with a ${remedial.estimatedImprovement} target (prototype).`)
     setRemedial(null)
   }
 
@@ -76,7 +76,7 @@ function AttentionSection({ data }) {
         {students.length === 0 && <p className="py-8 text-center text-xs text-slate-400">No students need attention right now 🎉</p>}
       </div>
 
-      {/* Remedial work dialog (mock) */}
+      {/* Remedial work dialog (prototype) */}
       <Dialog open={!!remedial} onOpenChange={(o) => !o && setRemedial(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>

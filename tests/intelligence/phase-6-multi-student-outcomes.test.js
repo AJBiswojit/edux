@@ -25,25 +25,17 @@ let groups
 let jeeGroup
 let neetGroup
 let universityGroup
-const get = (url, params = {}) => server.handleMockRequest({ method: 'get', url, params }).then((r) => r.data)
-const post = (url, data) => server.handleMockRequest({ method: 'post', url, data }).then((r) => r.data)
+const get = (url, params = {}) => server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
+const post = (url, data) => server.dispatchRequest({ method: 'post', url, data }).then((r) => r.data)
 const fail = async (request) => {
   try { await request() } catch (error) { return error }
   throw new Error('Expected request to fail')
 }
 
 beforeAll(async () => {
-  await import('../../src/api/mock-routes.js')
-  await import('../../src/api/mock-routes-extra.js')
-  await import('../../src/api/mock-routes-intelligence.js')
-  await import('../../src/api/mock-routes-faculty-intelligence.js')
-  await import('../../src/api/mock-routes-admin-intelligence.js')
-  await import('../../src/api/mock-routes-exam-agent.js')
-  await import('../../src/api/mock-routes-faculty-students.js')
-  await import('../../src/api/mock-routes-faculty-interventions.js')
-  await import('../../src/api/mock-routes-question-studio.js')
-  server = await import('../../src/api/mock-server.js')
-  server.setMockLatency([0, 0])
+  await import('../../src/api/index.js')
+  server = await import('../../src/api/core/router.js')
+  server.setResponseLatency([0, 0])
   const payload = await get('/faculty/similar-issues')
   groups = payload.groups
   jeeGroup = groups.find((group) => group.examFamily === 'JEE' && group.students.length >= 2)

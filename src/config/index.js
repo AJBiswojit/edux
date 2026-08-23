@@ -6,7 +6,7 @@ export const APP_CONFIG = {
   name: 'MediXO EduX',
   tagline: 'Empowering Smarter Learning Through AI',
   version: '1.0.0',
-  // When true, every service call is served by the in-browser mock API layer.
+  // When true, every service call is served by the in-browser prototype API adapter.
   USE_MOCK_API: import.meta.env.VITE_USE_MOCK !== 'false',
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://api.medixoedux.edu/v1',
   TOKEN_KEY: 'aurora_access_token',

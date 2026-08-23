@@ -31,14 +31,14 @@ function AssignmentsTab({ data }) {
   const submitReview = (e) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    toast.success('Review submitted ✓', `${reviewing.title} — grade ${fd.get('grade')}/100 recorded. Student will be notified (mock).`)
+    toast.success('Review submitted ✓', `${reviewing.title} — grade ${fd.get('grade')}/100 recorded. Student will be notified (prototype).`)
     setReviewing(null)
   }
 
   const submitComment = (e) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    toast.success('Comment added', `Feedback on ${commenting.title} saved and published to the student (mock).`)
+    toast.success('Comment added', `Feedback on ${commenting.title} saved and published to the student (prototype).`)
     setCommenting(null)
   }
 

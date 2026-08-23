@@ -1,6 +1,6 @@
 /**
  * Faculty — AI Question Studio service hooks (Phase 7).
- * Components consume the mock API only.
+ * Components consume the API layer only.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import request from '@/api/client'

@@ -5,7 +5,7 @@ import { getQuery as get } from './query'
 /**
  * Student Intelligence Foundation — service hooks.
  * Consume the centralized profile / datasets / derived intelligence via the
- * mock API (swap to real backend with VITE_USE_MOCK=false, zero code changes).
+ * API layer (swap to real backend with VITE_USE_MOCK=false, zero code changes).
  */
 
 /* Phase 3 — canonical consumption is ONE snapshot hook (summary already

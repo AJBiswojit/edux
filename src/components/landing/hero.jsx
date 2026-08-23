@@ -6,7 +6,7 @@ import {
   PlayCircle, ShieldCheck, Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { HERO_METRICS } from '@/mock-data/platform'
+import { HERO_METRICS } from '@/datasets/platform/content.js'
 import { useCountUp } from '@/hooks/use-count-up'
 import { useInView } from '@/hooks/use-in-view'
 

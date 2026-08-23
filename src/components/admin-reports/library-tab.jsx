@@ -1,7 +1,7 @@
 /**
  * Institutional Reports · Tab 5: Report Library.
  * Generated reports stored locally (frontend artifact — localStorage, not
- * a mock dataset). Actions: view, duplicate, rename, delete, favorite,
+ * a deterministic dataset). Actions: view, duplicate, rename, delete, favorite,
  * download, print. Export actions are clearly simulated.
  */
 

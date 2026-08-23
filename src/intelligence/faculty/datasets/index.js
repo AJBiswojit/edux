@@ -1,7 +1,7 @@
 /**
  * Faculty Intelligence — centralized dataset aggregation.
  *
- * The single source of truth for every faculty dataset. Existing mock data
+ * The single source of truth for every faculty dataset. Existing deterministic datasets
  * (courses, attendance, assignments, question bank, papers, PYQ, quiz,
  * exam blueprint, cohorts, weak students, analytics) is RE-EXPORTED here so
  * future modules import ONE place and never maintain isolated copies.
@@ -10,15 +10,15 @@
  */
 
 /* ---- existing faculty mock data (re-exported, not duplicated) ---- */
-import { facultyProfile, facultyDashboard, facultyAttendance, facultyAssignments, questionBank } from '../../../mock-data/faculty.js'
-import { facultyStudentAnalytics, facultyResearch, facultyLecturePlanner, facultyExamBuilder, facultyReports, facultySettings } from '../../../mock-data/faculty.js'
+import { facultyProfile, facultyDashboard, facultyAttendance, facultyAssignments, questionBank } from '@/datasets/faculty/workspace.js'
+import { facultyStudentAnalytics, facultyResearch, facultyLecturePlanner, facultyExamBuilder, facultyReports, facultySettings } from '@/datasets/faculty/workspace.js'
 import {
   facultyCourses, facultyTimetable, facultyAnnouncements, facultyQuizBuilder,
   facultyAiStudio, weakStudentDetection,
-} from '../../../mock-data/faculty-extra.js'
-import { paperGenerator } from '../../../mock-data/paper-generator.js'
-import { pyqAnalysis, pyqFilters, pyqPatterns, pyqVariants } from '../../../mock-data/pyq-analysis.js'
-import { aiTeachingAssistantThreads, copilotSuggestions, graphSearch, aiConversationStats } from '../../../mock-data/ai.js'
+} from '@/datasets/faculty/teaching.js'
+import { paperGenerator } from '@/datasets/faculty/paper-generator.js'
+import { pyqAnalysis, pyqFilters, pyqPatterns, pyqVariants } from '@/datasets/faculty/pyq-analysis.js'
+import { aiTeachingAssistantThreads, copilotSuggestions, graphSearch, aiConversationStats } from '@/datasets/ai/assistants.js'
 
 /* ---- new datasets ---- */
 import { facultySections, teachingSchedule, teachingCalendar, weeklyTeachingHours, courseTitleFor, colorFor } from './classes.js'

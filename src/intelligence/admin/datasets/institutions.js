@@ -3,15 +3,15 @@
  *
  * Institution-level relational references: departments, programs, campuses,
  * academic terms and the authoritative enrolment distribution. Values are
- * sourced from the master profile + existing admin mock data — this file
+ * sourced from the master profile + existing deterministic admin datasets — this file
  * only normalizes access, it never invents new numbers.
  */
 
 import { masterInstitutionProfile } from '../master-profile.js'
-import { adminDashboard } from '../../../mock-data/admin.js'
-import { DEPARTMENTS } from '../../../mock-data/users.js'
-import { adminPrograms } from '../../../mock-data/admin-extra.js'
-import { adminSettings } from '../../../mock-data/admin.js'
+import { adminDashboard } from '@/datasets/admin/core.js'
+import { DEPARTMENTS } from '@/datasets/platform/users.js'
+import { adminPrograms } from '@/datasets/admin/operations.js'
+import { adminSettings } from '@/datasets/admin/core.js'
 
 /* Departments (authoritative: master profile mirrors DEPARTMENTS). */
 export const institutionDepartments = masterInstitutionProfile.departments.map((d) => ({

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AI_CAPABILITIES } from '@/mock-data/platform'
+import { AI_CAPABILITIES } from '@/datasets/platform/content.js'
 import { SectionHeading, Reveal } from '@/components/shared/section-heading'
 import { useCountUp } from '@/hooks/use-count-up'
 import { useInView } from '@/hooks/use-in-view'

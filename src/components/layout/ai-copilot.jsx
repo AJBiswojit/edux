@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUp, Bot, Maximize2, Sparkles, X } from 'lucide-react'
 import { useCopilotSuggestions, useAITutorRespond } from '@/services'
-import { generateTutorReply } from '@/api/mock-routes'
+import { generateTutorReply } from '@/services'
 import { ChatMessage, TypingDots } from '@/components/shared/chat-message'
 import { useToast } from '@/components/ui'
 

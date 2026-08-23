@@ -96,3 +96,10 @@ export function useAIAssistantRespond() {
 }
 
 export const useAIStats = () => useQuery(get('/ai/stats', ['ai', 'stats']))
+
+/* ================= AI (deterministic prototype fallback) =================
+   Chat surfaces (AI Tutor · AI Copilot · Teaching Assistant) fall back to the
+   deterministic tutor reply engine when the assistant request fails, so they
+   never show an "offline" state. Re-exported here so UI components consume
+   the SERVICE layer instead of importing an API module directly. */
+export { generateTutorReply } from '@/api/ai/tutor-reply'

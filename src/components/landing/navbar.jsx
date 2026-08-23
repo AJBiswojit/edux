@@ -7,7 +7,7 @@ import { cn } from '@/utils/cn'
 import { Logo } from '@/components/shared/logo'
 import { useTheme } from '@/contexts/theme-context'
 import { Button } from '@/components/ui/button'
-import { MEGA_MENU_PLATFORM, MEGA_MENU_AI, MEGA_MENU_RESOURCES, NAV_LINKS } from '@/mock-data/platform'
+import { MEGA_MENU_PLATFORM, MEGA_MENU_AI, MEGA_MENU_RESOURCES, NAV_LINKS } from '@/datasets/platform/content.js'
 import { Sheet, SheetBody, SheetClose, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
 function IconByName({ name, className }) {

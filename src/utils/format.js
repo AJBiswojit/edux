@@ -83,7 +83,7 @@ export function debounce(fn, wait = 300) {
   }
 }
 
-/** Simulate network latency for mock APIs. */
+/** Simulate network latency for API layers. */
 export function sleep(ms = 400) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

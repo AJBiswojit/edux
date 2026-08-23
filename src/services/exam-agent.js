@@ -1,6 +1,6 @@
 /**
  * AI Exam Conducting Agent — service hooks.
- * Consume the practice papers and attempt history via the mock API
+ * Consume the practice papers and attempt history via the API layer
  * (swap to a real backend with VITE_USE_MOCK=false, zero code changes).
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'

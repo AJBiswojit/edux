@@ -3,7 +3,7 @@
  *
  * One centralized, interconnected intelligence layer for the Faculty module.
  *  - masterFacultyProfile   → single source of truth for faculty identity
- *  - facultyDatasets        → every faculty dataset (existing mock data
+ *  - facultyDatasets        → every faculty dataset (the existing deterministic datasets
  *                             re-exported + new datasets) — no isolated copies
  *  - engine                 → deterministic mock-AI derivation functions
  *  - computeFacultyIntelligence() → fully assembled snapshot

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import * as Icons from 'lucide-react'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { FEATURES } from '@/mock-data/platform'
+import { FEATURES } from '@/datasets/platform/content.js'
 import { SectionHeading, Reveal } from '@/components/shared/section-heading'
 import { cn } from '@/utils/cn'
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Check, Target, Eye, Users, Heart, Globe2 } from 'lucide-react'
 import { SectionHeading, Reveal, GradientText } from '@/components/shared/section-heading'
 import { Button } from '@/components/ui/button'
-import { PLATFORM_STATS } from '@/mock-data/platform'
+import { PLATFORM_STATS } from '@/datasets/platform/content.js'
 import { useCountUp } from '@/hooks/use-count-up'
 import { useInView } from '@/hooks/use-in-view'
 

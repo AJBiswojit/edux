@@ -139,7 +139,7 @@ export const facultyPortfolio = {
   },
 }
 
-/* ---------- Teaching history (seed events; saves append via mock API) ---------- */
+/* ---------- Teaching history (seed events; saves append via API layer) ---------- */
 export const aiStudioHistory = [
   { id: 'h1', type: 'lesson-plan', title: 'Lesson plan — Network flows & max-flow/min-cut', detail: 'CS501 · 50 min · Lecture + Practice', date: '2026-08-05' },
   { id: 'h2', type: 'conversation', title: 'AI conversation — Midsem paper B review', detail: '12 messages · pinned', date: '2026-08-04' },
