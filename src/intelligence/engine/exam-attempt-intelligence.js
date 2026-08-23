@@ -25,7 +25,7 @@
  */
 
 import { round1, avg, clamp } from './scores.js'
-import { classifyAttempt, classifyAttemptContext, ATTEMPT_CLASSIFICATIONS, SPEED_THRESHOLDS } from './exam-agent.js'
+import { classifyAttempt, classifyAttemptContext as resolveCanonicalAttemptContext, ATTEMPT_CLASSIFICATIONS, SPEED_THRESHOLDS } from './exam-agent.js'
 
 /* ------------------------------------------------------------------ */
 /* Small helpers                                                      */
@@ -53,6 +53,19 @@ function levelOf(acc) {
   if (acc >= 75) return 'Strong'
   if (acc >= 55) return 'Developing'
   return 'Weak'
+}
+
+/**
+ * Context view for intelligence consumers. It deliberately rejects a
+ * competitive record with no recognized exam family rather than guessing
+ * from subject text. University is represented as its own family label for
+ * partition consumers; the canonical normalized attempt retains null there.
+ */
+export function classifyAttemptContext(attempt) {
+  const context = resolveCanonicalAttemptContext(attempt)
+  if (context.domain === 'university') return { domain: 'university', examFamily: 'University' }
+  if (!context.examFamily) return { domain: null, examFamily: null }
+  return { domain: 'competitive', examFamily: context.examFamily }
 }
 
 const asDomain = (attempt) => {
