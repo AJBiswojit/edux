@@ -21,8 +21,10 @@ vi.mock('framer-motion', async () => {
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+import { installTestStorage, initApi } from '../setup/api.js'
+
 /**
- * PHASE 5 — Student 360 UI render smoke test (SSR, no browser).
+ * Student 360 UI render smoke test (SSR, no browser).
  *
  * Interactive browser verification is unavailable in this environment, so
  * this suite renders the REAL StudentProfile page (real components, real
@@ -35,15 +37,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
  *   · Interventions tab renders the honest empty state
  *   · the page renders for a JEE student without cross-domain content
  */
-const mem = new Map()
-const storage = {
-  getItem: (k) => (mem.has(k) ? mem.get(k) : null),
-  setItem: (k, v) => mem.set(k, String(v)),
-  removeItem: (k) => mem.delete(k),
-  clear: () => mem.clear(),
-}
-globalThis.window = { localStorage: storage }
-globalThis.localStorage = storage
+installTestStorage()
 /* minimal SSR shims so framer-motion can render outside a browser */
 if (typeof globalThis.SVGElement === 'undefined') globalThis.SVGElement = class SVGElement {}
 if (typeof globalThis.HTMLElement === 'undefined') globalThis.HTMLElement = class HTMLElement {}
@@ -85,9 +79,7 @@ async function renderPage(path, studentId = STUDENT_ID) {
 }
 
 beforeAll(async () => {
-  await import('../../src/api/index.js')
-  server = await import('../../src/api/core/router.js')
-  server.setResponseLatency([0, 0])
+  server = await initApi()
   ;({ default: request } = await import('../../src/api/client.js'))
   ;({ default: StudentProfile } = await import('../../src/pages/faculty/StudentProfile.jsx'))
   ;({ ToastProvider } = await import('../../src/components/ui/toast.jsx'))

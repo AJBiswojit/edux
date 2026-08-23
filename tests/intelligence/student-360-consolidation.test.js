@@ -6,53 +6,18 @@ import {
 } from '../../src/intelligence/faculty/engine/student-360.js'
 import { generateInterventionRecommendation } from '../../src/intelligence/faculty/engine/ground-level-intelligence.js'
 import { domainPool, domainSwPool } from '../../src/components/students-workspace/student-360-panels.jsx'
-
-const student = { id: 'fs_jee_a_03', roll: 'JEE-03', name: 'Aarav Sharma', batchId: 'batch_jee_a' }
-
-function attempt({ id, examMode, examFamily = null, subject, chapter, topic = chapter, outcomes, submittedAt }) {
-  return {
-    id,
-    studentId: student.id,
-    roll: student.roll,
-    mode: 'manual',
-    examMode,
-    examFamily,
-    examType: examFamily,
-    category: examMode,
-    examId: id,
-    examName: id,
-    submittedAt: submittedAt ?? `2026-08-${String(Number(id.slice(-2)) || 1).padStart(2, '0')}T10:00:00.000Z`,
-    scoring: { pct: 50, accuracy: 50, attemptRate: 100 },
-    questionAttempts: outcomes.map((o, index) => ({
-      questionId: `${id}-q${index + 1}`,
-      academicContext: { subject, chapter, topic },
-      question: { difficulty: o.diff ?? 'Medium', marks: 4, type: 'MCQ', correctAnswer: 0, text: `${chapter} q${index + 1}` },
-      response: {
-        selectedAnswer: o.correct ? 0 : 1,
-        status: o.skipped ? 'skipped' : 'answered',
-        answerChanges: o.changes ?? 0,
-        markedForReview: !!o.marked,
-      },
-      timing: { timeSpent: o.time ?? 60 },
-      behaviour: { visits: o.visits ?? 1 },
-      evaluation: {
-        isCorrect: !!o.correct,
-        isSkipped: !!o.skipped,
-        classification: o.classification ?? (o.skipped ? null : o.correct ? (o.time <= 30 ? 'fast-correct' : 'slow-correct') : (o.time <= 30 ? 'fast-incorrect' : 'slow-incorrect')),
-      },
-    })),
-  }
-}
+import { jeeStudent as student } from '../fixtures/students.js'
+import { makeAttempt as attempt } from '../fixtures/attempts.js'
 
 const university = attempt({
-  id: 'uni-01', examMode: 'University', examFamily: 'JEE',
+  id: 'uni-01', student, examMode: 'University', examFamily: 'JEE',
   subject: 'CS501', chapter: 'Graph Algorithms',
   outcomes: [
     { correct: true, time: 25 }, { correct: true, time: 30 }, { correct: false, time: 120, classification: 'slow-incorrect' },
   ],
 })
 const jeePhysicsWeak = attempt({
-  id: 'jee-02', examMode: 'Competitive', examFamily: 'JEE',
+  id: 'jee-02', student, examMode: 'Competitive', examFamily: 'JEE',
   subject: 'Physics', chapter: 'Rotational Motion',
   outcomes: [
     { correct: false, time: 20, classification: 'fast-incorrect' },
@@ -61,7 +26,7 @@ const jeePhysicsWeak = attempt({
   ],
 })
 const jeePhysicsWeak2 = attempt({
-  id: 'jee-03', examMode: 'Competitive', examFamily: 'JEE',
+  id: 'jee-03', student, examMode: 'Competitive', examFamily: 'JEE',
   subject: 'Physics', chapter: 'Rotational Motion', submittedAt: '2026-08-20T10:00:00.000Z',
   outcomes: [
     { correct: false, time: 25, classification: 'fast-incorrect' },
@@ -70,21 +35,21 @@ const jeePhysicsWeak2 = attempt({
   ],
 })
 const jeeMathStrong = attempt({
-  id: 'jee-04', examMode: 'Competitive', examFamily: 'JEE',
+  id: 'jee-04', student, examMode: 'Competitive', examFamily: 'JEE',
   subject: 'Mathematics', chapter: 'Calculus',
   outcomes: [
     { correct: true, time: 20 }, { correct: true, time: 25 }, { correct: true, time: 30 },
   ],
 })
 const neetBio = attempt({
-  id: 'neet-05', examMode: 'Competitive', examFamily: 'NEET',
+  id: 'neet-05', student, examMode: 'Competitive', examFamily: 'NEET',
   subject: 'Biology', chapter: 'Human Physiology',
   outcomes: [
     { correct: true, time: 30 }, { correct: false, time: 120, classification: 'slow-incorrect' }, { skipped: true, time: 0 },
   ],
 })
 const neetBio2 = attempt({
-  id: 'neet-06', examMode: 'Competitive', examFamily: 'NEET',
+  id: 'neet-06', student, examMode: 'Competitive', examFamily: 'NEET',
   subject: 'Biology', chapter: 'Human Physiology', submittedAt: '2026-08-22T10:00:00.000Z',
   outcomes: [
     { correct: true, time: 40 }, { correct: false, time: 30, classification: 'fast-incorrect' }, { skipped: true, time: 0 },
