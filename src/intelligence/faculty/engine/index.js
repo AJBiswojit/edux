@@ -53,7 +53,8 @@ export {
 export {
   INTERVENTION_STATUSES, TRANSITIONS, canTransition, practiceTypeFor,
   objectivesFor, buildInterventionFromGroup, selectPracticeQuestions,
-  buildRetestEntity, computeEffectiveness,
+  buildRetestEntity, sameInterventionTarget, metricsFromCanonicalAttempt,
+  matchInterventionExamAttempts, computeEffectiveness, computeGroupEffectiveness,
 } from './intervention-lifecycle.js'
 
 export {

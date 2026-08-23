@@ -792,7 +792,8 @@ export function buildCanonicalQuestionAttempts({ exam, interactions = {}, report
     analysis instead of recomputing it. */
 export function buildCanonicalExamAttempt({
   exam, interactions = {}, elapsedSeconds = 0, completedAt = null, startedAt = null,
-  studentId = null, roll = null, mode = 'manual', batchId = null, sectionId = null, report = null,
+  studentId = null, roll = null, mode = 'manual', batchId = null, sectionId = null,
+  interventionId = null, report = null,
 }) {
   const rep = report ?? buildExamAgentReport({ exam, interactions, elapsedSeconds, completedAt })
   const o = rep.overall
@@ -802,6 +803,7 @@ export function buildCanonicalExamAttempt({
   return {
     id: `ea-attempt-${Date.now()}`,
     studentId,
+    interventionId,
     roll,
     examId: exam.id,
     examName: exam.title,
@@ -912,6 +914,7 @@ export function normalizeExamAttempt(raw, examLookup = null) {
   return {
     id: raw.id ?? null,
     studentId: raw.studentId ?? null,
+    interventionId: raw.interventionId ?? null,
     roll: raw.roll ?? null,
     examId: raw.examId ?? null,
     examName: raw.examName ?? raw.examTitle ?? null,

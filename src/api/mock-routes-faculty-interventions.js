@@ -19,10 +19,11 @@ import {
   facultyStudents, getStudentAttempts,
 } from '@/intelligence/faculty/datasets/students-directory'
 import {
-  computeStudentIssueFingerprints, groupSimilarIssues, buildIndividualIssue,
-  buildIndividualWhyDetected, buildRecommendation,
+  computeStudentIssueFingerprints, computeStudentQuestionIntelligence,
+  groupSimilarIssues, buildIndividualIssue, buildIndividualWhyDetected, buildRecommendation,
   buildInterventionFromGroup, canTransition, selectPracticeQuestions,
-  buildRetestEntity, computeEffectiveness,
+  buildRetestEntity, sameInterventionTarget, matchInterventionExamAttempts,
+  computeEffectiveness, computeGroupEffectiveness,
 } from '@/intelligence/faculty'
 import { normalizeExamAttempt, classifyAttemptContext } from '@/intelligence'
 import { EXAM_AGENT_EXAMS } from '@/mock-data/exam-agent'
@@ -53,10 +54,15 @@ const readRetests = () => readJSON(RETEST_KEY, [])
 const writeRetests = (v) => writeJSON(RETEST_KEY, v)
 
 function canonicalAttemptsFor(studentId) {
-  const raw = studentId === 'u_stu_001'
-    ? readAllAttempts(true)
+  /* Canonical Exam Agent storage can contain attempts for any student. Merge
+     those records with the existing deterministic history; IDs de-duplicate
+     so a stored attempt can never be counted twice. */
+  const stored = readAllAttempts(false).filter((a) => a?.studentId === studentId)
+  const history = studentId === 'u_stu_001'
+    ? readAllAttempts(true).filter((a) => a?.studentId === studentId)
     : (getStudentAttempts(studentId) ?? [])
-  return raw
+  const byId = new Map([...history, ...stored].map((a) => [a.id, a]))
+  return [...byId.values()]
     .map((a) => normalizeExamAttempt(a, EXAM_AGENT_EXAMS))
     .filter((a) => a && a.studentId === studentId && a.mode !== 'demo')
 }
@@ -89,16 +95,17 @@ const slug = (v) => String(v ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').re
  * EXISTING lifecycle routes (detail/status/assign/practice/retest/student)
  * unchanged — one intervention system, one status machine.
  */
-function s360Records() {
+function storedInterventionRecords() {
   const overrides = readStatus()
   return Object.entries(overrides)
-    .filter(([, v]) => v && v.s360Group)
-    .map(([id, v]) => ({ id, group: v.s360Group, record: v }))
+    .filter(([, v]) => v && (v.interventionGroup || v.s360Group))
+    .map(([id, v]) => ({ id, group: v.interventionGroup ?? v.s360Group, record: v }))
 }
 
-/** Grouped similar-issue groups + Student-360 created records (one universe). */
+/** Grouped recommendations + every persisted per-student record (one store,
+ * one lifecycle). `s360Group` remains readable for Phase 5 compatibility. */
 function allInterventionGroups() {
-  return [...groupedPayload().groups, ...s360Records().map((r) => r.group)]
+  return [...groupedPayload().groups, ...storedInterventionRecords().map((r) => r.group)]
 }
 
 function findGroupById(id) {
@@ -109,10 +116,66 @@ function findGroupById(id) {
 function interventionFor(group) {
   const overrides = readStatus()
   const o = overrides[group.id] ?? null
-  const base = buildInterventionFromGroup(group, o)
-  return o?.s360Group
-    ? { ...base, source: o.source ?? 'Student 360', createdBy: o.createdBy ?? 'Dr. Meera Krishnan' }
-    : base
+  return buildInterventionFromGroup(group, o)
+}
+
+function persistedInterventions() {
+  const overrides = readStatus()
+  const stored = storedInterventionRecords().map(({ group }) => interventionFor(group))
+  const storedIds = new Set(stored.map((iv) => iv.id))
+  const reviewedGroups = groupedPayload().groups
+    .filter((group) => !storedIds.has(group.id) && overrides[group.id]?.status)
+    .map((group) => interventionFor(group))
+  return [...stored, ...reviewedGroups].filter((iv) => iv.status && iv.status !== 'Dismissed')
+}
+
+function activeInterventionForStudent(studentId, target, candidates = null) {
+  for (const iv of candidates ?? persistedInterventions()) {
+    if ((iv.studentIds ?? []).includes(studentId) && sameInterventionTarget(iv, target)) return iv
+  }
+  return null
+}
+
+function evidenceRowsForGroup(group) {
+  return (group.students ?? []).flatMap((member) => {
+    const rows = computeStudentQuestionIntelligence({ attempts: canonicalAttemptsFor(member.studentId) }).rows ?? []
+    return rows
+      .filter((row) => row.subject === group.subject && row.chapter === group.chapter)
+      .filter((row) => group.domain === 'University'
+        ? row.domain === 'university'
+        : row.domain === 'competitive' && row.examFamily === group.examFamily)
+      .map((row) => ({ ...row, studentId: member.studentId, studentName: member.name, roll: member.roll }))
+  })
+}
+
+function postExamOutcomeFor(iv, practice, retests) {
+  const practiceRows = practice.filter((p) => p.interventionId === iv.id && p.studentId === iv.studentId)
+  const retestRows = practiceRows.filter((p) => p.kind === 'retest')
+  const latestRetest = [...retestRows].sort((a, b) => String(b.submittedAt ?? '').localeCompare(String(a.submittedAt ?? '')))[0]
+  const matches = matchInterventionExamAttempts({
+    intervention: iv,
+    attempts: canonicalAttemptsFor(iv.studentId ?? iv.studentIds?.[0]),
+    after: latestRetest?.submittedAt ?? iv.retestCreatedAt ?? iv.createdAt,
+  })
+  /* The first strict subsequent attempt is the deterministic comparison
+     endpoint. Later attempts remain visible in Exam Analysis, but are not
+     averaged into this intervention outcome. */
+  const postMatch = matches[0] ?? null
+  const effectiveness = {
+    ...computeEffectiveness({
+      baseline: iv.baseline,
+      practiceAttempts: practiceRows.filter((p) => p.kind === 'practice'),
+      retestAttempts: retestRows,
+      postExamAttempts: postMatch ? [postMatch.metrics] : [],
+    }),
+    interventionId: iv.id,
+    studentId: iv.studentId,
+  }
+  return {
+    effectiveness,
+    postExam: postMatch ? { ...postMatch.metrics, matchType: postMatch.matchType, studentId: iv.studentId, interventionId: iv.id } : null,
+    retestEntity: retests.find((r) => r.interventionId === iv.id && (r.studentIds ?? []).includes(iv.studentId)) ?? null,
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -127,6 +190,7 @@ async function questionPoolFor(intervention) {
         .filter((q) => q.exam === label && q.subject === intervention.subject)
         .map((q) => ({
           id: q.id, question: q.question, options: q.options, answer: q.answer,
+          domain: 'Competitive', examFamily: intervention.examFamily,
           subject: q.subject, chapter: q.chapter, topic: q.topic, difficulty: q.difficulty, questionType: q.questionType,
           isPyq: true, pyq: q.pyq, year: q.year, source: 'competitive-foundation',
         })),
@@ -146,14 +210,42 @@ async function questionPoolFor(intervention) {
     .filter((q) => (code ? q.subjectCode === code : (q.subjectName ?? '').toLowerCase().includes(String(intervention.subject ?? '').toLowerCase())))
     .map((q) => ({
       id: q.id, question: q.question, options: q.options, answer: q.answer,
+      domain: 'University', examFamily: null,
       subject: q.subjectName, chapter: q.chapter, topic: q.topic, difficulty: q.difficulty, questionType: q.questionType,
       isPyq: true, pyq: q.pyq, year: q.year, source: 'university-pyq',
     }))
   return { questions: pyqs, includePyqByDefault: true }
 }
 
+function groupOutcome(group) {
+  const practice = readPractice()
+  const retests = readRetests()
+  const records = storedInterventionRecords()
+    .filter(({ record }) => record.source === 'Similar Issues' && record.groupId === group.id)
+    .map(({ group: storedGroup }) => {
+      const iv = interventionFor(storedGroup)
+      const outcome = postExamOutcomeFor(iv, practice, retests)
+      return { ...iv, effectiveness: outcome.effectiveness, postExam: outcome.postExam }
+    })
+  return computeGroupEffectiveness(records)
+}
+
+function presentGroup(group, activeCandidates = null) {
+  const candidates = activeCandidates ?? persistedInterventions()
+  const students = (group.students ?? []).map((member) => {
+    const existing = activeInterventionForStudent(member.studentId, group, candidates)
+    return {
+      ...member,
+      priority: member.severity === 'Critical' || member.severity === 'High' ? 'High' : group.priority,
+      evidenceCount: member.evidence?.questions ?? 0,
+      existingIntervention: existing ? { id: existing.id, status: existing.status, source: existing.source } : null,
+    }
+  })
+  return { ...group, students, interventionOutcome: groupOutcome(group) }
+}
+
 /* ------------------------------------------------------------------ */
-/* Faculty: similarity (Phase 5, unchanged)                           */
+/* Faculty: similarity (Phase 5 + multi-student outcome extension)     */
 /* ------------------------------------------------------------------ */
 mockRoute('get', '/faculty/similar-issues', ({ params }) => {
   const scope = params?.scope ?? 'all'
@@ -163,8 +255,9 @@ mockRoute('get', '/faculty/similar-issues', ({ params }) => {
   const scopeGroups = scope === 'batch'
     ? groups
     : groups
+  const active = persistedInterventions()
   return {
-    groups: scopeGroups,
+    groups: scopeGroups.map((group) => presentGroup(group, active)),
     individuals: individuals.map((f) => buildIndividualIssue(f)),
     count: groups.length,
     individualCount: individuals.length,
@@ -174,8 +267,190 @@ mockRoute('get', '/faculty/similar-issues', ({ params }) => {
   }
 })
 
-/* Phase 3 — retired GET /faculty/similar-issues/:id (zero consumers; the list
-   route above carries the full group payloads the UI expands inline). */
+function requireIssueGroup(id) {
+  const group = groupedPayload().groups.find((g) => g.id === id)
+  if (group) return group
+  const err = new Error('Similar Issue Group not found.')
+  err.response = { status: 404, data: { message: err.message } }
+  throw err
+}
+
+function practiceRequest(raw = {}) {
+  return {
+    count: Number(raw.count ?? raw.questionCount ?? 8),
+    difficulty: raw.difficulty ?? 'Medium',
+    questionType: raw.questionType ?? 'Any',
+    pyqPreference: raw.pyqPreference ?? 'Preferred',
+    selectionLevel: raw.selectionLevel ?? raw.level ?? 'exact',
+  }
+}
+
+async function practiceAvailability(group, config) {
+  const pool = await questionPoolFor(group)
+  const result = selectPracticeQuestions({
+    domain: group.domain, examFamily: group.examFamily, subject: group.subject, chapter: group.chapter,
+    difficulty: config.difficulty, count: config.count, questionType: config.questionType,
+    includePyq: config.pyqPreference !== 'No', pyqPreference: config.pyqPreference,
+    pool: pool.questions, level: config.selectionLevel,
+  })
+  return {
+    availableQuestions: result.available,
+    requiredQuestions: result.required,
+    shortfall: Math.max(0, result.required - result.available),
+    insufficient: result.insufficient,
+    selectionLevel: result.level,
+    requestedSelectionLevel: config.selectionLevel,
+  }
+}
+
+/* Group evidence is canonical question-attempt evidence. It is faculty-only
+   and partitioned by the selected group context. */
+mockRoute('get', '/faculty/similar-issues/:groupId/evidence', ({ params }) => {
+  const group = requireIssueGroup(params.groupId)
+  const rows = evidenceRowsForGroup(group)
+  return {
+    groupId: group.id,
+    domain: group.domain, examFamily: group.examFamily, subject: group.subject, chapter: group.chapter,
+    summary: { ...group.evidence, evidenceQuestions: rows.length },
+    rows,
+    students: group.students.map((s) => ({
+      ...s,
+      evidenceCount: rows.filter((r) => r.studentId === s.studentId).length,
+      rows: rows.filter((r) => r.studentId === s.studentId),
+    })),
+  }
+})
+
+mockRoute('get', '/faculty/similar-issues/:groupId/intervention-preflight', async ({ params }) => {
+  const group = requireIssueGroup(params.groupId)
+  const config = practiceRequest(params)
+  const evidenceRows = evidenceRowsForGroup(group)
+  const availability = await practiceAvailability(group, config)
+  const presented = presentGroup(group)
+  return {
+    group: presented,
+    groupEvidence: { ...group.evidence, evidenceQuestions: evidenceRows.length },
+    students: presented.students.map((s) => ({
+      ...s,
+      evidenceRows: evidenceRows.filter((r) => r.studentId === s.studentId),
+      selectableByDefault: !s.existingIntervention,
+      exclusionReason: s.existingIntervention ? `Existing active intervention (${s.existingIntervention.status})` : null,
+    })),
+    practiceConfig: config,
+    practiceAvailability: availability,
+  }
+})
+
+/** Faculty-confirmed group creation. One persisted lifecycle record is written
+ * per selected student; duplicates become explicit skips, never silent loss. */
+mockRoute('post', '/faculty/similar-issues/:groupId/interventions', async ({ params, body }) => {
+  const group = requireIssueGroup(params.groupId)
+  const requestedIds = [...new Set(Array.isArray(body?.studentIds) ? body.studentIds : [])]
+  if (!requestedIds.length) {
+    const err = new Error('Select at least one student from this Similar Issue Group.')
+    err.response = { status: 400, data: { message: err.message } }
+    throw err
+  }
+  const config = practiceRequest(body?.practiceConfig)
+  if (!Number.isFinite(config.count) || config.count < 1 || config.count > 30) {
+    const err = new Error('Requested question count must be between 1 and 30.')
+    err.response = { status: 400, data: { message: err.message } }
+    throw err
+  }
+  const availability = await practiceAvailability(group, config)
+  if (availability.insufficient) {
+    const err = new Error('Not enough questions match this configuration.')
+    err.response = { status: 400, data: { message: err.message, ...availability } }
+    throw err
+  }
+
+  const overrides = readStatus()
+  const created = []
+  const skipped = []
+  const createdAt = new Date().toISOString()
+  const activeCandidates = persistedInterventions()
+
+  requestedIds.forEach((studentId) => {
+    const member = group.students.find((s) => s.studentId === studentId)
+    if (!member) {
+      skipped.push({ studentId, name: 'Unknown student', reason: 'Student does not belong to this Similar Issue Group.' })
+      return
+    }
+    const existing = activeInterventionForStudent(studentId, group, activeCandidates)
+    if (existing) {
+      skipped.push({ studentId, name: member.name, reason: 'Existing active intervention', interventionId: existing.id, status: existing.status })
+      return
+    }
+
+    const interventionId = `similar-${slug(group.id)}-${slug(studentId)}`
+    const evidence = {
+      students: 1, subject: group.subject, chapter: group.chapter, issueType: group.issueType,
+      avgAccuracy: member.accuracy ?? null, avgTime: member.avgTime ?? null,
+      questions: member.evidence?.questions ?? 0, attempted: member.evidence?.attempted ?? null,
+      incorrect: member.evidence?.incorrect ?? 0, skipped: member.evidence?.skipped ?? 0,
+      affectedExams: member.evidence?.attempts ?? 0, attempts: member.evidence?.attempts ?? 0,
+      persistence: member.evidence?.attempts ?? 1, trend: member.trend ?? null,
+    }
+    const oneStudentGroup = {
+      ...group,
+      id: interventionId,
+      issueGroupId: group.id,
+      studentCount: 1,
+      students: [member],
+      evidence,
+    }
+    const objective = body?.objective ?? `Improve ${group.chapter} accuracy.`
+    const record = {
+      interventionGroup: oneStudentGroup,
+      interventionId,
+      studentId,
+      studentIds: [studentId],
+      source: 'Similar Issues',
+      groupId: group.id,
+      domain: group.domain,
+      examFamily: group.examFamily ?? null,
+      subject: group.subject,
+      chapter: group.chapter,
+      issueType: group.issueType,
+      priority: body?.priority ?? group.priority,
+      title: body?.title ?? `${group.chapter} Accuracy Recovery — ${member.name.split(' ')[0]}`,
+      objectives: [objective],
+      objective,
+      evidence,
+      practiceConfig: {
+        type: body?.practiceConfig?.type,
+        count: config.count,
+        difficulty: config.difficulty,
+        duration: Number(body?.practiceConfig?.duration ?? 20),
+        questionType: config.questionType,
+        includePyq: config.pyqPreference !== 'No',
+        pyqPreference: config.pyqPreference,
+        selectionLevel: config.selectionLevel,
+      },
+      pyqPreference: config.pyqPreference,
+      notes: body?.notes ?? '',
+      createdBy: body?.createdBy ?? 'Dr. Meera Krishnan',
+      createdAt,
+      updatedAt: createdAt,
+      status: 'Recommended',
+      practiceAvailability: availability,
+    }
+    overrides[interventionId] = record
+    created.push({ interventionId, studentId, name: member.name, status: 'Recommended' })
+  })
+
+  writeStatus(overrides)
+  return {
+    ok: created.length > 0,
+    groupId: group.id,
+    created, skipped,
+    createdCount: created.length,
+    skippedCount: skipped.length,
+    commonTarget: `${group.examFamily ?? group.domain} ${group.subject} → ${group.chapter}`,
+    priority: body?.priority ?? group.priority,
+    note: 'One intervention record per student. Faculty approval is still required; nothing was assigned automatically.',
+  }
+})
 
 /* ------------------------------------------------------------------ */
 /* Faculty: intervention center + lifecycle                           */
@@ -189,7 +464,9 @@ mockRoute('get', '/faculty/interventions', async () => {
     const ivPractice = practice.filter((p) => p.interventionId === iv.id)
     const ivRetests = retests.filter((r) => r.interventionId === iv.id)
     const retestAttempts = practice.filter((p) => p.kind === 'retest' && p.interventionId === iv.id)
-    const eff = computeEffectiveness({ baseline: iv.baseline, practiceAttempts: ivPractice.filter((p) => p.kind === 'practice'), retestAttempts })
+    const outcome = iv.studentId
+      ? postExamOutcomeFor(iv, practice, retests)
+      : { effectiveness: computeEffectiveness({ baseline: iv.baseline, practiceAttempts: ivPractice.filter((p) => p.kind === 'practice'), retestAttempts }), postExam: null }
     return {
       ...iv,
       practiceProgress: ivPractice.filter((p) => p.kind === 'practice').length,
@@ -197,7 +474,8 @@ mockRoute('get', '/faculty/interventions', async () => {
       practiceAccuracy: ivPractice.filter((p) => p.kind === 'practice').length ? Math.round(ivPractice.filter((p) => p.kind === 'practice').reduce((n, p) => n + p.accuracy, 0) / ivPractice.filter((p) => p.kind === 'practice').length) : null,
       retests: ivRetests.length,
       retestPending: ivRetests.length > 0 && !retestAttempts.length,
-      effectiveness: eff,
+      effectiveness: outcome.effectiveness,
+      postExam: outcome.postExam,
     }
   })
   return {
@@ -218,12 +496,16 @@ mockRoute('get', '/faculty/interventions/:id', async ({ params }) => {
   const retests = readRetests()
   const iv = interventionFor(group)
   const retestAttempts = practice.filter((p) => p.kind === 'retest' && p.interventionId === iv.id)
+  const outcome = iv.studentId
+    ? postExamOutcomeFor(iv, practice, retests)
+    : { effectiveness: computeEffectiveness({ baseline: iv.baseline, practiceAttempts: practice.filter((p) => p.kind === 'practice' && p.interventionId === iv.id), retestAttempts }), postExam: null }
   return {
     intervention: {
       ...iv,
-      effectiveness: computeEffectiveness({ baseline: iv.baseline, practiceAttempts: practice.filter((p) => p.kind === 'practice' && p.interventionId === iv.id), retestAttempts }),
+      effectiveness: outcome.effectiveness,
+      postExam: outcome.postExam,
       practiceAttempts: practice.filter((p) => p.interventionId === iv.id),
-      retests,
+      retests: retests.filter((r) => r.interventionId === iv.id),
     },
   }
 })
@@ -312,7 +594,9 @@ mockRoute('get', '/faculty/interventions/:id/practice', async ({ params }) => {
   const res = selectPracticeQuestions({
     domain: iv.domain, examFamily: iv.examFamily, subject: iv.subject, chapter: iv.chapter,
     difficulty: iv.practiceConfig?.difficulty ?? 'Medium', count: iv.practiceConfig?.count ?? 8,
-    includePyq: iv.practiceConfig?.includePyq ?? true, excludeIds: used, pool: pool.questions, level: 'subject',
+    questionType: iv.practiceConfig?.questionType ?? 'Any',
+    includePyq: iv.practiceConfig?.includePyq ?? true, pyqPreference: iv.practiceConfig?.pyqPreference,
+    excludeIds: used, pool: pool.questions, level: iv.practiceConfig?.selectionLevel ?? 'subject',
   })
   return { ...res, interventionId: iv.id, practiceType: iv.practiceConfig?.type, durationMinutes: iv.practiceConfig?.duration ?? 20 }
 })
@@ -343,6 +627,11 @@ mockRoute('post', '/faculty/interventions/:groupId/retest', async ({ params, bod
     domain: iv.domain, examFamily: iv.examFamily, subject: iv.subject, chapter: iv.chapter,
     difficulty, count, includePyq: pyqPreference === 'Yes', excludeIds: practiceIds, pool: pool.questions, level,
   })
+  if (res.insufficient) {
+    const err = new Error('Not enough unused questions match this re-test configuration.')
+    err.response = { status: 400, data: { message: err.message, available: res.available, required: res.required, shortfall: res.required - res.available } }
+    throw err
+  }
   const retest = buildRetestEntity({
     intervention: iv,
     title: body?.title ?? `Recovery Test — ${iv.chapter}`,
@@ -381,9 +670,15 @@ mockRoute('get', '/faculty/students/:id/interventions', async ({ params }) => {
       const practiceRows = myPractice.filter((p) => p.kind === 'practice')
       const retestRows = myPractice.filter((p) => p.kind === 'retest')
       const myRetests = retests.filter((r) => r.interventionId === iv.id && (r.studentIds ?? []).includes(params.id))
-      const eff = computeEffectiveness({ baseline: iv.baseline, practiceAttempts: practiceRows, retestAttempts: retestRows })
+      const outcome = iv.studentId
+        ? postExamOutcomeFor(iv, practice, retests)
+        : { effectiveness: computeEffectiveness({ baseline: iv.baseline, practiceAttempts: practiceRows, retestAttempts: retestRows }), postExam: null }
+      const eff = outcome.effectiveness
       return {
         id: iv.id,
+        interventionId: iv.id,
+        studentId: params.id,
+        groupId: iv.groupId ?? iv.issueGroupId ?? null,
         title: iv.title,
         domain: iv.domain,
         examFamily: iv.examFamily,
@@ -409,6 +704,8 @@ mockRoute('get', '/faculty/students/:id/interventions', async ({ params }) => {
         effectivenessStatus: eff?.outcome ?? 'Pending',
         outcome: eff?.completed ? eff.outcome : null,
         effectivenessEvidence: eff?.evidence ?? null,
+        effectiveness: eff,
+        postExam: outcome.postExam,
       }
     })
   return { items, count: items.length, studentId: params.id }
@@ -561,6 +858,16 @@ mockRoute('post', '/faculty/students/:studentId/interventions', ({ params, body 
   const count = Math.min(30, Math.max(1, Number(payload.practiceConfig?.count ?? 8) || 8))
   const record = {
     s360Group: group,
+    interventionId: id,
+    studentId: student.id,
+    studentIds: [student.id],
+    groupId: id,
+    domain,
+    examFamily,
+    subject,
+    chapter,
+    issueType,
+    evidence,
     source: 'Student 360',
     createdBy: payload.createdBy ?? 'Dr. Meera Krishnan',
     title: payload.title ?? `${chapter} Accuracy Recovery — ${student.name.split(' ')[0]}`,
@@ -569,8 +876,11 @@ mockRoute('post', '/faculty/students/:studentId/interventions', ({ params, body 
     practiceConfig: {
       count,
       difficulty: payload.practiceConfig?.difficulty ?? 'Medium',
-      duration: Math.max(10, Math.min(60, Math.round(count * 2))),
+      duration: Math.max(5, Math.min(120, Number(payload.practiceConfig?.duration ?? Math.round(count * 2)) || 20)),
+      questionType: payload.practiceConfig?.questionType ?? 'Any',
       includePyq: payload.practiceConfig?.pyqPreference !== 'No',
+      pyqPreference: payload.practiceConfig?.pyqPreference ?? 'Yes',
+      selectionLevel: payload.practiceConfig?.selectionLevel ?? 'subject',
     },
     pyqPreference: payload.practiceConfig?.pyqPreference ?? 'Yes',
     notes: payload.notes ?? '',
@@ -602,17 +912,57 @@ mockRoute('get', '/student/interventions', async ({ params }) => {
     .filter((iv) => ['Assigned', 'In Progress', 'Completed', 'Re-test Pending', 'Evaluating', 'Resolved', 'Improving', 'Persistent'].includes(iv.status))
     .map((iv) => {
       const myPractice = practice.filter((p) => p.interventionId === iv.id && p.studentId === studentId)
-      const myRetest = retests.find((r) => r.interventionId === iv.id && (r.studentIds ?? []).includes(studentId))
+      const practiceAttempts = myPractice.filter((p) => p.kind === 'practice')
       const retestAttempts = myPractice.filter((p) => p.kind === 'retest')
-      return {
+      const rawRetest = retests.find((r) => r.interventionId === iv.id && (r.studentIds ?? []).includes(studentId))
+      const member = (iv.students ?? []).find((s) => s.studentId === studentId)
+      const individualIv = iv.studentId ? iv : {
         ...iv,
+        studentId,
+        baseline: {
+          ...iv.baseline,
+          accuracy: member?.accuracy ?? iv.baseline?.accuracy,
+          avgTime: member?.avgTime ?? iv.baseline?.avgTime,
+          incorrect: member?.evidence?.incorrect ?? iv.baseline?.incorrect,
+          skipped: member?.evidence?.skipped ?? iv.baseline?.skipped,
+          questions: member?.evidence?.questions ?? iv.baseline?.questions,
+        },
+      }
+      const outcome = postExamOutcomeFor(individualIv, practice, retests)
+      const retest = rawRetest ? {
+        id: rawRetest.id, interventionId: rawRetest.interventionId, title: rawRetest.title,
+        domain: rawRetest.domain, examFamily: rawRetest.examFamily, subject: rawRetest.subject,
+        chapter: rawRetest.chapter, difficulty: rawRetest.difficulty,
+        questionCount: rawRetest.questionCount, timeLimit: rawRetest.timeLimit,
+        status: rawRetest.status, createdAt: rawRetest.createdAt,
+      } : null
+      /* Deliberately explicit allow-list: no group id/name, other students,
+         group averages, faculty notes, or faculty-only reasoning. */
+      return {
+        id: iv.id,
+        interventionId: iv.id,
+        studentId,
+        title: iv.title,
+        domain: iv.domain,
+        examFamily: iv.examFamily,
+        subject: iv.subject,
+        chapter: iv.chapter,
+        issueType: iv.issueType,
+        priority: iv.priority,
+        status: iv.status,
+        objective: iv.objectives?.[0] ?? null,
+        objectives: iv.objectives ?? [],
+        practiceConfig: iv.practiceConfig,
+        createdAt: iv.createdAt,
         whyAssigned: `Your recent assessments show repeated difficulty with ${iv.chapter} (${iv.issueType.toLowerCase()}).`,
-        practiceDone: myPractice.filter((p) => p.kind === 'practice').length > 0,
+        practiceDone: practiceAttempts.length > 0,
         practiceRequired: iv.practiceConfig?.count ?? 8,
-        practiceAccuracy: myPractice.filter((p) => p.kind === 'practice').length ? Math.round(myPractice.filter((p) => p.kind === 'practice').reduce((n, p) => n + p.accuracy, 0) / myPractice.filter((p) => p.kind === 'practice').length) : null,
-        retest: myRetest ?? null,
+        practiceAccuracy: practiceAttempts.length ? Math.round(practiceAttempts.reduce((n, p) => n + p.accuracy, 0) / practiceAttempts.length) : null,
+        retest,
         retestDone: retestAttempts.length > 0,
-        outcome: computeEffectiveness({ baseline: iv.baseline, practiceAttempts: myPractice.filter((p) => p.kind === 'practice'), retestAttempts }).outcome,
+        outcome: outcome.effectiveness.outcome,
+        effectiveness: outcome.effectiveness,
+        postExam: outcome.postExam,
       }
     })
   return { items, count: items.length, studentId }
@@ -630,7 +980,9 @@ mockRoute('get', '/student/interventions/:id/practice', async ({ params }) => {
   const res = selectPracticeQuestions({
     domain: iv.domain, examFamily: iv.examFamily, subject: iv.subject, chapter: iv.chapter,
     difficulty: iv.practiceConfig?.difficulty ?? 'Medium', count: iv.practiceConfig?.count ?? 8,
-    includePyq: iv.practiceConfig?.includePyq ?? true, pool: pool.questions, level: 'subject',
+    questionType: iv.practiceConfig?.questionType ?? 'Any',
+    includePyq: iv.practiceConfig?.includePyq ?? true, pyqPreference: iv.practiceConfig?.pyqPreference,
+    pool: pool.questions, level: iv.practiceConfig?.selectionLevel ?? 'subject',
   })
   return { ...res, interventionId: iv.id, practiceType: iv.practiceConfig?.type, durationMinutes: iv.practiceConfig?.duration ?? 20, whyAssigned: `Your recent assessments show repeated difficulty with ${iv.chapter}.` }
 })
@@ -643,11 +995,23 @@ mockRoute('post', '/student/interventions/:id/practice-attempts', async ({ param
     throw err
   }
   const iv = interventionFor(group)
+  const studentId = body?.studentId ?? 'u_stu_001'
+  if (!(iv.studentIds ?? []).includes(studentId)) {
+    const err = new Error('This intervention does not belong to the selected student.')
+    err.response = { status: 403, data: { message: err.message } }
+    throw err
+  }
+  const kind = body?.kind ?? 'practice'
+  if (kind === 'retest' && !readRetests().some((r) => r.interventionId === iv.id && (r.studentIds ?? []).includes(studentId))) {
+    const err = new Error('No linked re-test exists for this intervention and student.')
+    err.response = { status: 400, data: { message: err.message } }
+    throw err
+  }
   const attempt = {
     id: `ip-${Date.now()}`,
     interventionId: iv.id,
-    studentId: body?.studentId ?? 'u_stu_001',
-    kind: body?.kind ?? 'practice', /* practice | retest */
+    studentId,
+    kind, /* practice | retest */
     domain: iv.domain,
     examFamily: iv.examFamily,
     subject: iv.subject,
@@ -660,6 +1024,9 @@ mockRoute('post', '/student/interventions/:id/practice-attempts', async ({ param
     attemptRate: body?.attemptRate ?? 0,
     avgTime: body?.avgTime ?? 0,
     incorrect: body?.incorrect ?? 0,
+    skipped: body?.skipped ?? 0,
+    attempted: body?.attempted ?? body?.questionAttempts?.filter?.((q) => q.selectedAnswer != null)?.length ?? null,
+    questions: body?.questionAttempts?.length ?? 0,
     startedAt: body?.startedAt ?? null,
     submittedAt: new Date().toISOString(),
     mode: body?.kind === 'retest' ? 'intervention-retest' : 'intervention-practice',
@@ -700,7 +1067,8 @@ mockRoute('get', '/student/interventions/:id/retest', async ({ params }) => {
     err.response = { status: 404, data: { message: err.message } }
     throw err
   }
-  return { retest }
+  const { studentIds: _privateStudentIds, ...studentSafeRetest } = retest
+  return { retest: studentSafeRetest }
 })
 
 /* ------------------------------------------------------------------ */

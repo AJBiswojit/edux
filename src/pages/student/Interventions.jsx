@@ -40,6 +40,7 @@ function InterventionCard({ iv, onStartPractice, onStartRetest }) {
         </div>
       </div>
 
+      {iv.objective && <div className="mt-3 rounded-xl bg-slate-50 p-2.5 text-[11.5px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-300"><span className="font-bold">Objective:</span> {iv.objective}</div>}
       <div className="mt-3 flex flex-wrap gap-1.5">
         <Badge variant="secondary" size="sm"><Target className="h-3 w-3" /> {iv.issueType}</Badge>
         <Badge variant="secondary" size="sm"><BookOpen className="h-3 w-3" /> {iv.practiceConfig?.type}</Badge>
@@ -47,8 +48,8 @@ function InterventionCard({ iv, onStartPractice, onStartRetest }) {
         {iv.practiceDone && iv.practiceAccuracy != null && (
           <Badge variant={iv.practiceAccuracy >= 70 ? 'success' : 'warning'} size="sm">Practice {iv.practiceAccuracy}%</Badge>
         )}
-        {iv.outcome && ['Resolved', 'Improving', 'Persistent'].includes(iv.outcome) && (
-          <Badge variant={iv.outcome === 'Resolved' ? 'success' : iv.outcome === 'Improving' ? 'info' : 'danger'} size="sm">{iv.outcome}</Badge>
+        {iv.outcome && iv.outcome !== 'Pending' && (
+          <Badge variant={iv.outcome === 'Resolved' ? 'success' : iv.outcome === 'Improving' ? 'info' : iv.outcome === 'Persistent' ? 'danger' : 'warning'} size="sm">Prototype effectiveness: {iv.outcome}</Badge>
         )}
       </div>
 
@@ -116,6 +117,12 @@ function Interventions() {
           <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
             <p className="text-sm font-bold text-slate-700 dark:text-slate-200">No re-test assigned yet</p>
             <p className="mt-1 text-xs text-slate-400">The faculty will schedule a re-test after reviewing your practice.</p>
+            <Button variant="outline" className="mt-4" onClick={() => setSession(null)}>Back</Button>
+          </div>
+        ) : kind === 'practice' && practiceData?.data?.insufficient ? (
+          <div className="rounded-3xl border border-amber-200 bg-amber-50/60 p-10 text-center dark:border-amber-500/25 dark:bg-amber-500/5">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Practice is not available yet</p>
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">The configured set requires {practiceData.data.required} questions, but only {practiceData.data.available} currently match. Your faculty must broaden the filters; no partial practice session was created.</p>
             <Button variant="outline" className="mt-4" onClick={() => setSession(null)}>Back</Button>
           </div>
         ) : qs.length ? (

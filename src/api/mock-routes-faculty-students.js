@@ -29,9 +29,11 @@ import { readAllAttempts } from './exam-attempts-store'
     intelligence store (real attempts + Phase 2 seeds); others →
     deterministic faculty dataset history. */
 function canonicalAttemptsFor(studentId) {
-  const raw = studentId === 'u_stu_001'
-    ? readAllAttempts(true)
+  const stored = readAllAttempts(false).filter((a) => a?.studentId === studentId)
+  const history = studentId === 'u_stu_001'
+    ? readAllAttempts(true).filter((a) => a?.studentId === studentId)
     : (getStudentAttempts(studentId) ?? [])
+  const raw = [...new Map([...history, ...stored].map((a) => [a.id, a])).values()]
   return raw
     .map((a) => normalizeExamAttempt(a, EXAM_AGENT_EXAMS))
     .filter((a) => a && a.studentId === studentId && a.mode !== 'demo')
