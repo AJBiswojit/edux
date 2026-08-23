@@ -1,5 +1,6 @@
 /**
- * Faculty — Student 360 canonical intelligence panels (Phase 4 consolidation).
+ * Faculty — Student 360 canonical intelligence panels (Phase 4 consolidation,
+ * Phase 5 evidence→action hardening).
  *
  * ONE canonical presentation surface for the 360 bundle produced by
  * computeStudent360() (canonical attempts → engine → s360 → UI). Every
@@ -8,17 +9,23 @@
  *
  * Panels (one per canonical tab):
  *   OverviewPanel          — KPI summary + AI summary + exam history
- *   StrengthsPanel         — evidence-driven strengths, click → questions
- *   WeaknessesPanel        — actionable weaknesses + suggested intervention
+ *   StrengthsPanel         — evidence-driven strengths, click → questions;
+ *                            intervention suggestion ONLY on a real negative
+ *                            signal (declining trend / related weakness)
+ *   WeaknessesPanel        — actionable weaknesses → evidence questions →
+ *                            suggested intervention → Review & Create
  *   TimeBehaviourPanel     — time + observable behaviour (no psychology)
  *   ErrorsPanel            — Careless / Time-related / Unattempted / Unclassified
  *   TrendsPanel            — per-assessment progression + issue statuses
  *   ComparisonPanel        — first vs latest (context-isolated)
  *   DnaPanel               — Academic DNA evidence (reuses engine pools)
- *   SimilarIssuesPanel     — Phase 5 groups containing THIS student
+ *   SimilarIssuesPanel     — Phase 5: GROUPED issues (≥2 students) AND
+ *                            INDIVIDUAL issues for THIS student, each with
+ *                            evidence questions + suggested intervention
  *
- * Subject / Chapter / Question Analysis live in student-intelligence-tabs
- * (they carry the drill-down state machine); Interventions lives in
+ * All question evidence flows through the ONE shared EvidenceQuestionsDialog
+ * (student-evidence.jsx) — no per-panel dialogs. Subject / Chapter / Question
+ * Analysis live in student-intelligence-tabs; Interventions lives in
  * intervention-center. This file only owns the read-only 360 panels.
  */
 import { useMemo, useState } from 'react'
@@ -26,33 +33,40 @@ import { Link } from 'react-router-dom'
 import {
   AlertTriangle, ArrowUpRight, BookOpen, BrainCircuit, CheckCircle2,
   ClipboardList, FileText, Layers, Target, Timer,
-  TrendingUp, Users,
+  TrendingUp, User, Users,
 } from 'lucide-react'
 import {
-  Badge, Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, Table,
+  Badge, Button, Card, Table,
   TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui'
 import { ChartCard } from '@/components/shared/chart-card'
 import { StatCard } from '@/components/shared/stat-card'
 import { AreaTrend, BarCompare, DonutChart } from '@/components/charts'
-import { useWeakTopicQuestions } from '@/services/faculty-students'
-import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 import { ExamHistoryTable } from './student-exam-history'
-import { generateInterventionRecommendation } from '@/intelligence/faculty/engine/ground-level-intelligence'
-
-const LETTERS = QUESTION_OPTION_LABELS
-const DOMAIN_CONTEXT = { University: 'University', JEE: 'JEE', NEET: 'NEET' }
+import {
+  EvidenceQuestionsDialog,
+  SuggestedInterventionDialog,
+} from './student-evidence'
 
 const TREND_STYLE = { improving: 'success', declining: 'danger', stable: 'secondary', new: 'info' }
 const ISSUE_TONE = {
   'Persistent weakness': 'danger', 'Resolved issue': 'success', 'Improving issue': 'info',
   'Declining area': 'warning', 'Strong area': 'success', 'Developing area': 'secondary',
 }
-const RESULT_STYLE = { Correct: 'success', Incorrect: 'danger', Skipped: 'warning' }
-
 const matchesContext = (item, context) => context === 'University'
   ? item.examMode === 'University'
   : item.examMode === 'Competitive' && item.examFamily === context
+
+/** Canonical question rows for one subject+chapter inside ONE domain. */
+export function evidenceRowsFor(s360, domain, subject, chapter) {
+  return (s360?.question?.rows ?? []).filter((r) =>
+    r.subject === subject && r.chapter === chapter && matchesContext(r, domain))
+}
+
+/** The fingerprint partition of an issue matches the selected UI domain. */
+export const issueMatchesDomain = (issue, domain) => domain === 'University'
+  ? issue.domain === 'University'
+  : issue.domain === 'Competitive' && issue.examFamily === domain
 
 /* Domain → the s360 sub-pool (subjects/chapters are stored university vs
    competitive[family]; strengths/weaknesses and question rows are the same). */
@@ -79,87 +93,6 @@ function EvidenceLine({ evidence }) {
       {evidence?.questions ?? 0} questions · {evidence?.incorrect ?? 0} incorrect ·{' '}
       {evidence?.skipped ?? 0} skipped{evidence?.avgTime ? ` · ${evidence.avgTime}s avg` : ''}
     </p>
-  )
-}
-
-/* ================= Canonical question-evidence dialog ================= */
-function QuestionEvidenceDialog({ open, onOpenChange, subject, chapter, domain, mode, s360 }) {
-  const { data } = useWeakTopicQuestions(subject, chapter)
-
-  /* Always derive canonical attempt evidence first — the dialog must never
-     be empty when question-level evidence exists. */
-  const canonicalEvidence = useMemo(() => {
-    const rows = (s360?.question?.rows ?? []).filter((r) =>
-      r.subject === subject && r.chapter === chapter && matchesContext(r, domain))
-    if (mode === 'strength') return rows.filter((r) => r.status === 'Correct')
-    if (mode === 'weakness') return rows.filter((r) => r.status !== 'Correct')
-    return rows
-  }, [s360, subject, chapter, domain, mode])
-
-  const hasAny = canonicalEvidence.length > 0 || (data?.items?.length ?? 0) > 0
-  const titleMode = mode === 'strength' ? 'Strength evidence' : mode === 'weakness' ? 'Weakness evidence' : 'Evidence questions'
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{titleMode} — {chapter} ({subject})</DialogTitle>
-        </DialogHeader>
-        <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-          {canonicalEvidence.length > 0 && (
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
-                Student Evidence — {canonicalEvidence.length} question(s)
-              </p>
-              {canonicalEvidence.map((r, i) => (
-                <div key={`${r.attemptId}-${r.id}-${i}`} className="mb-2 rounded-2xl border border-indigo-100 p-3.5 dark:border-indigo-500/20">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={RESULT_STYLE[r.status] ?? 'secondary'} size="sm">{r.status}</Badge>
-                    <Badge variant="outline" size="sm">{r.difficulty ?? 'Medium'} · {r.type ?? 'MCQ'}</Badge>
-                    {r.id && <Badge variant="secondary" size="sm">{r.id}</Badge>}
-                    <span className="ml-auto text-[9px] font-medium text-slate-400">{r.examName} · {r.date}</span>
-                  </div>
-                  {r.text && <p className="mt-2 text-[12px] leading-relaxed text-slate-700 dark:text-slate-200">{r.text}</p>}
-                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]">
-                    <span className="text-slate-500">Student: <span className="font-bold text-slate-700 dark:text-slate-200">{typeof r.selected === 'number' ? LETTERS[r.selected] : r.selected ?? '—'}</span></span>
-                    <span className="text-slate-500">Correct: <span className="font-bold text-emerald-600">{typeof r.correctAnswer === 'number' ? LETTERS[r.correctAnswer] : r.correctAnswer ?? '—'}</span></span>
-                    <span className="text-slate-500">Time: <span className="font-bold">{r.timeSpent}s</span></span>
-                    <span className="text-slate-500">Changes: <span className="font-bold">{r.answerChanges ?? 0}</span></span>
-                    <span className="text-slate-500">Revisits: <span className="font-bold">{r.revisits ?? 0}</span></span>
-                    <span className="text-slate-500">Review: <span className="font-bold">{r.markedForReview ? 'Yes' : 'No'}</span></span>
-                  </div>
-                  {r.observation && <p className="mt-1.5 text-[10px] italic text-slate-400">{r.observation}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {data?.items?.length > 0 && (
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Related Question Bank — {data.items.length} question(s)</p>
-              {data.items.map((q) => (
-                <div key={q.id} className="mb-2 rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary" size="sm">{q.id}</Badge>
-                    <Badge variant="outline" size="sm">{q.type} · {q.difficulty}</Badge>
-                    {q.status && <Badge variant={q.status === 'Approved' ? 'success' : 'warning'} size="sm">{q.status}</Badge>}
-                  </div>
-                  <p className="mt-2 text-[12.5px] leading-relaxed text-slate-700 dark:text-slate-200">{q.text}</p>
-                  <p className="mt-1 text-[10.5px] font-medium text-slate-400">{q.chapter} · {q.topic}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!hasAny && (
-            <p className="py-6 text-center text-xs text-slate-400">No question-level evidence available.</p>
-          )}
-          {canonicalEvidence.length > 0 && !(data?.items?.length) && (
-            <p className="text-center text-[10px] italic text-slate-400">Question Bank record unavailable — showing canonical attempt evidence.</p>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -226,7 +159,16 @@ function OverviewPanel({ s360, studentId, domain }) {
 }
 
 /* ================= Strengths ================= */
-function StrengthCard({ s, onEvidence }) {
+/**
+ * A strength only earns an intervention suggestion when it carries a REAL
+ * negative signal: a declining trend, or the same chapter is also tracked
+ * as a weakness/issue in this domain. Never on accuracy alone.
+ */
+function strengthNegativeSignal(s, weaknessChapters) {
+  return s.trend === 'declining' || weaknessChapters.has(`${s.subject}|${s.chapter}`)
+}
+
+function StrengthCard({ s, negative, onEvidence, onSuggestion }) {
   return (
     <div className="rounded-2xl border border-emerald-100 p-3.5 dark:border-emerald-500/20">
       <div className="flex flex-wrap items-center gap-2">
@@ -234,50 +176,78 @@ function StrengthCard({ s, onEvidence }) {
         <Badge variant="success" size="sm">{s.accuracy}% accuracy</Badge>
         {s.fast && <Badge variant="outline" size="sm">Fast solving</Badge>}
         {s.trend && <Badge variant={TREND_STYLE[s.trend] ?? 'secondary'} size="sm">{s.trend}</Badge>}
+        {negative && <Badge variant="danger" size="sm">Related concern</Badge>}
       </div>
       <p className="mt-1 text-[11px] font-medium text-slate-400">{s.subject}</p>
       <EvidenceLine evidence={s.evidence} />
-      <div className="mt-2">
+      {negative && (
+        <p className="mt-1 text-[10.5px] leading-relaxed text-rose-600 dark:text-rose-300">
+          {s.trend === 'declining'
+            ? 'Accuracy in this strong area is declining across recent assessments.'
+            : 'This chapter is also tracked as an active weakness in this domain.'}
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => onEvidence(s)}><FileText className="h-3 w-3" /> View evidence questions</Button>
+        {negative && (
+          <Button size="sm" variant="ghost" onClick={() => onSuggestion(s)}><Target className="h-3 w-3" /> Suggested intervention</Button>
+        )}
       </div>
     </div>
   )
 }
 
-function StrengthsPanel({ s360, domain }) {
+function StrengthsPanel({ s360, domain, student, onInterventionCreated }) {
   const [active, setActive] = useState(null)
+  const [suggestion, setSuggestion] = useState(null)
   const pool = domainSwPool(s360, domain)
   const strengths = pool.strengths ?? []
+  const weaknessChapters = useMemo(() => new Set((pool.weaknesses ?? []).map((w) => `${w.subject}|${w.chapter}`)), [pool])
+  const evidenceRows = useMemo(() => active ? evidenceRowsFor(s360, domain, active.subject, active.chapter) : [], [s360, domain, active])
+  const suggestionRows = useMemo(() => suggestion ? evidenceRowsFor(s360, domain, suggestion.subject, suggestion.chapter) : [], [s360, domain, suggestion])
   return (
-    <ChartCard title={`Strengths — ${domain}`} subtitle="Evidence-driven: accuracy · speed · trend (from actual attempts)" actions={<Badge variant="success"><TrendingUp className="h-3 w-3" /> {strengths.length} strong</Badge>}>
+    <ChartCard title={`Strengths — ${domain}`} subtitle="Evidence-driven: accuracy · speed · trend (from actual attempts). Interventions are suggested only when a real negative signal exists." actions={<Badge variant="success"><TrendingUp className="h-3 w-3" /> {strengths.length} strong</Badge>}>
       {strengths.length ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {strengths.map((s) => <StrengthCard key={`st-${s.chapter}-${s.subject}`} s={s} onEvidence={setActive} />)}
+          {strengths.map((s) => (
+            <StrengthCard key={`st-${s.chapter}-${s.subject}`} s={s}
+              negative={strengthNegativeSignal(s, weaknessChapters)}
+              onEvidence={setActive} onSuggestion={setSuggestion} />
+          ))}
         </div>
       ) : <p className="py-6 text-center text-xs text-slate-400">No {domain} strengths detected yet — complete more assessments.</p>}
-      <QuestionEvidenceDialog open={!!active} onOpenChange={(v) => !v && setActive(null)} subject={active?.subject} chapter={active?.chapter} domain={domain} mode="strength" s360={s360} />
+      <EvidenceQuestionsDialog
+        open={!!active} onOpenChange={(v) => !v && setActive(null)}
+        title={`Strength evidence — ${active?.chapter ?? ''}`}
+        rows={active ? evidenceRows.filter((r) => r.status === 'Correct') : []}
+        subject={active?.subject} chapter={active?.chapter} domain={domain}
+      />
+      <SuggestedInterventionDialog
+        open={!!suggestion} onOpenChange={(v) => !v && setSuggestion(null)}
+        issue={suggestion} domain={domain} student={student} rows={suggestionRows}
+        onCreated={onInterventionCreated}
+      />
     </ChartCard>
   )
 }
 
-/* ================= Weaknesses ================= */
+/* ================= Weaknesses (→ evidence → suggested intervention → review & create) ================= */
 function WeaknessCard({ w, onEvidence, onSuggestion }) {
-  const rows = useMemo(() => w, [w])
   return (
     <div className="rounded-2xl border border-rose-100 p-3.5 dark:border-rose-500/20">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{rows.chapter}</p>
-        <Badge variant="danger" size="sm">{rows.accuracy}% accuracy</Badge>
-        {rows.highTime && <Badge variant="warning" size="sm">{rows.avgTime}s avg</Badge>}
-        <Badge variant={rows.priority === 'High' ? 'danger' : 'warning'} size="sm">{rows.priority} priority</Badge>
-        {rows.trend && <Badge variant={TREND_STYLE[rows.trend] ?? 'secondary'} size="sm">{rows.trend}</Badge>}
+        <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{w.chapter}</p>
+        <Badge variant="danger" size="sm">{w.accuracy}% accuracy</Badge>
+        {w.highTime && <Badge variant="warning" size="sm">{w.avgTime}s avg</Badge>}
+        <Badge variant={w.priority === 'High' ? 'danger' : 'warning'} size="sm">{w.priority} priority</Badge>
+        {w.trend && <Badge variant={TREND_STYLE[w.trend] ?? 'secondary'} size="sm">{w.trend}</Badge>}
       </div>
-      <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">{rows.reason}</p>
-      <EvidenceLine evidence={rows.evidence} />
+      <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">{w.reason}</p>
+      <EvidenceLine evidence={w.evidence} />
       <div className="mt-2 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={() => onEvidence(rows)}><FileText className="h-3 w-3" /> Evidence questions</Button>
-        <Button size="sm" variant="ghost" onClick={() => onSuggestion(rows)}><Target className="h-3 w-3" /> Suggested intervention</Button>
-        <Link to={`/faculty/question-intelligence?tab=question-intelligence&subject=${encodeURIComponent(rows.subject)}&chapter=${encodeURIComponent(rows.chapter)}`}>
+        <Button size="sm" variant="outline" onClick={() => onEvidence(w)}><FileText className="h-3 w-3" /> Evidence questions</Button>
+        <Button size="sm" variant="ghost" onClick={() => onSuggestion(w)}><Target className="h-3 w-3" /> Suggested intervention</Button>
+        <Link to={`/faculty/question-intelligence?tab=question-intelligence&subject=${encodeURIComponent(w.subject)}&chapter=${encodeURIComponent(w.chapter)}`}>
           <Button size="sm" variant="ghost"><BookOpen className="h-3 w-3" /> Related questions</Button>
         </Link>
       </div>
@@ -285,67 +255,31 @@ function WeaknessCard({ w, onEvidence, onSuggestion }) {
   )
 }
 
-function SuggestedInterventionDialog({ open, onOpenChange, weakness, domain, s360 }) {
-  /* Derive a recommendation from the EXISTING Phase 5/6 ground-level engine,
-     using this weakness's actual question rows. No new engine, no auto-assign. */
-  const recommendation = useMemo(() => {
-    if (!weakness) return null
-    const rows = (s360?.question?.rows ?? []).filter((r) =>
-      r.subject === weakness.subject && r.chapter === weakness.chapter && matchesContext(r, domain))
-    return generateInterventionRecommendation(rows, { subject: weakness.subject, chapter: weakness.chapter })
-  }, [weakness, s360, domain])
-
-  if (!weakness) return null
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Target className="h-4 w-4 text-indigo-500" /> Suggested intervention — {weakness.chapter}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <p className="text-[11.5px] text-slate-500 dark:text-slate-400">
-            Derived from the existing intervention intelligence. Faculty must explicitly approve/create an intervention — nothing is assigned automatically.
-          </p>
-          {weakness && recommendation && recommendation.issueType !== 'Strong Performance' ? (
-            <div className="rounded-2xl border-2 border-indigo-200/80 bg-gradient-to-br from-indigo-50/80 via-blue-50/50 to-white p-4 dark:border-indigo-500/30 dark:from-indigo-500/5 dark:via-blue-500/5 dark:to-transparent">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Issue</p><p className="text-[12px] font-bold text-slate-800 dark:text-slate-100">{recommendation.issueType}</p></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Priority</p><Badge variant={recommendation.priority === 'High' || recommendation.priority === 'Critical' ? 'danger' : 'warning'} size="sm">{recommendation.priority}</Badge></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Concept</p><p className="text-[12px] font-bold text-slate-800 dark:text-slate-100">{recommendation.concept}</p></div>
-              </div>
-              {recommendation.evidence?.length > 0 && (
-                <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[11px] text-slate-600 dark:text-slate-300">
-                  {recommendation.evidence.map((e, i) => <li key={i}>{e}</li>)}
-                </ul>
-              )}
-              <p className="mt-2 text-[12px] text-slate-700 dark:text-slate-200">{recommendation.recommendedAction}</p>
-              {recommendation.whyExplanation && <p className="mt-2 rounded-xl bg-amber-50/80 p-2 text-[11px] leading-relaxed text-amber-800 dark:bg-amber-500/5 dark:text-amber-200">{recommendation.whyExplanation}</p>}
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Link to="/faculty/my-students?view=interventions"><Button size="sm"><Target className="h-3 w-3" /> Open Intervention Center</Button></Link>
-                <Link to={`/faculty/question-intelligence?tab=question-intelligence&subject=${encodeURIComponent(weakness.subject)}&chapter=${encodeURIComponent(weakness.chapter)}`}><Button size="sm" variant="outline"><BookOpen className="h-3 w-3" /> Question Bank / PYQs</Button></Link>
-              </div>
-            </div>
-          ) : <p className="py-4 text-center text-xs text-slate-400">{recommendation ? 'Performance is strong for this chapter — no intervention needed.' : 'No question-level evidence available to derive a recommendation.'}</p>}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function WeaknessesPanel({ s360, domain }) {
+function WeaknessesPanel({ s360, domain, student, onInterventionCreated }) {
   const [evidence, setEvidence] = useState(null)
   const [suggestion, setSuggestion] = useState(null)
   const pool = domainSwPool(s360, domain)
   const weaknesses = pool.weaknesses ?? []
+  const evidenceRows = useMemo(() => evidence ? evidenceRowsFor(s360, domain, evidence.subject, evidence.chapter) : [], [s360, domain, evidence])
+  const suggestionRows = useMemo(() => suggestion ? evidenceRowsFor(s360, domain, suggestion.subject, suggestion.chapter) : [], [s360, domain, suggestion])
   return (
-    <ChartCard title={`Priority weaknesses — ${domain}`} subtitle="Low accuracy / high time across assessments; each has question evidence" actions={<Badge variant="danger"><AlertTriangle className="h-3 w-3" /> {weaknesses.length} flagged</Badge>}>
+    <ChartCard title={`Priority weaknesses — ${domain}`} subtitle="Low accuracy / high time across assessments · every weakness opens its actual questions, then a faculty-reviewed intervention" actions={<Badge variant="danger"><AlertTriangle className="h-3 w-3" /> {weaknesses.length} flagged</Badge>}>
       {weaknesses.length ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {weaknesses.map((w) => <WeaknessCard key={`wk-${w.chapter}-${w.subject}`} w={w} onEvidence={setEvidence} onSuggestion={setSuggestion} />)}
         </div>
       ) : <p className="py-6 text-center text-xs text-slate-400">No {domain} weaknesses flagged — excellent.</p>}
-      <QuestionEvidenceDialog open={!!evidence} onOpenChange={(v) => !v && setEvidence(null)} subject={evidence?.subject} chapter={evidence?.chapter} domain={domain} mode="weakness" s360={s360} />
-      <SuggestedInterventionDialog open={!!suggestion} onOpenChange={(v) => !v && setSuggestion(null)} weakness={suggestion} domain={domain} s360={s360} />
+      <EvidenceQuestionsDialog
+        open={!!evidence} onOpenChange={(v) => !v && setEvidence(null)}
+        title={`Weakness evidence — ${evidence?.chapter ?? ''}`}
+        rows={evidence ? evidenceRows.filter((r) => r.status !== 'Correct') : []}
+        subject={evidence?.subject} chapter={evidence?.chapter} domain={domain}
+      />
+      <SuggestedInterventionDialog
+        open={!!suggestion} onOpenChange={(v) => !v && setSuggestion(null)}
+        issue={suggestion} domain={domain} student={student} rows={suggestionRows}
+        onCreated={onInterventionCreated}
+      />
     </ChartCard>
   )
 }
@@ -560,41 +494,156 @@ function DnaPanel({ s360, domain }) {
 }
 
 /* ================= Similar Issues (Phase 5, this-student scoped) ================= */
-function SimilarIssuesPanel({ studentId, domain, similarIssues }) {
+/**
+ * TWO clearly separated areas, both domain-isolated:
+ *   A. GROUPED ISSUES   — Phase 5 groups (≥2 students) containing this student
+ *   B. INDIVIDUAL ISSUES — this student's fingerprints with NO ≥2-student
+ *      group (buildIndividualIssue view: whyDetected + priority reuse the
+ *      existing fingerprint/severity/priority rules — no second classifier)
+ * Every issue exposes View Evidence Questions + Suggested Intervention.
+ */
+function GroupedIssueCard({ g, studentId, onEvidence, onSuggestion }) {
+  const me = (g.students ?? []).find((s) => s.studentId === studentId)
+  return (
+    <div className="rounded-2xl border border-slate-200/70 p-4 dark:border-slate-800">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{g.subject} — {g.chapter}</p>
+        <Badge variant={g.priority === 'Critical' || g.priority === 'High' ? 'danger' : 'warning'} size="sm">{g.priority}</Badge>
+        <Badge variant="gradient" size="sm"><Users className="h-2.5 w-2.5" /> {g.studentCount} students</Badge>
+      </div>
+      <p className="mt-0.5 text-[11px] font-medium text-slate-400">{g.issueType} · {g.examFamily ?? g.domain} · {g.severity} severity</p>
+      <p className="mt-2 text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-300">{g.whyDetected}</p>
+      <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px] text-slate-500">
+        {me && <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">This student: {me.accuracy}% · {me.avgTime}s</span>}
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">{g.avgAccuracy}% group avg</span>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">{g.evidence?.questions ?? g.totalQuestions ?? 0} evidence questions</span>
+        {g.persistent && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">Persistent</span>}
+        {g.declining && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Declining</span>}
+      </div>
+      <p className="mt-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">→ {g.recommendation?.title}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={() => onEvidence(g)}><FileText className="h-3 w-3" /> Evidence questions</Button>
+        <Button size="sm" variant="ghost" onClick={() => onSuggestion(g)}><Target className="h-3 w-3" /> Suggested intervention</Button>
+      </div>
+    </div>
+  )
+}
+
+function IndividualIssueCard({ issue, onEvidence, onSuggestion }) {
+  return (
+    <div className="rounded-2xl border border-amber-100 p-4 dark:border-amber-500/20">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="warning" size="sm"><User className="h-2.5 w-2.5" /> Individual issue</Badge>
+        <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{issue.subject} → {issue.chapter}</p>
+        <Badge variant="secondary" size="sm">{issue.issueType}</Badge>
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10.5px] text-slate-500">
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">Severity: {issue.severity}</span>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">Priority: {issue.priority}</span>
+        <span className="rounded-full bg-rose-50 px-2 py-0.5 font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">Accuracy: {issue.accuracy ?? '—'}%</span>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">Avg time: {issue.avgTime ?? '—'}s</span>
+        {issue.trend && (
+          <span className={`rounded-full px-2 py-0.5 ${issue.trend === 'declining' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+            Trend: {issue.trend === 'declining' ? 'Declining' : issue.trend}
+          </span>
+        )}
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">Evidence: {issue.evidenceQuestionCount ?? 0} questions</span>
+      </div>
+      <div className="mt-2 rounded-xl bg-amber-50/70 p-2.5 dark:bg-amber-500/5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Why detected</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">{issue.whyDetected}</p>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={() => onEvidence(issue)}><FileText className="h-3 w-3" /> Evidence questions</Button>
+        <Button size="sm" variant="ghost" onClick={() => onSuggestion(issue)}><Target className="h-3 w-3" /> Suggested intervention</Button>
+      </div>
+    </div>
+  )
+}
+
+function SimilarIssuesPanel({ studentId, domain, s360, similarIssues, similarIssuesLoading, similarIssuesError, onRetrySimilarIssues, student, onInterventionCreated }) {
+  const [evidence, setEvidence] = useState(null)
+  const [suggestion, setSuggestion] = useState(null)
+
   const groups = useMemo(() => {
     const all = similarIssues?.groups ?? []
-    const isDomain = (g) => domain === 'University'
-      ? g.domain === 'University'
-      : g.domain === 'Competitive' && g.examFamily === domain
-    return all.filter((g) => isDomain(g) && (g.students ?? []).some((s) => s.studentId === studentId))
+    return all.filter((g) => issueMatchesDomain(g, domain) && (g.students ?? []).some((s) => s.studentId === studentId))
   }, [similarIssues, studentId, domain])
 
-  return (
-    <ChartCard title={`Similar issues — ${domain}`} subtitle="Phase 5 groups containing this student (domain-isolated; prototype similarity score)" actions={<Badge variant="gradient"><Users className="h-3 w-3" /> {groups.length} group(s)</Badge>}>
-      {groups.length ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          {groups.map((g) => {
-            const me = (g.students ?? []).find((s) => s.studentId === studentId)
-            return (
-              <div key={g.id} className="rounded-2xl border border-slate-200/70 p-4 dark:border-slate-800">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{g.subject} — {g.chapter}</p>
-                  <Badge variant={g.priority === 'Critical' || g.priority === 'High' ? 'danger' : 'warning'} size="sm">{g.priority}</Badge>
-                </div>
-                <p className="mt-0.5 text-[11px] font-medium text-slate-400">{g.issueType} · {g.examFamily ?? g.domain}</p>
-                <p className="mt-2 text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-300">{g.whyDetected}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px] text-slate-500">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">{g.studentCount} students</span>
-                  {me && <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">You: {me.accuracy}%</span>}
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">{g.avgAccuracy}% avg</span>
-                  {g.persistent && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">Persistent</span>}
-                </div>
-                <p className="mt-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">→ {g.recommendation?.title}</p>
-              </div>
-            )
-          })}
+  const individualIssues = useMemo(() => {
+    const all = similarIssues?.individuals ?? []
+    return all.filter((f) => f.studentId === studentId && issueMatchesDomain(f, domain))
+  }, [similarIssues, studentId, domain])
+
+  const evidenceRows = useMemo(() => evidence ? evidenceRowsFor(s360, domain, evidence.subject, evidence.chapter) : [], [s360, domain, evidence])
+  const suggestionRows = useMemo(() => suggestion ? evidenceRowsFor(s360, domain, suggestion.subject, suggestion.chapter) : [], [s360, domain, suggestion])
+
+  if (similarIssuesLoading && !similarIssues) {
+    return (
+      <ChartCard title={`Similar issues — ${domain}`} subtitle="Loading similar-issue intelligence…">
+        <p className="py-6 text-center text-xs text-slate-400">Loading similar issues…</p>
+      </ChartCard>
+    )
+  }
+
+  if (similarIssuesError) {
+    return (
+      <ChartCard title={`Similar issues — ${domain}`} subtitle="Similar-issue intelligence unavailable right now">
+        <div className="py-6 text-center">
+          <p className="text-xs text-slate-400">Similar issues could not be loaded. Individual and grouped issue detection needs this data.</p>
+          {onRetrySimilarIssues && (
+            <Button size="sm" variant="outline" className="mt-3" onClick={() => onRetrySimilarIssues()}>Retry</Button>
+          )}
         </div>
-      ) : <p className="py-6 text-center text-xs text-slate-400">No {domain} similar-issue groups include this student yet.</p>}
+      </ChartCard>
+    )
+  }
+
+  return (
+    <ChartCard
+      title={`Similar issues — ${domain}`}
+      subtitle="Grouped issues are shared by multiple students; individual issues currently have no matching group (prototype similarity score)"
+      actions={<Badge variant="gradient"><Users className="h-3 w-3" /> {groups.length} group(s) · {individualIssues.length} individual</Badge>}
+    >
+      {/* A. GROUPED ISSUES */}
+      <div>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">A. Grouped issues — shared with other students</p>
+        {groups.length ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {groups.map((g) => (
+              <GroupedIssueCard key={g.id} g={g} studentId={studentId} onEvidence={setEvidence} onSuggestion={setSuggestion} />
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:border-slate-700">No similar issues currently identified.</p>
+        )}
+      </div>
+
+      {/* B. INDIVIDUAL ISSUES */}
+      <div className="mt-5">
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">B. Individual issues — currently specific to this student</p>
+        {individualIssues.length ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {individualIssues.map((issue, i) => (
+              <IndividualIssueCard key={`${issue.subject}-${issue.chapter}-${i}`} issue={issue} onEvidence={setEvidence} onSuggestion={setSuggestion} />
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:border-slate-700">No individual issues currently identified.</p>
+        )}
+      </div>
+
+      <EvidenceQuestionsDialog
+        open={!!evidence} onOpenChange={(v) => !v && setEvidence(null)}
+        title={`Issue evidence — ${evidence?.chapter ?? ''}`}
+        rows={evidenceRows}
+        subject={evidence?.subject} chapter={evidence?.chapter} domain={domain}
+      />
+      <SuggestedInterventionDialog
+        open={!!suggestion} onOpenChange={(v) => !v && setSuggestion(null)}
+        issue={suggestion} domain={domain} student={student} rows={suggestionRows}
+        onCreated={onInterventionCreated}
+      />
     </ChartCard>
   )
 }

@@ -19,11 +19,12 @@ import {
   facultyStudents, getStudentAttempts,
 } from '@/intelligence/faculty/datasets/students-directory'
 import {
-  computeStudentIssueFingerprints, groupSimilarIssues,
+  computeStudentIssueFingerprints, groupSimilarIssues, buildIndividualIssue,
+  buildIndividualWhyDetected, buildRecommendation,
   buildInterventionFromGroup, canTransition, selectPracticeQuestions,
   buildRetestEntity, computeEffectiveness,
 } from '@/intelligence/faculty'
-import { normalizeExamAttempt } from '@/intelligence'
+import { normalizeExamAttempt, classifyAttemptContext } from '@/intelligence'
 import { EXAM_AGENT_EXAMS } from '@/mock-data/exam-agent'
 import { readAllAttempts } from './exam-attempts-store'
 
@@ -75,10 +76,43 @@ function groupedPayload() {
   return { groups }
 }
 
+/* ------------------------------------------------------------------ */
+/* Phase 5 hardening — Student 360-sourced individual interventions    */
+/* ------------------------------------------------------------------ */
+
+const slug = (v) => String(v ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+
+/**
+ * Student-360-created interventions are stored in the SAME
+ * aurora_faculty_interventions record map. Their override entry carries the
+ * full synthetic single-student group (`s360Group`) so they flow through the
+ * EXISTING lifecycle routes (detail/status/assign/practice/retest/student)
+ * unchanged — one intervention system, one status machine.
+ */
+function s360Records() {
+  const overrides = readStatus()
+  return Object.entries(overrides)
+    .filter(([, v]) => v && v.s360Group)
+    .map(([id, v]) => ({ id, group: v.s360Group, record: v }))
+}
+
+/** Grouped similar-issue groups + Student-360 created records (one universe). */
+function allInterventionGroups() {
+  return [...groupedPayload().groups, ...s360Records().map((r) => r.group)]
+}
+
+function findGroupById(id) {
+  return allInterventionGroups().find((g) => g.id === id) ?? null
+}
+
 /** Canonical intervention record for a group (with persisted overrides). */
 function interventionFor(group) {
   const overrides = readStatus()
-  return buildInterventionFromGroup(group, overrides[group.id] ?? null)
+  const o = overrides[group.id] ?? null
+  const base = buildInterventionFromGroup(group, o)
+  return o?.s360Group
+    ? { ...base, source: o.source ?? 'Student 360', createdBy: o.createdBy ?? 'Dr. Meera Krishnan' }
+    : base
 }
 
 /* ------------------------------------------------------------------ */
@@ -131,12 +165,7 @@ mockRoute('get', '/faculty/similar-issues', ({ params }) => {
     : groups
   return {
     groups: scopeGroups,
-    individuals: individuals.map((f) => ({
-      studentId: f.studentId, roll: f.roll, name: f.name, batchId: f.batchId,
-      domain: f.domain, examFamily: f.examFamily, subject: f.subject, chapter: f.chapter,
-      issueType: f.issueType, severity: f.severity, accuracy: f.accuracy, avgTime: f.avgTime,
-      trend: f.trend, evidence: f.evidence, lastExam: f.lastExam,
-    })),
+    individuals: individuals.map((f) => buildIndividualIssue(f)),
     count: groups.length,
     individualCount: individuals.length,
     scope,
@@ -152,7 +181,7 @@ mockRoute('get', '/faculty/similar-issues', ({ params }) => {
 /* Faculty: intervention center + lifecycle                           */
 /* ------------------------------------------------------------------ */
 mockRoute('get', '/faculty/interventions', async () => {
-  const { groups } = groupedPayload()
+  const groups = allInterventionGroups()
   const practice = readPractice()
   const retests = readRetests()
   const items = groups.map((g) => {
@@ -179,8 +208,7 @@ mockRoute('get', '/faculty/interventions', async () => {
 })
 
 mockRoute('get', '/faculty/interventions/:id', async ({ params }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.id)
+  const group = findGroupById(params.id)
   if (!group) {
     const err = new Error('Intervention not found.')
     err.response = { status: 404, data: { message: err.message } }
@@ -202,8 +230,7 @@ mockRoute('get', '/faculty/interventions/:id', async ({ params }) => {
 
 /* Controlled status transitions (faculty) */
 mockRoute('post', '/faculty/interventions/:groupId/status', ({ params, body }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.groupId)
+  const group = findGroupById(params.groupId)
   if (!group) {
     const err = new Error('Intervention not found.')
     err.response = { status: 404, data: { message: err.message } }
@@ -273,8 +300,7 @@ mockRoute('post', '/faculty/interventions/:groupId/assign', ({ params }) => {
 
 /* Practice set for an intervention */
 mockRoute('get', '/faculty/interventions/:id/practice', async ({ params }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.id)
+  const group = findGroupById(params.id)
   if (!group) {
     const err = new Error('Intervention not found.')
     err.response = { status: 404, data: { message: err.message } }
@@ -293,8 +319,7 @@ mockRoute('get', '/faculty/interventions/:id/practice', async ({ params }) => {
 
 /* Create re-test (Completed → Re-test Pending) */
 mockRoute('post', '/faculty/interventions/:groupId/retest', async ({ params, body }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.groupId)
+  const group = findGroupById(params.groupId)
   if (!group) {
     const err = new Error('Intervention not found.')
     err.response = { status: 404, data: { message: err.message } }
@@ -339,16 +364,24 @@ mockRoute('post', '/faculty/interventions/:groupId/retest', async ({ params, bod
    every intervention payload (list/detail) and updated by practice/re-test
    writes, so the lifecycle keeps full visibility. */
 
-/* Faculty: a student's intervention history (for the 360 profile) */
+/* Faculty: a student's intervention history (for the 360 profile).
+   Phase 5 hardening: includes Student-360-created interventions from
+   'Recommended' onward (so "Intervention Created" is visible immediately
+   after faculty review) and reports per-student practice / re-test /
+   effectiveness status via the SAME lifecycle data. */
 mockRoute('get', '/faculty/students/:id/interventions', async ({ params }) => {
-  const { groups } = groupedPayload()
   const practice = readPractice()
-  const items = groups
+  const retests = readRetests()
+  const items = allInterventionGroups()
     .map((g) => interventionFor(g))
     .filter((iv) => (iv.studentIds ?? []).includes(params.id))
-    .filter((iv) => ['Assigned', 'In Progress', 'Completed', 'Re-test Pending', 'Evaluating', 'Resolved', 'Improving', 'Persistent'].includes(iv.status))
+    .filter((iv) => ['Recommended', 'Approved', 'Planned', 'Assigned', 'In Progress', 'Completed', 'Re-test Pending', 'Evaluating', 'Resolved', 'Improving', 'Persistent'].includes(iv.status))
     .map((iv) => {
       const myPractice = practice.filter((p) => p.interventionId === iv.id && p.studentId === params.id)
+      const practiceRows = myPractice.filter((p) => p.kind === 'practice')
+      const retestRows = myPractice.filter((p) => p.kind === 'retest')
+      const myRetests = retests.filter((r) => r.interventionId === iv.id && (r.studentIds ?? []).includes(params.id))
+      const eff = computeEffectiveness({ baseline: iv.baseline, practiceAttempts: practiceRows, retestAttempts: retestRows })
       return {
         id: iv.id,
         title: iv.title,
@@ -359,12 +392,200 @@ mockRoute('get', '/faculty/students/:id/interventions', async ({ params }) => {
         issueType: iv.issueType,
         priority: iv.priority,
         status: iv.status,
-        practiceDone: myPractice.filter((p) => p.kind === 'practice').length > 0,
-        practiceAccuracy: myPractice.filter((p) => p.kind === 'practice').length ? Math.round(myPractice.filter((p) => p.kind === 'practice').reduce((n, p) => n + p.accuracy, 0) / myPractice.filter((p) => p.kind === 'practice').length) : null,
-        outcome: null,
+        source: iv.source ?? 'Similar Issues',
+        createdAt: iv.createdAt ?? null,
+        objectives: iv.objectives ?? [],
+        practiceConfig: iv.practiceConfig ?? null,
+        evidence: iv.evidence ?? null,
+        practiceDone: practiceRows.length > 0,
+        practiceStatus: practiceRows.length === 0
+          ? 'Not started'
+          : iv.status === 'Completed' || ['Re-test Pending', 'Evaluating', 'Resolved', 'Improving', 'Persistent'].includes(iv.status) ? 'Completed' : 'In progress',
+        practiceProgress: practiceRows.length,
+        practiceRequired: iv.practiceConfig?.count ?? 8,
+        practiceAccuracy: practiceRows.length ? Math.round(practiceRows.reduce((n, p) => n + p.accuracy, 0) / practiceRows.length) : null,
+        retestStatus: retestRows.length > 0 ? 'Completed' : myRetests.length > 0 ? 'Pending' : 'Not created',
+        retests: myRetests.length,
+        effectivenessStatus: eff?.outcome ?? 'Pending',
+        outcome: eff?.completed ? eff.outcome : null,
+        effectivenessEvidence: eff?.evidence ?? null,
       }
     })
   return { items, count: items.length, studentId: params.id }
+})
+
+/* ------------------------------------------------------------------ */
+/* Phase 5 hardening — Weakness → Evidence → Review → CREATE          */
+/* ------------------------------------------------------------------ */
+/**
+ * Faculty reviewed an individual weakness/issue inside Student 360 and chose
+ * to create an intervention. This is NOT a second intervention system:
+ *   · evidence is RE-DERIVED server-side from the student's canonical
+ *     attempts (fingerprints → question rows) — the client payload never
+ *     fabricates evidence;
+ *   · the record is built by the EXISTING buildInterventionFromGroup() from
+ *     a synthetic single-student group and stored in the EXISTING
+ *     aurora_faculty_interventions map;
+ *   · it enters the lifecycle at 'Recommended' (faculty already reviewed);
+ *     every later transition goes through the validated /status route.
+ * Nothing is assigned automatically.
+ */
+mockRoute('post', '/faculty/students/:studentId/interventions', ({ params, body }) => {
+  const student = facultyStudents.find((s) => s.id === params.studentId)
+  if (!student) {
+    const err = new Error('Student not found.')
+    err.response = { status: 404, data: { message: err.message } }
+    throw err
+  }
+  const payload = body ?? {}
+  const { subject, chapter } = payload
+  if (!subject || !chapter) {
+    const err = new Error('Subject and chapter are required to create an intervention.')
+    err.response = { status: 400, data: { message: err.message } }
+    throw err
+  }
+
+  const examFamily = payload.examFamily ?? (student.examFamily || null)
+  const domain = payload.domain ?? (examFamily ? 'Competitive' : 'University')
+
+  /* canonical evidence — fingerprints first, raw question rows as fallback */
+  const attempts = canonicalAttemptsFor(student.id)
+  const fingerprints = computeStudentIssueFingerprints(student, attempts)
+  const fp = fingerprints.find((f) =>
+    f.subject === subject && f.chapter === chapter
+    && (domain === 'University' ? f.domain === 'University' : f.domain === 'Competitive' && f.examFamily === examFamily))
+
+  let evidence = null
+  let issueType = payload.issueType ?? fp?.issueType ?? 'Performance Gap'
+  let whyDetected = payload.whyDetected ?? null
+  let accuracy = null
+  let avgTime = null
+
+  if (fp) {
+    evidence = {
+      students: 1, subject, chapter, issueType: fp.issueType,
+      avgAccuracy: fp.accuracy ?? 0, avgTime: fp.avgTime ?? 0,
+      questions: fp.questions ?? 0, incorrect: fp.incorrect ?? 0, skipped: fp.skipped ?? 0,
+      attempts: fp.evidence?.attempts ?? fp.persistence ?? 1,
+      affectedExams: [...new Set((fp.series ?? []).map((s) => s.date))].size,
+      persistence: fp.persistence ?? 1,
+      trend: fp.trend ?? null,
+    }
+    accuracy = fp.accuracy ?? null
+    avgTime = fp.avgTime ?? null
+    issueType = fp.issueType
+    whyDetected = whyDetected ?? buildIndividualWhyDetected(fp)
+  } else {
+    /* fallback: aggregate the student's actual question rows for this chapter
+       (domain-scoped — never mixes University with JEE/NEET attempts) */
+    const scopedAttempts = attempts.filter((a) => {
+      const ctx = classifyAttemptContext(a)
+      return domain === 'University'
+        ? ctx.domain === 'university'
+        : ctx.examFamily === examFamily
+    })
+    const rows = scopedAttempts.flatMap((a) => (a.questionAttempts ?? [])
+      .map((qa) => ({
+        subject: qa.academicContext?.subject ?? null,
+        chapter: qa.academicContext?.chapter ?? null,
+        isCorrect: qa.evaluation?.isCorrect ?? false,
+        isSkipped: qa.evaluation?.isSkipped ?? qa.response?.status === 'skipped',
+        attempted: qa.response?.selectedAnswer != null,
+        time: qa.timing?.timeSpent ?? 0,
+        date: (a.submittedAt ?? '').slice(0, 10),
+      })))
+      .filter((r) => r.subject === subject && r.chapter === chapter)
+    if (!rows.length) {
+      const err = new Error(`No question-level evidence available for ${chapter} (${subject}) — an intervention cannot be created without evidence.`)
+      err.response = { status: 400, data: { message: err.message } }
+      throw err
+    }
+    const correct = rows.filter((r) => r.isCorrect).length
+    const attempted = rows.filter((r) => r.attempted).length
+    const incorrect = rows.filter((r) => r.isCorrect === false && r.attempted).length
+    const skipped = rows.filter((r) => r.isSkipped).length
+    accuracy = attempted ? Math.round((correct / attempted) * 100) : 0
+    avgTime = attempted ? Math.round(rows.reduce((n, r) => n + r.time, 0) / attempted) : 0
+    evidence = {
+      students: 1, subject, chapter, issueType,
+      avgAccuracy: accuracy, avgTime,
+      questions: rows.length, incorrect, skipped,
+      attempts: [...new Set(rows.map((r) => r.date))].length,
+      affectedExams: [...new Set(rows.map((r) => r.date))].size,
+      persistence: [...new Set(rows.map((r) => r.date))].length,
+      trend: null,
+    }
+    whyDetected = whyDetected ?? `${incorrect} incorrect and ${skipped} skipped of ${rows.length} question(s) recorded for ${chapter} across ${evidence.attempts} assessment(s).`
+  }
+
+  const id = `s360-${student.id}-${slug(subject)}-${slug(chapter)}`
+  const overrides = readStatus()
+  const existing = overrides[id]
+  if (existing && existing.status && existing.status !== 'Dismissed') {
+    const err = new Error(`An intervention for ${student.name} — ${subject} ${chapter} already exists (status: ${existing.status}). Open the Intervention Center to manage it.`)
+    err.response = { status: 400, data: { message: err.message } }
+    throw err
+  }
+
+  /* recommendation re-derived by the EXISTING Phase 5 builder when a
+     fingerprint exists; otherwise the faculty-reviewed payload's summary */
+  const recommendation = fp
+    ? buildRecommendation(fp, {
+        avgAcc: evidence.avgAccuracy, highTime: !!fp.highTime,
+        persistent: fp.status === 'persistent', declining: fp.trend === 'declining',
+        skipRate: fp.skipRate ?? 0,
+      })
+    : (payload.recommendation ?? { title: 'Targeted practice', actions: [], detail: `${issueType} in ${chapter}.` })
+
+  const group = {
+    id,
+    name: `${domain === 'University' ? 'University' : examFamily} ${subject} — ${chapter}`,
+    domain,
+    examFamily,
+    subject,
+    chapter,
+    issueType,
+    severity: fp?.severity ?? (accuracy != null && accuracy < 55 ? 'High' : 'Medium'),
+    priority: payload.priority ?? 'Medium',
+    students: [{
+      studentId: student.id, roll: student.roll, name: student.name, batchId: student.batchId,
+      accuracy, severity: fp?.severity ?? null, avgTime,
+      trend: fp?.trend ?? null, status: fp?.status ?? null,
+      evidence: fp?.evidence ?? null, lastExam: fp?.lastExam ?? null,
+    }],
+    evidence,
+    whyDetected,
+    recommendation,
+  }
+
+  const count = Math.min(30, Math.max(1, Number(payload.practiceConfig?.count ?? 8) || 8))
+  const record = {
+    s360Group: group,
+    source: 'Student 360',
+    createdBy: payload.createdBy ?? 'Dr. Meera Krishnan',
+    title: payload.title ?? `${chapter} Accuracy Recovery — ${student.name.split(' ')[0]}`,
+    priority: payload.priority ?? 'Medium',
+    objectives: payload.objective ? [payload.objective] : undefined,
+    practiceConfig: {
+      count,
+      difficulty: payload.practiceConfig?.difficulty ?? 'Medium',
+      duration: Math.max(10, Math.min(60, Math.round(count * 2))),
+      includePyq: payload.practiceConfig?.pyqPreference !== 'No',
+    },
+    pyqPreference: payload.practiceConfig?.pyqPreference ?? 'Yes',
+    notes: payload.notes ?? '',
+    status: 'Recommended', /* faculty already reviewed → enters the lifecycle here */
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+  overrides[id] = record
+  writeStatus(overrides)
+  const intervention = interventionFor(group)
+  return {
+    ok: true,
+    intervention,
+    note: 'Recommendation recorded. Faculty approval is still required before planning/assignment — nothing is delivered automatically.',
+  }
 })
 
 /* ------------------------------------------------------------------ */
@@ -372,7 +593,7 @@ mockRoute('get', '/faculty/students/:id/interventions', async ({ params }) => {
 /* ------------------------------------------------------------------ */
 mockRoute('get', '/student/interventions', async ({ params }) => {
   const studentId = params?.studentId ?? 'u_stu_001'
-  const { groups } = groupedPayload()
+  const groups = allInterventionGroups()
   const practice = readPractice()
   const retests = readRetests()
   const items = groups
@@ -398,8 +619,7 @@ mockRoute('get', '/student/interventions', async ({ params }) => {
 })
 
 mockRoute('get', '/student/interventions/:id/practice', async ({ params }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.id)
+  const group = findGroupById(params.id)
   if (!group) {
     const err = new Error('Intervention not found.')
     err.response = { status: 404, data: { message: err.message } }
@@ -416,8 +636,7 @@ mockRoute('get', '/student/interventions/:id/practice', async ({ params }) => {
 })
 
 mockRoute('post', '/student/interventions/:id/practice-attempts', async ({ params, body }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.id)
+  const group = findGroupById(params.id)
   if (!group) {
     const err = new Error('Intervention not found.')
     err.response = { status: 404, data: { message: err.message } }

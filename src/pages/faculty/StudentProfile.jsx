@@ -37,10 +37,9 @@ import { StudentInterventionsPanel } from '@/components/students-workspace/inter
 import { DOMAIN_BADGE, FAMILY_BADGE, STUDENT_STATUS_STYLES } from '@/constants/ui'
 import { useFacultyStudent360 } from '@/services/faculty-students'
 import { useSimilarIssues } from '@/services/faculty-interventions'
+import { readContextParam, readTabParam, build360SearchParams } from '@/utils/student-360-url'
 
 const DOMAINS = ['University', 'JEE', 'NEET']
-const DOMAIN_PARAM = { university: 'University', jee: 'JEE', neet: 'NEET' }
-const DOMAIN_TO_PARAM = { University: 'university', JEE: 'jee', NEET: 'neet' }
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: Layers },
@@ -58,22 +57,16 @@ const TABS = [
   { id: 'interventions', label: 'Interventions', icon: Target },
 ]
 
-function readParam(search, key, map, fallback) {
-  const v = search.get(key)
-  if (v && map[v]) return map[v]
-  return fallback
-}
-
 function StudentProfile() {
   const { studentId } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { data, isLoading, isError, refetch } = useFacultyStudent360(studentId)
-  const { data: similarIssues } = useSimilarIssues('all')
+  const { data: similarIssues, isLoading: similarIssuesLoading, isError: similarIssuesError, refetch: refetchSimilarIssues } = useSimilarIssues('all')
 
   /* ---- canonical state, mirrored to URL ---- */
-  const [tab, setTab] = useState(() => searchParams.get('tab') ?? 'overview')
-  const [domain, setDomain] = useState(() => readParam(searchParams, 'context', DOMAIN_PARAM, null))
+  const [tab, setTab] = useState(() => readTabParam(searchParams))
+  const [domain, setDomain] = useState(() => readContextParam(searchParams, null))
 
   /* drilldown state for subjects/chapters/questions (URL-backed) */
   const [selectedSubject, setSelectedSubject] = useState(() => searchParams.get('subject'))
@@ -96,11 +89,10 @@ function StudentProfile() {
 
   /* Persist tab/context/subject/chapter to the URL without wiping other params */
   useEffect(() => {
-    const next = new URLSearchParams(searchParams)
-    if (tab && tab !== 'overview') next.set('tab', tab); else next.delete('tab')
-    next.set('context', DOMAIN_TO_PARAM[activeDomain] ?? 'university')
-    if (selectedSubject) next.set('subject', selectedSubject); else next.delete('subject')
-    if (chapterContext?.chapter) next.set('chapter', chapterContext.chapter); else next.delete('chapter')
+    const next = build360SearchParams(searchParams, {
+      tab, domain: activeDomain,
+      subject: selectedSubject, chapter: chapterContext?.chapter,
+    })
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, activeDomain, selectedSubject, chapterContext?.chapter])
@@ -118,6 +110,12 @@ function StudentProfile() {
     setTab(v)
     if (v !== 'subjects') setSelectedSubject(null)
     if (v !== 'chapters') setChapterContext(null)
+  }, [])
+
+  /* After a Student-360-sourced intervention is created, jump to the
+     Interventions tab so faculty immediately see "Intervention Created". */
+  const handleInterventionCreated = useCallback(() => {
+    setTab('interventions')
   }, [])
 
   if (isLoading) return <DashboardSkeleton cards={3} />
@@ -228,14 +226,14 @@ function StudentProfile() {
           <OverviewPanel s360={data} studentId={studentId} domain={activeDomain} />
         </TabsContent>
 
-        {/* 2. Strengths */}
+        {/* 2. Strengths (evidence; intervention only on a real negative signal) */}
         <TabsContent value="strengths">
-          <StrengthsPanel s360={data} domain={activeDomain} />
+          <StrengthsPanel s360={data} domain={activeDomain} student={data?.student ?? { id: studentId }} onInterventionCreated={handleInterventionCreated} />
         </TabsContent>
 
-        {/* 3. Weaknesses (→ evidence questions → suggested intervention) */}
+        {/* 3. Weaknesses (→ evidence questions → suggested intervention → review & create) */}
         <TabsContent value="weaknesses">
-          <WeaknessesPanel s360={data} domain={activeDomain} />
+          <WeaknessesPanel s360={data} domain={activeDomain} student={data?.student ?? { id: studentId }} onInterventionCreated={handleInterventionCreated} />
         </TabsContent>
 
         {/* 4. Subject Intelligence (drill into chapters) */}
@@ -251,6 +249,7 @@ function StudentProfile() {
         {/* 5. Chapter Intelligence (→ topics → evidence questions + intervention) */}
         <TabsContent value="chapters">
           <ChapterIntelligencePanel s360={data} domain={activeDomain} context={chapterContext}
+            student={data?.student ?? { id: studentId }} onInterventionCreated={handleInterventionCreated}
             onNavigate={(ctx) => setChapterContext(ctx)} />
         </TabsContent>
 
@@ -284,9 +283,12 @@ function StudentProfile() {
           <DnaPanel s360={data} domain={activeDomain} />
         </TabsContent>
 
-        {/* 12. Similar Issues (Phase 5, domain-isolated, this student) */}
+        {/* 12. Similar Issues (Phase 5, domain-isolated, this student: grouped + individual) */}
         <TabsContent value="similar">
-          <SimilarIssuesPanel studentId={studentId} domain={activeDomain} similarIssues={similarIssues} />
+          <SimilarIssuesPanel studentId={studentId} domain={activeDomain} s360={data}
+            similarIssues={similarIssues} similarIssuesLoading={similarIssuesLoading}
+            similarIssuesError={similarIssuesError} onRetrySimilarIssues={refetchSimilarIssues}
+            student={data?.student ?? { id: studentId }} onInterventionCreated={handleInterventionCreated} />
         </TabsContent>
 
         {/* 13. Interventions (Phase 6 lifecycle, read-only here) */}

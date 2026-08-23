@@ -15,7 +15,7 @@ import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import {
   useInterventions, useIntervention, useInterventionPractice,
   useInterventionStatus, useInterventionModify, useInterventionAssign, useCreateRetest,
-  useFacultyStudentInterventions,
+  useFacultyStudentInterventions, useCreateStudent360Intervention,
 } from '@/services/faculty-interventions'
 import { formatDate } from '@/utils/format'
 
@@ -428,14 +428,143 @@ function InterventionDetailDialog({ id, open, onOpenChange }) {
 }
 
 /* ================= Center tab ================= */
+/* ---------------- Student 360 → Review & Create Intervention ---------------- */
+/**
+ * Phase 5 hardening — faculty reviewed a suggested intervention inside
+ * Student 360 and confirms creation. The dialog shows the full context
+ * (student · domain · family · subject · chapter · issue · read-only
+ * evidence) plus the editable practice configuration. Creation calls the
+ * EXISTING lifecycle (single mock API → same localStorage store, status
+ * starts at 'Recommended'). Evidence is read-only; nothing is auto-assigned.
+ */
+function ReviewCreateInterventionDialog({
+  open, onOpenChange, student, domain, subject, chapter, issueLabel, whyDetected,
+  evidenceSummary = [], defaults = {}, onCreated,
+}) {
+  const toast = useToast()
+  const { mutateAsync, isPending } = useCreateStudent360Intervention()
+  const [form, setForm] = useState(null)
+  const f = form ?? {}
+  const val = (key, fallback) => (form && form[key] != null ? form[key] : (defaults[key] ?? fallback))
+  const set = (key) => (v) => setForm((prev) => ({ ...prev, [key]: v }))
+  const examFamily = domain === 'University' ? 'University' : domain
+
+  const create = async () => {
+    try {
+      const res = await mutateAsync({
+        studentId: student?.id,
+        payload: {
+          title: val('title', `${chapter} Accuracy Recovery`),
+          domain: domain === 'University' ? 'University' : 'Competitive',
+          examFamily: domain === 'University' ? null : domain,
+          subject, chapter,
+          issueType: issueLabel?.split(' — ')[0] ?? 'Performance Gap',
+          priority: val('priority', 'Medium'),
+          objective: val('objective', `Improve accuracy on ${chapter} problems.`),
+          whyDetected,
+          practiceConfig: {
+            count: Number(val('count', 8)) || 8,
+            difficulty: val('difficulty', 'Medium'),
+            pyqPreference: val('pyqPreference', 'Yes'),
+          },
+          notes: val('notes', '') || '',
+          createdBy: 'Dr. Meera Krishnan',
+        },
+      })
+      toast.success('Intervention created', `${res?.intervention?.title ?? 'Intervention'} — status ${res?.intervention?.status ?? 'Recommended'}. Faculty approval is still required before assignment.`)
+      setForm(null)
+      onOpenChange(false)
+      onCreated?.(res?.intervention ?? null)
+    } catch (e) {
+      toast.error('Could not create intervention', e?.response?.data?.message ?? 'Please review the details and try again.')
+    }
+  }
+
+  if (!open) return null
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) setForm(null); onOpenChange?.(v) }}>
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex flex-wrap items-center gap-2">
+            <Target className="h-5 w-5 text-indigo-500" /> Review &amp; Create Intervention
+            <Badge variant="warning" size="sm">Faculty review required</Badge>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* read-only context */}
+          <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Context (read-only)</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11.5px]">
+              <div><span className="text-slate-400">Student:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{student?.name ?? '—'}</span> <span className="text-slate-400">({student?.roll ?? '—'})</span></div>
+              <div><span className="text-slate-400">Domain:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{domain === 'University' ? 'University' : 'Competitive'}</span></div>
+              <div><span className="text-slate-400">Exam family:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{examFamily}</span></div>
+              <div><span className="text-slate-400">Subject:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{subject}</span></div>
+              <div><span className="text-slate-400">Chapter:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{chapter}</span></div>
+              <div><span className="text-slate-400">Issue:</span> <span className="font-bold text-slate-800 dark:text-slate-100">{issueLabel ?? '—'}</span></div>
+            </div>
+            {whyDetected && <p className="mt-2 rounded-xl bg-indigo-50/70 p-2 text-[11px] leading-relaxed text-indigo-900 dark:bg-indigo-500/5 dark:text-indigo-200">{whyDetected}</p>}
+          </div>
+
+          {/* read-only evidence */}
+          <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Evidence (read-only — derived from actual question attempts)</p>
+            {evidenceSummary.length ? (
+              <ul className="space-y-0.5">
+                {evidenceSummary.map((e, i) => <li key={i} className="text-[11.5px] text-slate-600 dark:text-slate-300">• {e}</li>)}
+              </ul>
+            ) : <p className="text-[11.5px] text-slate-400">Evidence summary unavailable — the server re-derives it from canonical attempts on creation.</p>}
+          </div>
+
+          {/* editable configuration */}
+          <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Practice configuration (editable)</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Title"><Input defaultValue={defaults.title ?? `${chapter} Accuracy Recovery`} onChange={(e) => set('title')(e.target.value)} /></Field>
+              <Field label="Priority">
+                <Select value={val('priority', 'Medium')} onValueChange={set('priority')}>
+                  {['Critical', 'High', 'Medium', 'Low'].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </Select>
+              </Field>
+              <Field label="Objective" className="sm:col-span-2"><Textarea defaultValue={defaults.objective ?? `Improve accuracy on ${chapter} problems.`} onChange={(e) => set('objective')(e.target.value)} /></Field>
+              <Field label="Practice questions"><Input type="number" min={1} max={30} defaultValue={Number(defaults.count ?? 8) || 8} onChange={(e) => set('count')(e.target.value)} /></Field>
+              <Field label="Difficulty">
+                <Select value={val('difficulty', 'Medium')} onValueChange={set('difficulty')}>
+                  {['Easy', 'Medium', 'Hard', 'Mixed'].map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </Select>
+              </Field>
+              <Field label="PYQ preference">
+                <Select value={val('pyqPreference', 'Yes')} onValueChange={set('pyqPreference')}>
+                  <SelectItem value="Yes">Preferred</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                </Select>
+              </Field>
+              <Field label="Faculty notes"><Textarea defaultValue={defaults.notes ?? ''} onChange={(e) => set('notes')(e.target.value)} /></Field>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={create} disabled={isPending}>{isPending ? 'Creating…' : <><CheckCircle2 className="h-4 w-4" /> Create Intervention</>}</Button>
+            <Button variant="outline" onClick={() => { setForm(null); onOpenChange?.(false) }}>Cancel</Button>
+            <p className="ml-auto max-w-[240px] text-[10px] font-medium text-slate-400">Enters the existing lifecycle at “Recommended” — approval, planning and assignment stay manual.</p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 /* ---------------- Student-360 scoped interventions ---------------- */
 /**
- * Read-only panel for a SINGLE student's assigned/active interventions,
- * reused by the canonical Student 360 page. It reuses the same
+ * Read-only panel for a SINGLE student's interventions, reused by the
+ * canonical Student 360 page. It reuses the same
  * /faculty/students/:id/interventions endpoint + lifecycle as the center;
  * it does NOT create a second intervention system and never assigns
- * anything automatically. The "Manage" link returns faculty to the full
- * Intervention Center.
+ * anything automatically. Phase 5 hardening: interventions created from
+ * Student 360 appear from "Recommended" onward ("Intervention Created") with
+ * status · priority · target · created date · practice status · re-test
+ * status · effectiveness status. The "Manage" link returns faculty to the
+ * full Intervention Center.
  */
 function StudentInterventionsPanel({ studentId, domain }) {
   const { data, isLoading, isError, refetch } = useFacultyStudentInterventions(studentId)
@@ -450,6 +579,7 @@ function StudentInterventionsPanel({ studentId, domain }) {
     : all
   const sorted = [...items].sort((a, b) =>
     ({ Critical: 0, High: 1, Medium: 2, Low: 3 }[a.priority] ?? 4) - ({ Critical: 0, High: 1, Medium: 2, Low: 3 }[b.priority] ?? 4))
+  const createdCount = sorted.filter((iv) => iv.source === 'Student 360').length
 
   return (
     <div className="space-y-4">
@@ -460,6 +590,7 @@ function StudentInterventionsPanel({ studentId, domain }) {
           </h3>
           <p className="mt-0.5 text-xs text-slate-400">
             Existing practice &amp; re-test plans{domain ? ` · ${domain} only` : ''}. Faculty approval is mandatory — nothing is delivered automatically.
+            {createdCount > 0 && ` ${createdCount} created from Student 360.`}
           </p>
         </div>
         <Link to="/faculty/my-students?view=interventions">
@@ -480,15 +611,21 @@ function StudentInterventionsPanel({ studentId, domain }) {
                   {iv.title}
                   <Badge variant={PRIORITY_STYLE[iv.priority] ?? 'secondary'} size="sm">{iv.priority}</Badge>
                   <Badge variant={STATUS_STYLE[iv.status] ?? 'secondary'} size="sm">{iv.status}</Badge>
+                  {iv.source === 'Student 360' && <Badge variant="info" size="sm">Created from Student 360</Badge>}
                 </p>
                 <p className="mt-0.5 text-[11.5px] font-medium text-slate-400">
-                  {iv.subject} — {iv.chapter} · {iv.issueType}
+                  {iv.subject} — {iv.chapter} · {iv.issueType} · {iv.examFamily ?? iv.domain}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {iv.source === 'Student 360' && iv.createdAt && <Badge variant="secondary" size="sm">Created {formatDate(iv.createdAt, 'MMM d, yyyy')}</Badge>}
+                  <Badge variant="outline" size="sm">Practice: {iv.practiceStatus ?? '—'}{iv.practiceProgress != null && iv.practiceRequired != null ? ` (${iv.practiceProgress}/${iv.practiceRequired})` : ''}</Badge>
+                  <Badge variant="outline" size="sm">Re-test: {iv.retestStatus ?? '—'}</Badge>
+                  <Badge variant={(iv.effectivenessStatus && iv.effectivenessStatus !== 'Pending') ? OUTCOME_STYLE[iv.effectivenessStatus] ?? 'secondary' : 'secondary'} size="sm">Effectiveness: {iv.effectivenessStatus ?? 'Pending'}</Badge>
                   {iv.practiceDone && iv.practiceAccuracy != null && <Badge variant="outline" size="sm">{iv.practiceAccuracy}% practice</Badge>}
-                  {iv.outcome && <Badge variant={OUTCOME_STYLE[iv.outcome] ?? 'secondary'} size="sm">{iv.outcome}</Badge>}
-                  <Badge variant="secondary" size="sm">{iv.examFamily ?? iv.domain}</Badge>
                 </div>
+                {iv.effectivenessEvidence && iv.effectivenessStatus && iv.effectivenessStatus !== 'Pending' && (
+                  <p className="mt-1 text-[10.5px] leading-relaxed text-slate-400">{iv.effectivenessEvidence}</p>
+                )}
               </div>
             </button>
           ))}
@@ -496,8 +633,8 @@ function StudentInterventionsPanel({ studentId, domain }) {
       ) : (
         <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
           <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No interventions for this student yet</p>
-          <p className="mt-1 text-xs text-slate-400">Use a weakness’s “Suggested intervention” action or the Intervention Center to create one.</p>
+          <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No interventions created for this student.</p>
+          <p className="mt-1 text-xs text-slate-400">Use a weakness’s “Suggested intervention → Review &amp; Create” action or the Intervention Center to create one.</p>
         </div>
       )}
 
@@ -596,5 +733,5 @@ function InterventionCenterTab() {
   )
 }
 
-export { InterventionCenterTab, StudentInterventionsPanel }
+export { InterventionCenterTab, StudentInterventionsPanel, ReviewCreateInterventionDialog }
 export default InterventionCenterTab

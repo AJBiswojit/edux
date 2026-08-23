@@ -1,12 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeExamAttempt, classifyAttemptContext } from '../../src/intelligence/engine/exam-agent.js'
-import { buildAttemptSignals } from '../../src/intelligence/engine/exam-attempt-intelligence.js'
+import {
+  classifyAttemptContext as classifyAdapterContext,
+  buildAttemptSignals,
+} from '../../src/intelligence/engine/exam-attempt-intelligence.js'
 import {
   computeStudent360,
   computeStudentChapterIntelligence,
   computeStudentQuestionIntelligence,
 } from '../../src/intelligence/faculty/engine/student-360.js'
 import { groupSimilarIssues } from '../../src/intelligence/faculty/engine/similar-issues.js'
+
+/**
+ * PHASE 5 CONSOLIDATED — the ONE canonical Student 360 domain-isolation suite.
+ *
+ * Phase 4 ended with two near-duplicate suites:
+ *   · tests/intelligence/student-360-domain-isolation.test.js  (10 tests — canonical)
+ *   · test/student-360-domain-isolation.test.js                ( 9 tests — duplicate)
+ * Phase 5 merged every meaningful assertion from the duplicate into THIS file
+ * and removed the duplicate + its private fixture module. Coverage below:
+ * University isolation · JEE isolation · NEET isolation · University+JEE ·
+ * University+NEET · no cross-family leakage · question evidence isolation ·
+ * DNA evidence isolation · trend isolation · comparison isolation ·
+ * adapter context rejection (no subject-name inference) · Similar Issues
+ * partition (groups AND individuals).
+ */
 
 const student = { id: 'fixture-student', roll: 'FIX-001', name: 'Fixture Student', batchId: 'fixture-batch' }
 
@@ -44,10 +62,23 @@ const neetPhysics = attempt({ id: 'neet-05', examMode: 'Competitive', examFamily
 const neetChemistry = attempt({ id: 'neet-06', examMode: 'Competitive', examFamily: 'NEET', subject: 'Chemistry', chapter: 'Organic Chemistry' })
 const neetBiology = attempt({ id: 'neet-07', examMode: 'Competitive', examFamily: 'NEET', subject: 'Biology', chapter: 'Human Physiology' })
 const allAttempts = [university, jeePhysics, jeeMaths, jeeChemistry, neetPhysics, neetChemistry, neetBiology]
+const universityJee = [university, jeePhysics, jeeMaths, jeeChemistry]
+const universityNeet = [university, neetPhysics, neetChemistry, neetBiology]
 
 describe('Student 360 canonical domain isolation', () => {
   it('classifies explicit University metadata ahead of a conflicting family', () => {
     expect(classifyAttemptContext(university)).toEqual({ domain: 'university', examMode: 'University', examFamily: null })
+  })
+
+  it('adapter context view classifies canonical University, JEE, and NEET metadata without subject-name inference', () => {
+    expect(classifyAdapterContext(university)).toEqual({ domain: 'university', examFamily: 'University' })
+    expect(classifyAdapterContext(jeePhysics)).toEqual({ domain: 'competitive', examFamily: 'JEE' })
+    expect(classifyAdapterContext(neetPhysics)).toEqual({ domain: 'competitive', examFamily: 'NEET' })
+  })
+
+  it('adapter context rejects competitive attempts with no canonical family instead of guessing from a subject', () => {
+    const unknown = attempt({ id: 'x-99', examMode: 'Competitive', examFamily: null, subject: 'Biology', chapter: 'Human Physiology' })
+    expect(classifyAdapterContext(unknown)).toEqual({ domain: null, examFamily: null })
   })
 
   it('normalizes legacy attempts into canonical University, JEE, and NEET contexts', () => {
@@ -56,10 +87,13 @@ describe('Student 360 canonical domain isolation', () => {
     expect(normalizeExamAttempt({ id: 'n', category: 'Competitive', examType: 'NEET', interactions: {} }).examFamily).toBe('NEET')
   })
 
-  it('keeps University subjects and chapters university-only', () => {
+  it('keeps University subjects and chapters university-only (and NEET pools empty for a University+JEE history)', () => {
     const signals = buildAttemptSignals(allAttempts)
     expect(signals.university.subjects.map((row) => row.subject)).toEqual(['CS501'])
     expect(signals.university.chapters.map((row) => row.chapter)).toEqual(['Graphs'])
+    const universityJeeSignals = buildAttemptSignals(universityJee)
+    expect(universityJeeSignals.competitive.NEET.subjects).toEqual([])
+    expect(universityJeeSignals.competitive.NEET.chapters).toEqual([])
   })
 
   it('keeps JEE Physics, Mathematics, and Chemistry isolated from NEET and University', () => {
@@ -82,10 +116,13 @@ describe('Student 360 canonical domain isolation', () => {
     expect(signals.competitive.NEET.chapters).toHaveLength(1)
     expect(signals.competitive.JEE.chapters[0].attempts).toBe(1)
     expect(signals.competitive.NEET.chapters[0].attempts).toBe(1)
+    expect(signals.competitive.JEE.chapters[0].series).toHaveLength(1)
+    expect(signals.competitive.NEET.chapters[0].series).toHaveLength(1)
+    expect(signals.competitive.JEE.chapters[0].series[0]).not.toEqual(signals.competitive.NEET.chapters[0].series[0])
   })
 
   it('isolates a University plus JEE student across subjects, questions, trends, and comparison', () => {
-    const s360 = computeStudent360({ student, attempts: [university, jeePhysics, jeeMaths, jeeChemistry] })
+    const s360 = computeStudent360({ student, attempts: universityJee })
     expect(s360.subjects.university.map((row) => row.subject)).toEqual(['CS501'])
     expect(s360.subjects.competitive.JEE.map((row) => row.subject).sort()).toEqual(['Chemistry', 'Mathematics', 'Physics'])
     expect(s360.question.byContext.University.rows.every((row) => row.examMode === 'University')).toBe(true)
@@ -95,7 +132,7 @@ describe('Student 360 canonical domain isolation', () => {
   })
 
   it('isolates a University plus NEET student across subjects, questions, and DNA evidence', () => {
-    const s360 = computeStudent360({ student, attempts: [university, neetPhysics, neetChemistry, neetBiology] })
+    const s360 = computeStudent360({ student, attempts: universityNeet })
     expect(s360.subjects.competitive.NEET.map((row) => row.subject).sort()).toEqual(['Biology', 'Chemistry', 'Physics'])
     expect(s360.question.byContext.NEET.rows.every((row) => row.examFamily === 'NEET')).toBe(true)
     expect(s360.strengthsWeaknesses.evidence.university.chapters.every((row) => row.subject === 'CS501')).toBe(true)
@@ -124,5 +161,24 @@ describe('Similar Issues partition regression', () => {
     expect(result.groups).toHaveLength(3)
     expect(result.groups.map((group) => `${group.domain}:${group.examFamily ?? 'University'}`).sort())
       .toEqual(['Competitive:JEE', 'Competitive:NEET', 'University:University'])
+  })
+
+  it('keeps singleton partitions as individual issues instead of forcing a cross-domain group', () => {
+    const base = { subject: 'Physics', chapter: 'Modern Physics', issueType: 'Low Accuracy', accuracyBand: 'low', timeBand: 'normal', trend: 'stable', skipBand: 'none' }
+    const result = groupSimilarIssues([
+      { ...base, studentId: 'u', domain: 'University', examFamily: null },
+      { ...base, studentId: 'j', domain: 'Competitive', examFamily: 'JEE' },
+      { ...base, studentId: 'n', domain: 'Competitive', examFamily: 'NEET' },
+    ])
+    expect(result.groups).toEqual([])
+    expect(result.individuals).toHaveLength(3)
+  })
+
+  it('only groups equivalent issues in the same family partition', () => {
+    const base = { domain: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Mechanics', issueType: 'Low Accuracy', accuracyBand: 'low', timeBand: 'normal', trend: 'stable', skipBand: 'none' }
+    const result = groupSimilarIssues([{ ...base, studentId: 'j1' }, { ...base, studentId: 'j2' }])
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0].examFamily).toBe('JEE')
+    expect(result.individuals).toEqual([])
   })
 })
