@@ -8,9 +8,11 @@ import { getQuery as get } from './query'
  * mock API (swap to real backend with VITE_USE_MOCK=false, zero code changes).
  */
 
+/* Phase 3 — canonical consumption is ONE snapshot hook (summary already
+   embeds profile + datasets + derived, mirroring the faculty contract).
+   The unused /derived and /datasets view hooks were retired along with their
+   projection endpoints. */
 export const useStudentIntelligence = () => useQuery(get('/intelligence/summary', ['intelligence', 'summary']))
-export const useStudentIntelligenceDerived = () => useQuery(get('/intelligence/derived', ['intelligence', 'derived']))
-export const useStudentIntelligenceDatasets = () => useQuery(get('/intelligence/datasets', ['intelligence', 'datasets']))
 export const useMasterStudentProfile = () => useQuery(get('/intelligence/profile', ['intelligence', 'profile']))
 
 /**

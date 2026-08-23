@@ -37,9 +37,6 @@ export function useGenerateStudioQuestions() {
 export const useStudioSessions = () =>
   useQuery({ queryKey: ['faculty', 'question-studio', 'sessions'], queryFn: () => request({ url: '/faculty/question-studio/sessions' }).then((r) => r.data) })
 
-export const useStudioSession = (id) =>
-  useQuery({ queryKey: ['faculty', 'question-studio', 'sessions', id], queryFn: () => request({ url: `/faculty/question-studio/sessions/${id}` }).then((r) => r.data), enabled: !!id })
-
 export function useStudioQuestionAction() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -49,7 +46,4 @@ export function useStudioQuestionAction() {
   })
 }
 
-export const useStudioApproved = () =>
-  useQuery({ queryKey: ['faculty', 'question-studio', 'approved'], queryFn: () => request({ url: '/faculty/question-studio/approved' }).then((r) => r.data) })
-
-export default { useQuestionStudioSummary, useQuestionStudioSources, useQuestionStudioSource, useAnalyzeSource, useUploadSource, useGenerateStudioQuestions, useStudioSessions, useStudioSession, useStudioQuestionAction, useStudioApproved }
+export default { useQuestionStudioSummary, useQuestionStudioSources, useQuestionStudioSource, useAnalyzeSource, useUploadSource, useGenerateStudioQuestions, useStudioSessions, useStudioQuestionAction }

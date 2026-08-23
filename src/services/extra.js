@@ -21,7 +21,8 @@ export const useFacultyCourses = () => useQuery(get('/faculty/courses', ['facult
 export const useFacultyTimetable = () => useQuery(get('/faculty/timetable', ['faculty', 'timetable']))
 export const useFacultyAnnouncements = () => useQuery(get('/faculty/announcements', ['faculty', 'announcements']))
 export const useFacultyQuizBuilder = () => useQuery(get('/faculty/quiz-builder', ['faculty', 'quiz-builder']))
-export const useFacultyAiStudio = () => useQuery(get('/faculty/ai-studio', ['faculty', 'ai-studio']))
+/* Phase 3 — retired useFacultyAiStudio (legacy fetch for the superseded AI
+   Studio page; the AI Workspace consumes thread/respond hooks + save only). */
 
 /* ================= PARENT (extra) ================= */
 export const useParentAssignments = () => useQuery(get('/parent/assignments', ['parent', 'assignments']))
@@ -46,9 +47,8 @@ export const useAdminPrograms = () => useQuery(get('/admin/programs', ['admin', 
 export const useAdminSubjects = () => useQuery(get('/admin/subjects', ['admin', 'subjects']))
 export const useAdminBatches = () => useQuery(get('/admin/batches', ['admin', 'batches']))
 export const useAdminCalendar = () => useQuery(get('/admin/calendar', ['admin', 'calendar']))
-export const useAdminAttendanceAnalytics = () => useQuery(get('/admin/attendance-analytics', ['admin', 'attendance-analytics']))
-export const useAdminAssignmentAnalytics = () => useQuery(get('/admin/assignment-analytics', ['admin', 'assignment-analytics']))
-export const useAdminExamAnalytics = () => useQuery(get('/admin/exam-analytics', ['admin', 'exam-analytics']))
+/* Phase 3 — retired the three legacy admin analytics hooks (pages removed in
+   Phase 2; Institution Intelligence reads the datasets via its own engines). */
 export const useAdminQuestionBank = () => useQuery(get('/admin/question-bank', ['admin', 'question-bank']))
 export const useAdminScholarships = () => useQuery(get('/admin/scholarships', ['admin', 'scholarships']))
 export const useAdminCms = () => useQuery(get('/admin/cms', ['admin', 'cms']))
@@ -56,21 +56,19 @@ export const useAdminApiConfig = () => useQuery(get('/admin/api-config', ['admin
 export const useAdminDataTools = () => useQuery(get('/admin/data-tools', ['admin', 'data-tools']))
 
 /* ================= AI Exam Analysis (student) ================= */
-export const useExamAnalysis = () => useQuery(get('/student/exam-analysis', ['student', 'exam-analysis']))
+/* Phase 3 — retired the unused base useExamAnalysis fetch; the page consumes
+   the options + per-id analysis endpoints below. */
 export const useExamAnalysisOptions = () => useQuery(get('/student/exam-analysis/options', ['student', 'exam-analysis', 'options']))
 export const useExamAnalysisById = (id) =>
   useQuery({ ...get(`/student/exam-analysis/${id}`, ['student', 'exam-analysis', id]), enabled: !!id })
 
 /* ================= Student Academics hub ================= */
-export const useAcademicProfile = () => useQuery(get('/student/academic-profile', ['student', 'academic-profile']))
-export const useAcademicResources = () => useQuery(get('/student/academic-resources', ['student', 'academic-resources']))
-export const useAcademicProgress = () => useQuery(get('/student/academic-progress', ['student', 'academic-progress']))
+/* Phase 3 — retired the unused academics-hub hooks (profile/resources/
+   progress) and usePerformanceAccuracy: those pages now consume the canonical
+   useStudentIntelligence snapshot. */
 
 /* ================= MediXO Mentor workspace ================= */
 export const useMentorWorkspace = () => useQuery(get('/student/mentor/workspace', ['student', 'mentor', 'workspace']))
-
-/* ================= Student Performance & Accuracy ================= */
-export const usePerformanceAccuracy = () => useQuery(get('/student/performance-accuracy', ['student', 'performance-accuracy']))
 
 /* ================= AI Question Paper Generator (faculty) ================= */
 export const usePaperGenerator = () => useQuery(get('/faculty/paper-generator', ['faculty', 'paper-generator']))
@@ -129,9 +127,8 @@ export function usePaperShare() {
   })
 }
 
-export function usePaperShares() {
-  return useQuery(get('/faculty/paper-generator/shares', ['faculty', 'paper-generator', 'shares']))
-}
+/* Phase 3 — retired usePaperShares (the share action posts remain; nothing
+   reads the shares list). */
 
 export const useAdminStudents = () => useQuery(get('/admin/students', ['admin', 'students']))
 export const useAdminFaculty = () => useQuery(get('/admin/faculty', ['admin', 'faculty']))

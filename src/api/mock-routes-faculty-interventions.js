@@ -145,16 +145,8 @@ mockRoute('get', '/faculty/similar-issues', ({ params }) => {
   }
 })
 
-mockRoute('get', '/faculty/similar-issues/:id', ({ params }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.id)
-  if (!group) {
-    const err = new Error('Issue group not found.')
-    err.response = { status: 404, data: { message: err.message } }
-    throw err
-  }
-  return { group }
-})
+/* Phase 3 — retired GET /faculty/similar-issues/:id (zero consumers; the list
+   route above carries the full group payloads the UI expands inline). */
 
 /* ------------------------------------------------------------------ */
 /* Faculty: intervention center + lifecycle                           */
@@ -342,23 +334,10 @@ mockRoute('post', '/faculty/interventions/:groupId/retest', async ({ params, bod
   return { ok: true, retest, insufficient: res.insufficient, available: res.available, required: res.required }
 })
 
-/* Effectiveness */
-mockRoute('get', '/faculty/interventions/:id/effectiveness', async ({ params }) => {
-  const { groups } = groupedPayload()
-  const group = groups.find((g) => g.id === params.id)
-  if (!group) {
-    const err = new Error('Intervention not found.')
-    err.response = { status: 404, data: { message: err.message } }
-    throw err
-  }
-  const iv = interventionFor(group)
-  const practice = readPractice()
-  return computeEffectiveness({
-    baseline: iv.baseline,
-    practiceAttempts: practice.filter((p) => p.kind === 'practice' && p.interventionId === iv.id),
-    retestAttempts: practice.filter((p) => p.kind === 'retest' && p.interventionId === iv.id),
-  })
-})
+/* Effectiveness — Phase 3: the standalone read route was retired (zero
+   consumers). Effectiveness itself is unchanged: it is still computed into
+   every intervention payload (list/detail) and updated by practice/re-test
+   writes, so the lifecycle keeps full visibility. */
 
 /* Faculty: a student's intervention history (for the 360 profile) */
 mockRoute('get', '/faculty/students/:id/interventions', async ({ params }) => {

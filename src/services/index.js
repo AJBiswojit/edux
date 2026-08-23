@@ -4,15 +4,11 @@ import request from '@/api/client'
 
 /* ================= STUDENT ================= */
 
-export const useStudentProfile = () => useQuery(get('/student/profile', ['student', 'profile']))
-export const useStudentDashboard = () => useQuery(get('/student/dashboard', ['student', 'dashboard']))
-export const useStudentAttendance = () => useQuery(get('/student/attendance', ['student', 'attendance']))
-export const useStudentAssignments = () => useQuery(get('/student/assignments', ['student', 'assignments']))
-export const useStudentCourses = () => useQuery(get('/student/courses', ['student', 'courses']))
-export const useCourseDetail = (id) =>
-  useQuery({ ...get(`/student/courses/${id}`, ['student', 'courses', id]), enabled: !!id })
-export const useStudentSubjects = () => useQuery(get('/student/subjects', ['student', 'subjects']))
-export const useCalendarEvents = () => useQuery(get('/student/events', ['student', 'events']))
+/* Phase 3 — retired unused legacy per-page student hooks (profile, dashboard,
+   attendance, assignments, courses, course detail, subjects, events). Those
+   pages consume the canonical Student Intelligence snapshot
+   (`useStudentIntelligence` in services/intelligence.js); their endpoints have
+   been retired alongside. */
 export const useMockTests = () => useQuery(get('/student/mock-tests', ['student', 'mock-tests']))
 export const useExams = () => useQuery(get('/student/exams', ['student', 'exams']))
 export const useStudentSettings = () => useQuery(get('/student/settings', ['student', 'settings']))
@@ -39,13 +35,12 @@ export const useFacultyRoster = () => useQuery(get('/faculty/roster', ['faculty'
 
 /* ================= ADMIN ================= */
 
-export const useAdminDashboard = () => useQuery(get('/admin/dashboard', ['admin', 'dashboard']))
+/* Phase 3 — retired unused admin legacy hooks (dashboard, analytics,
+   performance, placements); Institution Intelligence
+   (`useAdminIntelligence`) is the canonical snapshot. */
 export const useAdminUsers = () => useQuery(get('/admin/users', ['admin', 'users']))
 export const useAdminDepartments = () => useQuery(get('/admin/departments', ['admin', 'departments']))
 export const useAdminCourses = () => useQuery(get('/admin/courses', ['admin', 'courses']))
-export const useAdminAnalytics = () => useQuery(get('/admin/analytics', ['admin', 'analytics']))
-export const useAdminPerformance = () => useQuery(get('/admin/performance', ['admin', 'performance']))
-export const useAdminPlacements = () => useQuery(get('/admin/placements', ['admin', 'placements']))
 export const useAdminResearch = () => useQuery(get('/admin/research', ['admin', 'research']))
 export const useAdminRoles = () => useQuery(get('/admin/roles', ['admin', 'roles']))
 export const useAdminPermissions = () => useQuery(get('/admin/permissions', ['admin', 'permissions']))
@@ -68,8 +63,6 @@ export const useParentReports = () => useQuery(get('/parent/reports', ['parent',
 /* ================= AI ================= */
 
 export const useAITutorThreads = () => useQuery(get('/ai/tutor/threads', ['ai', 'tutor', 'threads']))
-export const useAITutorThread = (id) =>
-  useQuery({ ...get(`/ai/tutor/threads/${id}`, ['ai', 'tutor', 'threads', id]), enabled: !!id })
 
 export function useAITutorRespond() {
   return useMutation({
@@ -82,9 +75,9 @@ export const useCopilotSuggestions = (path) =>
   useQuery({ ...get('/ai/copilot/suggestions', ['ai', 'copilot', path]), enabled: !!path })
 
 export const useLearningPath = () => useQuery(get('/ai/learning-path', ['ai', 'learning-path']))
-export const useAIRecommendations = () => useQuery(get('/ai/recommendations', ['ai', 'recommendations']))
-export const useAIWeaknesses = () => useQuery(get('/ai/weaknesses', ['ai', 'weaknesses']))
-export const useAIPrediction = () => useQuery(get('/ai/prediction', ['ai', 'prediction']))
+/* Phase 3 — retired unused AI hooks: single tutor thread (the tutor page
+   paginates the thread list), AI recommendations/weaknesses/prediction and
+   the legacy AI quiz/exam generators (builder pages use their own services). */
 
 export function useGraphSearch(query) {
   return useQuery({
@@ -99,18 +92,6 @@ export const useAIAssistantThreads = () => useQuery(get('/ai/assistant/threads',
 export function useAIAssistantRespond() {
   return useMutation({
     mutationFn: ({ text }) => request({ method: 'post', url: '/ai/assistant/respond', data: { text } }).then((r) => r.data),
-  })
-}
-
-export function useGenerateQuiz() {
-  return useMutation({
-    mutationFn: (payload) => request({ method: 'post', url: '/ai/generate-quiz', data: payload }).then((r) => r.data),
-  })
-}
-
-export function useGenerateExam() {
-  return useMutation({
-    mutationFn: (payload) => request({ method: 'post', url: '/ai/generate-exam', data: payload }).then((r) => r.data),
   })
 }
 

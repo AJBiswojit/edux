@@ -11,13 +11,6 @@ export const useSimilarIssues = (scope = 'all') =>
     queryFn: () => request({ url: '/faculty/similar-issues', params: { scope } }).then((r) => r.data),
   })
 
-export const useIssueGroup = (id) =>
-  useQuery({
-    queryKey: ['faculty', 'similar-issues', id],
-    queryFn: () => request({ url: `/faculty/similar-issues/${id}` }).then((r) => r.data),
-    enabled: !!id,
-  })
-
 export const useInterventions = () =>
   useQuery({
     queryKey: ['faculty', 'interventions'],
@@ -35,13 +28,6 @@ export const useInterventionPractice = (id) =>
   useQuery({
     queryKey: ['faculty', 'interventions', id, 'practice'],
     queryFn: () => request({ url: `/faculty/interventions/${id}/practice` }).then((r) => r.data),
-    enabled: !!id,
-  })
-
-export const useInterventionEffectiveness = (id) =>
-  useQuery({
-    queryKey: ['faculty', 'interventions', id, 'effectiveness'],
-    queryFn: () => request({ url: `/faculty/interventions/${id}/effectiveness` }).then((r) => r.data),
     enabled: !!id,
   })
 
@@ -125,8 +111,8 @@ export const useFacultyStudentInterventions = (studentId) =>
   })
 
 export default {
-  useSimilarIssues, useIssueGroup, useInterventions, useIntervention, useInterventionPractice,
-  useInterventionEffectiveness, useInterventionStatus, useInterventionModify, useInterventionAssign,
+  useSimilarIssues, useInterventions, useIntervention, useInterventionPractice,
+  useInterventionStatus, useInterventionModify, useInterventionAssign,
   useCreateRetest, useRelatedResources, useStudentInterventions, useStudentInterventionPractice,
   useStudentInterventionRetest, useSubmitInterventionAttempt, useFacultyStudentInterventions,
 }

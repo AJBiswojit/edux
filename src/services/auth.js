@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import request from '@/api/client'
 
 /* ================= AUTH ================= */
@@ -51,37 +51,12 @@ export function useRegisterVerifyOtp() {
   })
 }
 
-export function useRegistrationStatus(email) {
-  return useQuery({
-    queryKey: ['auth', 'registration', 'status', email],
-    queryFn: () => request({ url: '/auth/registration/status', params: { email } }).then((r) => r.data),
-    enabled: !!email,
-  })
-}
-
-export function useProfileSetup() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (payload) => request({ method: 'post', url: '/auth/profile-setup', data: payload }).then((r) => r.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['auth'] })
-    },
-  })
-}
+/* Phase 3 — retired unused hooks: useRegistrationStatus / useProfileSetup
+   (the auth flow runs through AuthContext + register/OTP mutations), and the
+   platform GET hooks for testimonials/pricing/faqs/stats (landing sections
+   read the same canonical datasets from @/mock-data/platform directly). */
 
 /* ================= PLATFORM ================= */
-
-export function useTestimonials() {
-  return useQuery({ queryKey: ['platform', 'testimonials'], queryFn: () => request({ url: '/platform/testimonials' }).then((r) => r.data) })
-}
-
-export function usePricingPlans() {
-  return useQuery({ queryKey: ['platform', 'pricing'], queryFn: () => request({ url: '/platform/pricing' }).then((r) => r.data) })
-}
-
-export function useFaqs() {
-  return useQuery({ queryKey: ['platform', 'faqs'], queryFn: () => request({ url: '/platform/faqs' }).then((r) => r.data) })
-}
 
 export function useBlogPosts() {
   return useQuery({ queryKey: ['platform', 'blog'], queryFn: () => request({ url: '/platform/blog' }).then((r) => r.data) })
@@ -101,10 +76,6 @@ export function useCareers() {
 
 export function useCaseStudies() {
   return useQuery({ queryKey: ['platform', 'case-studies'], queryFn: () => request({ url: '/platform/case-studies' }).then((r) => r.data) })
-}
-
-export function usePlatformStats() {
-  return useQuery({ queryKey: ['platform', 'stats'], queryFn: () => request({ url: '/platform/stats' }).then((r) => r.data) })
 }
 
 export function useNewsletter() {
