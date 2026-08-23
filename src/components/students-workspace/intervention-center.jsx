@@ -15,6 +15,7 @@ import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import {
   useInterventions, useIntervention, useInterventionPractice,
   useInterventionStatus, useInterventionModify, useInterventionAssign, useCreateRetest,
+  useFacultyStudentInterventions,
 } from '@/services/faculty-interventions'
 import { formatDate } from '@/utils/format'
 
@@ -427,6 +428,84 @@ function InterventionDetailDialog({ id, open, onOpenChange }) {
 }
 
 /* ================= Center tab ================= */
+/* ---------------- Student-360 scoped interventions ---------------- */
+/**
+ * Read-only panel for a SINGLE student's assigned/active interventions,
+ * reused by the canonical Student 360 page. It reuses the same
+ * /faculty/students/:id/interventions endpoint + lifecycle as the center;
+ * it does NOT create a second intervention system and never assigns
+ * anything automatically. The "Manage" link returns faculty to the full
+ * Intervention Center.
+ */
+function StudentInterventionsPanel({ studentId, domain }) {
+  const { data, isLoading, isError, refetch } = useFacultyStudentInterventions(studentId)
+  const [selected, setSelected] = useState(null)
+
+  if (isLoading) return <DashboardSkeleton cards={2} />
+  if (isError) return <ErrorState onRetry={() => refetch()} />
+
+  const all = data?.items ?? []
+  const items = domain
+    ? all.filter((iv) => (domain === 'University' ? iv.domain === 'University' : iv.domain === 'Competitive' && iv.examFamily === domain))
+    : all
+  const sorted = [...items].sort((a, b) =>
+    ({ Critical: 0, High: 1, Medium: 2, Low: 3 }[a.priority] ?? 4) - ({ Critical: 0, High: 1, Medium: 2, Low: 3 }[b.priority] ?? 4))
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
+            <Target className="h-4 w-4 text-teal-600 dark:text-teal-400" /> Interventions for this student
+          </h3>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Existing practice &amp; re-test plans{domain ? ` · ${domain} only` : ''}. Faculty approval is mandatory — nothing is delivered automatically.
+          </p>
+        </div>
+        <Link to="/faculty/my-students?view=interventions">
+          <Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" /> Open Intervention Center</Button>
+        </Link>
+      </div>
+
+      {sorted.length ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          {sorted.map((iv) => (
+            <button key={iv.id} onClick={() => setSelected(iv.id)}
+              className="flex w-full items-start gap-3 rounded-2xl border border-slate-200/70 bg-white p-4 text-left shadow-sm transition-all hover:border-teal-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-teal-500/40">
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${iv.priority === 'Critical' || iv.priority === 'High' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300'}`}>
+                <Target className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 text-[13px] font-bold text-slate-900 dark:text-white">
+                  {iv.title}
+                  <Badge variant={PRIORITY_STYLE[iv.priority] ?? 'secondary'} size="sm">{iv.priority}</Badge>
+                  <Badge variant={STATUS_STYLE[iv.status] ?? 'secondary'} size="sm">{iv.status}</Badge>
+                </p>
+                <p className="mt-0.5 text-[11.5px] font-medium text-slate-400">
+                  {iv.subject} — {iv.chapter} · {iv.issueType}
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {iv.practiceDone && iv.practiceAccuracy != null && <Badge variant="outline" size="sm">{iv.practiceAccuracy}% practice</Badge>}
+                  {iv.outcome && <Badge variant={OUTCOME_STYLE[iv.outcome] ?? 'secondary'} size="sm">{iv.outcome}</Badge>}
+                  <Badge variant="secondary" size="sm">{iv.examFamily ?? iv.domain}</Badge>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
+          <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No interventions for this student yet</p>
+          <p className="mt-1 text-xs text-slate-400">Use a weakness’s “Suggested intervention” action or the Intervention Center to create one.</p>
+        </div>
+      )}
+
+      <InterventionDetailDialog id={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} />
+    </div>
+  )
+}
+
 function InterventionCenterTab() {
   const { data, isLoading, isError, refetch } = useInterventions()
   const [statusFilter, setStatusFilter] = useState('All')
@@ -517,5 +596,5 @@ function InterventionCenterTab() {
   )
 }
 
-export { InterventionCenterTab }
+export { InterventionCenterTab, StudentInterventionsPanel }
 export default InterventionCenterTab
