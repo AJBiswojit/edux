@@ -5,23 +5,22 @@
  */
 import { mockRoute } from './mock-server'
 import {
-  masterStudentProfile, datasets, computeDerivedIntelligence, getStudentIntelligence,
+  masterStudentProfile, getStudentIntelligence,
   normalizeExamAttempt, filterExamAttempts, buildExamEvidence,
 } from '@/intelligence'
 import { EXAM_AGENT_EXAMS } from '@/mock-data/exam-agent'
 import { readAllAttempts } from './exam-attempts-store'
 
 mockRoute('get', '/intelligence/profile', () => masterStudentProfile)
-mockRoute('get', '/intelligence/datasets', () => datasets)
 
-/* Phase 2 — the derived graph (and the summary snapshot) receives the
-   exam-attempt evidence pools so the EXISTING Academic DNA engine can
-   consume canonical attempts. When no attempts exist the graph computes
-   exactly as before (attemptSignals = null). */
-mockRoute('get', '/intelligence/derived', () => {
-  const evidence = buildEvidenceForIntelligence()
-  return computeDerivedIntelligence(evidence ? { attemptSignals: evidence } : {})
-})
+/* Phase 3 — consolidated to ONE canonical snapshot route (/summary), matching
+   the faculty foundation contract; the unused /datasets and /derived
+   projection routes were retired (the summary already embeds profile +
+   datasets + derived). The summary is intentionally NOT memoized: the
+   derived graph (and the summary snapshot) receives the exam-attempt
+   evidence pools so the EXISTING Academic DNA engine can consume canonical
+   attempts, and attempts change as the Exam Agent runs. When no attempts
+   exist the graph computes exactly as before (attemptSignals = null). */
 mockRoute('get', '/intelligence/summary', () => {
   const evidence = buildEvidenceForIntelligence()
   return getStudentIntelligence(evidence ? { attemptSignals: evidence } : {})

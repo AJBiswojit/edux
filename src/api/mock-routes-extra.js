@@ -4,7 +4,6 @@
  */
 import { mockRoute } from './mock-server'
 import { studentPrograms, forumTopics, forumCategories, supportTickets, admitCard } from '@/mock-data/student-extra'
-import { studentAcademicProfile, academicResources, academicProgress } from '@/mock-data/student-academics'
 import { examAnalysis, examAnalysisOptions, examAnalysisVariants, universityExamOptions } from '@/mock-data/exam-analysis'
 import { EXAM_AGENT_EXAMS } from '@/mock-data/exam-agent'
 import { normalizeExamAttempt, filterExamAttempts, buildAttemptAnalysisVariant } from '@/intelligence'
@@ -17,11 +16,10 @@ import {
   aiConversations, suggestedQuestions, quickPrompts, resourceRecommendations,
   generatedNotes, downloads, completedRecommendations,
 } from '@/intelligence/datasets/workspace.js'
-import { performanceAccuracy } from '@/mock-data/performance-accuracy'
 import { paperGenerator } from '@/mock-data/paper-generator'
 import { pyqAnalysis, pyqFilters, pyqPatterns, applyPyqVariant } from '@/mock-data/pyq-analysis'
 import { pyqVariants } from '@/mock-data/pyq-analysis'
-import { facultyCourses, facultyTimetable, facultyAnnouncements, facultyQuizBuilder, facultyAiStudio } from '@/mock-data/faculty-extra'
+import { facultyCourses, facultyTimetable, facultyAnnouncements, facultyQuizBuilder } from '@/mock-data/faculty-extra'
 import { facultyReports } from '@/mock-data/faculty'
 import { aiStudioHistory, savedLessonPlans } from '@/intelligence/faculty/datasets/ai-studio'
 import { adminPeople } from '@/intelligence/admin/datasets/people'
@@ -29,7 +27,6 @@ import { masterInstitutionProfile } from '@/intelligence/admin/master-profile'
 import { parentAssignments, parentFees, parentBehavior, parentCalendarEvents, parentDownloads, parentNotifications, parentSettings } from '@/mock-data/parent-extra'
 import {
   adminRevenue, adminPrograms, adminSubjects, adminBatches, adminAcademicCalendar,
-  adminAttendanceAnalytics, adminAssignmentAnalytics, adminExamAnalytics,
   adminQuestionBank, adminScholarships, adminCms, adminApiConfig, adminDataTools,
 } from '@/mock-data/admin-extra'
 
@@ -56,7 +53,8 @@ mockRoute('get', '/faculty/courses', () => ({ items: facultyCourses }))
 mockRoute('get', '/faculty/timetable', () => ({ items: facultyTimetable }))
 mockRoute('get', '/faculty/announcements', () => ({ items: facultyAnnouncements }))
 mockRoute('get', '/faculty/quiz-builder', () => facultyQuizBuilder)
-mockRoute('get', '/faculty/ai-studio', () => facultyAiStudio)
+/* Phase 3 — retired GET /faculty/ai-studio (superseded page fetch; the AI
+   Workspace consumes assistant threads/respond + the save endpoint below). */
 
 /* ---------------- Parent (extra) ---------------- */
 mockRoute('get', '/parent/assignments', () => ({ items: parentAssignments }))
@@ -74,9 +72,8 @@ mockRoute('get', '/admin/programs', () => ({ programs: adminPrograms }))
 mockRoute('get', '/admin/subjects', () => ({ subjects: adminSubjects }))
 mockRoute('get', '/admin/batches', () => ({ batches: adminBatches }))
 mockRoute('get', '/admin/calendar', () => ({ events: adminAcademicCalendar }))
-mockRoute('get', '/admin/attendance-analytics', () => adminAttendanceAnalytics)
-mockRoute('get', '/admin/assignment-analytics', () => adminAssignmentAnalytics)
-mockRoute('get', '/admin/exam-analytics', () => adminExamAnalytics)
+/* Phase 3 — retired the three legacy admin analytics reads (pages removed in
+   Phase 2; datasets still power the Institution Intelligence engines). */
 mockRoute('get', '/admin/question-bank', () => adminQuestionBank)
 mockRoute('get', '/admin/scholarships', () => ({ items: adminScholarships }))
 mockRoute('get', '/admin/cms', () => adminCms)
@@ -84,7 +81,8 @@ mockRoute('get', '/admin/api-config', () => adminApiConfig)
 mockRoute('get', '/admin/data-tools', () => adminDataTools)
 
 /* ---------------- AI Exam Analysis (student) ---------------- */
-mockRoute('get', '/student/exam-analysis', () => examAnalysis)
+/* Phase 3 — retired the unused base GET /student/exam-analysis read (the
+   static dataset remains the fallback inside the :id handler below). */
 
 /* Phase 2 — canonical exam attempts join the AI Exam Analysis option set
    (marked "Sample" when from the deterministic seed history). Demo
@@ -138,9 +136,8 @@ mockRoute('get', '/student/exam-analysis/:id', ({ params }) => {
 })
 
 /* ---------------- Student Academics hub ---------------- */
-mockRoute('get', '/student/academic-profile', () => studentAcademicProfile)
-mockRoute('get', '/student/academic-resources', () => ({ items: academicResources }))
-mockRoute('get', '/student/academic-progress', () => academicProgress)
+/* Phase 3 — retired unused academics-hub reads (profile/resources/progress);
+   the Academics page consumes the Student Intelligence snapshot. */
 
 /* ---------------- MediXO Mentor workspace ---------------- */
 mockRoute('get', '/student/mentor/workspace', () => ({
@@ -162,7 +159,8 @@ mockRoute('get', '/student/mentor/workspace', () => ({
 }))
 
 /* ---------------- Student Performance & Accuracy ---------------- */
-mockRoute('get', '/student/performance-accuracy', () => performanceAccuracy)
+/* Phase 3 — retired the unused static GET /student/performance-accuracy read;
+   the page derives everything from the Student Intelligence snapshot. */
 
 /* ---------------- AI Question Paper Generator (faculty) ---------------- */
 /* Return a snapshot so in-memory mutations (delete/duplicate) never corrupt
@@ -296,11 +294,8 @@ mockRoute('post', '/faculty/paper-generator/papers/:id/share', ({ params, body }
   try { window.localStorage.setItem('aurora_faculty_paper_shares', JSON.stringify(shares)) } catch { /* storage unavailable */ }
   return { ok: true, share }
 })
-mockRoute('get', '/faculty/paper-generator/shares', () => {
-  let shares = []
-  try { shares = JSON.parse(window.localStorage.getItem('aurora_faculty_paper_shares') || '[]') } catch { shares = [] }
-  return { items: shares }
-})
+/* Phase 3 — retired the unread GET /faculty/paper-generator/shares list (the
+   share action above stays; nothing lists shares). */
 
 /* ---------------- Admin unified people (intelligence-backed) ---------------- */
 mockRoute('get', '/admin/students', () => ({

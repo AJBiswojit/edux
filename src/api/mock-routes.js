@@ -4,11 +4,9 @@
  * file directly, so switching to a real backend requires zero code changes.
  */
 import { mockRoute, setMockLatency } from './mock-server'
-import { MOCK_USERS, STUDENT_ROSTER, FACULTY_LIST, ADMIN_USERS, DEPARTMENTS } from '@/mock-data/users'
+import { MOCK_USERS, STUDENT_ROSTER, ADMIN_USERS, DEPARTMENTS } from '@/mock-data/users'
 import { REGISTRATION_OPTIONS } from '@/mock-data/registration'
 import {
-  studentProfile, studentDashboard, studentAttendance, studentAssignments,
-  studentCourses, courseDetail, studentSubjects, calendarEvents,
   mockTests, exams,
 } from '@/mock-data/student-academics'
 import { studentSettings } from '@/mock-data/student-growth'
@@ -18,7 +16,7 @@ import {
   facultyReports, facultySettings,
 } from '@/mock-data/faculty'
 import {
-  adminDashboard, adminCourses, adminAnalytics, adminPerformance, adminPlacements,
+  adminCourses,
   adminResearch, adminRoles, adminPermissions, adminAuditLogs, adminAiConfig, adminSettings,
 } from '@/mock-data/admin'
 import {
@@ -27,12 +25,12 @@ import {
 } from '@/mock-data/parent'
 import {
   aiTutorThreads, aiTutorQuickPrompts, copilotSuggestions, aiTeachingAssistantThreads,
-  learningPath, aiRecommendations, aiWeaknesses, aiPrediction,
-  graphSearch, aiConversationStats, quizGeneratorSample, examGeneratorSample,
+  learningPath,
+  graphSearch, aiConversationStats,
 } from '@/mock-data/ai'
 import { generateAssistantReply } from './mock-assistant-reply'
 import {
-  TESTIMONIALS, PRICING_PLANS, FAQS, BLOG_POSTS, CAREERS, CASE_STUDIES, PLATFORM_STATS, CONTACT_INFO,
+  BLOG_POSTS, CAREERS, CASE_STUDIES, CONTACT_INFO,
 } from '@/mock-data/platform'
 
 setMockLatency([320, 640])
@@ -62,7 +60,8 @@ mockRoute('post', '/auth/verify-email', ({ body }) => {
   return { ok: true, verified: true }
 })
 mockRoute('post', '/auth/resend-otp', () => ({ ok: true, message: 'OTP re-sent.', demoOtp: '731205' }))
-mockRoute('post', '/auth/profile-setup', ({ body }) => ({ ok: true, user: { ...MOCK_USERS[0], ...body } }))
+/* Phase 3 — retired POST /auth/profile-setup (the Profile Setup page persists
+   through AuthContext, nothing consumed this response). */
 
 /* ---------------- Registration (Phase 28) ----------------
    Deterministic prototype flow: register -> OTP (482193) -> profile -> session.
@@ -130,37 +129,25 @@ mockRoute('post', '/auth/register/verify', ({ body }) => {
   try { window.localStorage.setItem('aurora_registered_students', JSON.stringify(registry)) } catch { /* storage unavailable */ }
   return { ok: true, verified: true }
 })
-mockRoute('get', '/auth/registration/status', ({ params }) => {
-  const email = String(params?.email ?? '').toLowerCase().trim()
-  let registry = []
-  try { registry = JSON.parse(window.localStorage.getItem('aurora_registered_students') || '[]') } catch { registry = [] }
-  const draft = registry.find((r) => r.email?.toLowerCase() === email)
-  if (!draft) return { registered: false }
-  return { registered: true, verified: !!draft.verified }
-})
+/* Phase 3 — retired GET /auth/registration/status (unused read view; the
+   register → OTP → verified flow is untouched and keeps its own registry). */
 
 /* ---------------- Platform (landing) ---------------- */
-mockRoute('get', '/platform/testimonials', () => ({ items: TESTIMONIALS }))
-mockRoute('get', '/platform/pricing', () => ({ plans: PRICING_PLANS }))
-mockRoute('get', '/platform/faqs', () => ({ items: FAQS }))
+/* Phase 3 — retired unused platform reads (testimonials/pricing/faqs/stats):
+   landing sections import the same canonical datasets directly. */
 mockRoute('get', '/platform/blog', () => ({ posts: BLOG_POSTS }))
 mockRoute('get', '/platform/blog/:id', ({ params }) => ({ post: BLOG_POSTS.find((p) => String(p.id) === params.id) ?? BLOG_POSTS[0] }))
 mockRoute('get', '/platform/careers', () => ({ roles: CAREERS }))
 mockRoute('get', '/platform/case-studies', () => ({ studies: CASE_STUDIES }))
-mockRoute('get', '/platform/stats', () => ({ stats: PLATFORM_STATS }))
 mockRoute('get', '/platform/contact', () => CONTACT_INFO)
 mockRoute('post', '/platform/newsletter', () => ({ ok: true, message: 'Subscribed! Watch your inbox for the next issue.' }))
 mockRoute('post', '/platform/contact', () => ({ ok: true, message: 'Message received — our team will reply within one business day.' }))
 
 /* ---------------- Student ---------------- */
-mockRoute('get', '/student/profile', () => studentProfile)
-mockRoute('get', '/student/dashboard', () => studentDashboard)
-mockRoute('get', '/student/attendance', () => studentAttendance)
-mockRoute('get', '/student/assignments', () => ({ items: studentAssignments }))
-mockRoute('get', '/student/courses', () => ({ items: studentCourses }))
-mockRoute('get', '/student/courses/:id', ({ params }) => ({ course: params.id === courseDetail.id ? courseDetail : { ...courseDetail, id: params.id, code: params.id, title: studentCourses.find((c) => c.id === params.id)?.title ?? 'Course' } }))
-mockRoute('get', '/student/subjects', () => ({ items: studentSubjects }))
-mockRoute('get', '/student/events', () => ({ items: calendarEvents }))
+/* Phase 3 — retired the legacy per-page student reads (profile, dashboard,
+   attendance, assignments, courses, course detail, subjects, events). Those
+   pages consume the Student Intelligence Foundation snapshot
+   (/intelligence/summary). */
 mockRoute('get', '/student/mock-tests', () => ({ items: mockTests }))
 mockRoute('get', '/student/exams', () => ({ items: exams }))
 mockRoute('get', '/student/settings', () => studentSettings)
@@ -178,13 +165,14 @@ mockRoute('get', '/faculty/settings', () => facultySettings)
 mockRoute('get', '/faculty/roster', () => ({ students: STUDENT_ROSTER }))
 
 /* ---------------- Admin ---------------- */
-mockRoute('get', '/admin/dashboard', () => adminDashboard)
+/* Phase 3 — retired GET /admin/dashboard: the admin dashboard consumes
+   /admin-intelligence/summary. */
 mockRoute('get', '/admin/users', () => ({ users: ADMIN_USERS }))
 mockRoute('get', '/admin/departments', () => ({ departments: DEPARTMENTS }))
 mockRoute('get', '/admin/courses', () => ({ courses: adminCourses }))
-mockRoute('get', '/admin/analytics', () => adminAnalytics)
-mockRoute('get', '/admin/performance', () => adminPerformance)
-mockRoute('get', '/admin/placements', () => adminPlacements)
+/* Phase 3 — retired GET /admin/analytics|performance|placements (their pages
+   were removed in Phase 2; the datasets remain inside the Institution
+   Intelligence engines). */
 mockRoute('get', '/admin/research', () => adminResearch)
 mockRoute('get', '/admin/roles', () => ({ roles: adminRoles }))
 mockRoute('get', '/admin/permissions', () => ({ modules: adminPermissions }))
@@ -205,15 +193,15 @@ mockRoute('get', '/parent/reports', () => ({ items: parentReports }))
 
 /* ---------------- AI ---------------- */
 mockRoute('get', '/ai/tutor/threads', () => ({ threads: aiTutorThreads, quickPrompts: aiTutorQuickPrompts }))
-mockRoute('get', '/ai/tutor/threads/:id', ({ params }) => ({ thread: aiTutorThreads.find((t) => t.id === params.id) ?? aiTutorThreads[0] }))
+/* Phase 3 — retired GET /ai/tutor/threads/:id (the tutor page dereferences
+   threads from the list payload). */
 mockRoute('post', '/ai/tutor/respond', ({ body }) => ({ reply: generateTutorReply(body?.text || ''), threadId: body?.threadId || 'new' }))
 mockRoute('get', '/ai/copilot/suggestions', ({ params }) => ({
   suggestions: copilotSuggestions[params?.path] ?? copilotSuggestions['/student'],
 }))
 mockRoute('get', '/ai/learning-path', () => learningPath)
-mockRoute('get', '/ai/recommendations', () => aiRecommendations)
-mockRoute('get', '/ai/weaknesses', () => aiWeaknesses)
-mockRoute('get', '/ai/prediction', () => aiPrediction)
+/* Phase 3 — retired unused AI reads (recommendations/weaknesses/prediction);
+   AI surfaces consume tutor/copilot/assistant threads + intelligence. */
 mockRoute('get', '/ai/graph-search', ({ params }) => ({ ...graphSearch, query: params?.q || '' }))
 mockRoute('get', '/ai/assistant/threads', () => ({ threads: aiTeachingAssistantThreads }))
 /* Assistant replies are simulated (frontend-only prototype) — the reply
@@ -232,14 +220,15 @@ mockRoute('post', '/ai/assistant/respond', ({ body }) => {
   }
   return { reply }
 })
-mockRoute('post', '/ai/generate-quiz', ({ body }) => ({ quiz: { ...quizGeneratorSample, title: `Generated: ${body?.topic || 'General'} — ${body?.count || 5} questions` } }))
-mockRoute('post', '/ai/generate-exam', ({ body }) => ({ exam: examGeneratorSample }))
+/* Phase 3 — retired unused AI quiz/exam generation endpoints (the builder
+   pages use /faculty/quiz-builder and /faculty/exam-builder services). */
 mockRoute('get', '/ai/stats', () => aiConversationStats)
 
 /* ---------------- Shared lookup ---------------- */
-mockRoute('get', '/directory/faculty', () => ({ items: FACULTY_LIST }))
-mockRoute('get', '/directory/students', () => ({ items: STUDENT_ROSTER }))
-mockRoute('get', '/directory/users', () => ({ items: ADMIN_USERS }))
+/* Phase 2 cleanup: the legacy `/directory/*` endpoints had no service, hook,
+   page or component consumer (they predate the services layer). The datasets
+   they served (STUDENT_ROSTER, FACULTY_LIST, ADMIN_USERS) remain authoritative
+   via direct imports in the intelligence datasets. */
 
 /* ---------------- AI reply generators ---------------- */
 

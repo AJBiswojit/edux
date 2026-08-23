@@ -150,15 +150,8 @@ mockRoute('get', '/faculty/question-studio/sessions', () => {
   }
 })
 
-mockRoute('get', '/faculty/question-studio/sessions/:id', ({ params }) => {
-  const session = sessionOf(params.id)
-  if (!session) {
-    const err = new Error('Session not found.')
-    err.response = { status: 404, data: { message: err.message } }
-    throw err
-  }
-  return { session }
-})
+/* Phase 3 — retired GET /faculty/question-studio/sessions/:id (zero consumers;
+   the studio tracks the active session from the sessions list + actions). */
 
 /* ---------------- Review actions ---------------- */
 mockRoute('post', '/faculty/question-studio/sessions/:id/questions/:qid/regenerate', ({ params }) => {
@@ -245,9 +238,6 @@ mockRoute('post', '/faculty/question-studio/sessions/:id/questions/:qid/reject',
 })
 
 /* ---------------- Approved pool (integration check) ---------------- */
-mockRoute('get', '/faculty/question-studio/approved', () => {
-  reSync()
-  const sessions = readSessions()
-  const items = sessions.flatMap((s) => (s.questions ?? []).filter((q) => q.approved))
-  return { items, count: items.length }
-})
+/* Phase 3 — retired the unread GET /faculty/question-studio/approved list;
+   approvals sync into the Question Bank via the per-question action routes
+   above, so no data or behavior is lost. */
