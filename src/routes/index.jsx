@@ -166,6 +166,26 @@ function LegacyFacultyRedirect({ to }) {
   return <Navigate to={to + search} replace />
 }
 
+/* Phase 4: the canonical student-detail experience is
+   /faculty/my-students/:studentId. The older /faculty/students/:studentId/360
+   alias redirects there, preserving any query state (context/tab/…). The
+   dedicated attempt-analysis deep link stays on its own canonical route. */
+function Student360Redirect() {
+  const { pathname, search } = useLocation()
+  const id = pathname.split('/')[3]
+  return <Navigate to={`/faculty/my-students/${id}${search}`} replace />
+}
+
+/* Legacy /faculty/students/:studentId/exams/:attemptId/analysis → canonical
+   /faculty/my-students/:studentId/exams/:attemptId route. */
+function FacultyAttemptRedirect() {
+  const { pathname, search } = useLocation()
+  const parts = pathname.split('/')
+  const studentId = parts[3]
+  const attemptId = parts[5]
+  return <Navigate to={`/faculty/my-students/${studentId}/exams/${attemptId}${search}`} replace />
+}
+
 /* Parent/Guardian is NOT part of the current product version. Pages, routes
    and data stay in the codebase for the future, but the portal is disabled
    while FEATURE_FLAGS.parentPortal is false — a parent login is redirected
@@ -268,7 +288,11 @@ function AppRoutes() {
         <Route path="ai-assistant" element={withSuspense(AITeachingAssistant)} />
         <Route path="my-students" element={withSuspense(MyStudents)} />
         <Route path="my-students/:studentId" element={withSuspense(StudentProfile)} />
+        {/* Backward-compatible alias for the old Student 360 deep link */}
+        <Route path="students/:studentId/360" element={<Student360Redirect />} />
         <Route path="my-students/:studentId/exams/:attemptId" element={withSuspense(FacultyAttemptAnalysis)} />
+        {/* Legacy attempt-analysis alias → canonical my-students route */}
+        <Route path="students/:studentId/exams/:attemptId/analysis" element={<FacultyAttemptRedirect />} />
         <Route path="research" element={withSuspense(FacultyResearch)} />
         <Route path="lecture-planner" element={withSuspense(LecturePlanner)} />
         <Route path="exam-builder" element={withSuspense(ExamBuilder)} />

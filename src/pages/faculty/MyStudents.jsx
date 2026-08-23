@@ -10,7 +10,7 @@
  * deterministically from each student's exam history — never hardcoded.
  */
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, ArrowRight, ArrowUpDown, BookOpen, Search, Sparkles, Users, UsersRound } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -91,9 +91,15 @@ function StudentList({ students, onOpen }) {
 
 function MyStudents() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { data, isLoading, isError, refetch } = useFacultyStudents()
 
-  const [view, setView] = useState('students') // students | batches
+  /* Deep-link support: ?view=interventions|issues opens that tab directly
+     (used by Student 360's "Open Intervention Center" action). */
+  const initialView = ['students', 'batches', 'issues', 'interventions'].includes(searchParams.get('view'))
+    ? searchParams.get('view')
+    : 'students'
+  const [view, setView] = useState(initialView) // students | batches | issues | interventions
   const [domain, setDomain] = useState('All')
   const [family, setFamily] = useState('All')
   const [batchId, setBatchId] = useState('All')

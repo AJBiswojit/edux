@@ -1,74 +1,109 @@
 /**
- * Faculty — Student Profile → 360° Student Intelligence (Phase 4+).
+ * Faculty — Student 360 (canonical faculty student-detail experience, Phase 4).
  *
- * Orchestration page: loads the 360 bundle, renders the profile header, KPI
- * section and tab navigation, and delegates each tab to a focused panel
- * component from `@/components/students-workspace/`. This file holds no
- * analytical UI — all panels live in student-workspace and read the derived
- * `s360` data directly (canonical attempts → engine → s360 → UI).
+ * ONE canonical orchestration page: Faculty → My Students → Student 360.
  *
- * Tabs: Overview · Examinations · Subject Intelligence · Chapter Intelligence
- * · Question Analysis · Time & Behaviour · Trends · Academic DNA
+ *   canonical attempts → useFacultyStudent360() → computeStudent360 (engine)
+ *                                                     ↓
+ *                                       this page (state + URL) + 13 tab panels
+ *
+ * This file holds NO analytical UI and NO second engine. Every tab is a pure
+ * consumer of the pre-derived s360 bundle. Tab, domain, subject, chapter and
+ * open-question state are mirrored to the URL so deep links refresh cleanly:
+ *
+ *   /faculty/my-students/:studentId?context=jee&tab=weaknesses&subject=Physics
+ *
+ * The domain selector stays University / JEE / NEET (never a generic
+ * "Competitive" context) and every panel reads only that context's pools.
  */
-import { useMemo, useState, useCallback } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowLeft, ArrowRight, BrainCircuit, ClipboardList, FileText,
-  LayoutDashboard, Layers, ListChecks, Target, Timer, TrendingUp,
+  ArrowLeft, ArrowRight, BrainCircuit, ClipboardList, Crosshair, FileText,
+  GitCompare, Layers, ListChecks, Target, Timer, TrendingUp, Users,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
-import { Student360Panels } from '@/components/students-workspace/student-360-panels'
-import { ExamHistoryTable } from '@/components/students-workspace/student-exam-history'
-import { DOMAIN_BADGE, FAMILY_BADGE, STUDENT_STATUS_STYLES } from '@/constants/ui'
+import {
+  OverviewPanel, StrengthsPanel, WeaknessesPanel, TimeBehaviourPanel, ErrorsPanel,
+  TrendsPanel, ComparisonPanel, DnaPanel, SimilarIssuesPanel,
+} from '@/components/students-workspace/student-360-panels'
 import {
   SubjectIntelligencePanel, SubjectDrilldownPanel,
   ChapterIntelligencePanel, QuestionAnalysisPanel,
 } from '@/components/students-workspace/student-intelligence-tabs'
-import {
-  TimeBehaviourPanel, TrendsPanel, DnaPanel,
-} from '@/components/students-workspace/student-profile-panels'
+import { StudentInterventionsPanel } from '@/components/students-workspace/intervention-center'
+import { DOMAIN_BADGE, FAMILY_BADGE, STUDENT_STATUS_STYLES } from '@/constants/ui'
 import { useFacultyStudent360 } from '@/services/faculty-students'
-import { useFacultyStudentInterventions } from '@/services/faculty-interventions'
+import { useSimilarIssues } from '@/services/faculty-interventions'
+
+const DOMAINS = ['University', 'JEE', 'NEET']
+const DOMAIN_PARAM = { university: 'University', jee: 'JEE', neet: 'NEET' }
+const DOMAIN_TO_PARAM = { University: 'university', JEE: 'jee', NEET: 'neet' }
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'exams', label: 'Examinations', icon: ClipboardList },
+  { id: 'overview', label: 'Overview', icon: Layers },
+  { id: 'strengths', label: 'Strengths', icon: TrendingUp },
+  { id: 'weaknesses', label: 'Weaknesses', icon: Crosshair },
   { id: 'subjects', label: 'Subject Intelligence', icon: Layers },
   { id: 'chapters', label: 'Chapter Intelligence', icon: ListChecks },
   { id: 'questions', label: 'Question Analysis', icon: FileText },
   { id: 'time', label: 'Time & Behaviour', icon: Timer },
+  { id: 'errors', label: 'Errors', icon: ClipboardList },
   { id: 'trends', label: 'Trends', icon: TrendingUp },
+  { id: 'comparison', label: 'Comparison', icon: GitCompare },
   { id: 'dna', label: 'Academic DNA', icon: BrainCircuit },
+  { id: 'similar', label: 'Similar Issues', icon: Users },
+  { id: 'interventions', label: 'Interventions', icon: Target },
 ]
+
+function readParam(search, key, map, fallback) {
+  const v = search.get(key)
+  if (v && map[v]) return map[v]
+  return fallback
+}
 
 function StudentProfile() {
   const { studentId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data, isLoading, isError, refetch } = useFacultyStudent360(studentId)
-  const [tab, setTab] = useState('overview')
-  const [domain, setDomain] = useState(null)
-  const [examFilter, setExamFilter] = useState('All')
-  const [family, setFamily] = useState('All')
-  const { data: studentIvData } = useFacultyStudentInterventions(studentId)
+  const { data: similarIssues } = useSimilarIssues('all')
 
-  /* drilldown state for subject → chapter */
-  const [selectedSubject, setSelectedSubject] = useState(null)
-  const [chapterContext, setChapterContext] = useState(null)
-  const [questionContext, setQuestionContext] = useState(null)
+  /* ---- canonical state, mirrored to URL ---- */
+  const [tab, setTab] = useState(() => searchParams.get('tab') ?? 'overview')
+  const [domain, setDomain] = useState(() => readParam(searchParams, 'context', DOMAIN_PARAM, null))
 
+  /* drilldown state for subjects/chapters/questions (URL-backed) */
+  const [selectedSubject, setSelectedSubject] = useState(() => searchParams.get('subject'))
+  const [chapterContext, setChapterContext] = useState(() => {
+    const ch = searchParams.get('chapter')
+    const sub = searchParams.get('subject')
+    return ch ? { subject: sub, chapter: ch } : null
+  })
+  const [questionContext, setQuestionContext] = useState(() => {
+    const ch = searchParams.get('chapter')
+    const sub = searchParams.get('subject')
+    return ch ? { subject: sub, chapter: ch } : null
+  })
+
+  /* sync initial domain from data default once loaded */
   const activeDomain = useMemo(() => {
     if (domain) return domain
     return data?.defaultDomain ?? 'University'
   }, [domain, data])
 
-  const history = useMemo(() => {
-    let items = data?.attempts ?? []
-    if (examFilter !== 'All') items = items.filter((a) => a.examMode === examFilter)
-    if (family !== 'All') items = items.filter((a) => a.examFamily === family)
-    return items
-  }, [data, examFilter, family])
+  /* Persist tab/context/subject/chapter to the URL without wiping other params */
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    if (tab && tab !== 'overview') next.set('tab', tab); else next.delete('tab')
+    next.set('context', DOMAIN_TO_PARAM[activeDomain] ?? 'university')
+    if (selectedSubject) next.set('subject', selectedSubject); else next.delete('subject')
+    if (chapterContext?.chapter) next.set('chapter', chapterContext.chapter); else next.delete('chapter')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, activeDomain, selectedSubject, chapterContext?.chapter])
 
   const handleSubjectSelect = useCallback((subject) => {
     setSelectedSubject(subject)
@@ -79,6 +114,12 @@ function StudentProfile() {
     setTab('chapters')
   }, [selectedSubject])
 
+  const handleTabChange = useCallback((v) => {
+    setTab(v)
+    if (v !== 'subjects') setSelectedSubject(null)
+    if (v !== 'chapters') setChapterContext(null)
+  }, [])
+
   if (isLoading) return <DashboardSkeleton cards={3} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
@@ -87,6 +128,10 @@ function StudentProfile() {
   const atts = data?.attempts ?? []
   const latest = atts[0] ?? null
 
+  const availableDomains = DOMAINS.filter((d) =>
+    (d === 'University' ? (data?.uniCount ?? 0) : d === 'JEE' ? (data?.jeeCount ?? 0) : (data?.neetCount ?? 0)) > 0)
+  const domainOptions = availableDomains.length ? availableDomains : ['University']
+
   return (
     <div>
       <button onClick={() => navigate('/faculty/my-students')} className="mb-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11.5px] font-bold text-slate-500 transition-colors hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
@@ -94,26 +139,20 @@ function StudentProfile() {
       </button>
 
       <PageHeader
-        eyebrow="Faculty · Students · 360° Intelligence"
+        eyebrow="Faculty · Students · Student 360"
         title={`${s.name ?? 'Student'} — 360° Academic Intelligence`}
         description={`Roll ${s.roll} · ${s.batchName ?? '—'} — every insight derived from canonical exam attempts (demo excluded).`}
         breadcrumbs={[{ label: 'Faculty' }, { label: 'My Students', to: '/faculty/my-students' }, { label: s.name ?? 'Profile' }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {(data?.uniCount > 0 || data?.jeeCount > 0 || data?.neetCount > 0) && (
-              <div className="flex flex-wrap rounded-2xl border border-slate-200/80 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
-                {[
-                  data?.uniCount > 0 && 'University',
-                  data?.jeeCount > 0 && 'JEE',
-                  data?.neetCount > 0 && 'NEET',
-                ].filter(Boolean).map((d) => (
-                  <button key={d} onClick={() => setDomain(d)}
-                    className={`rounded-xl px-3.5 py-1.5 text-[11.5px] font-bold transition-all ${activeDomain === d ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/25' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}>
-                    {d}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap rounded-2xl border border-slate-200/80 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
+              {domainOptions.map((d) => (
+                <button key={d} onClick={() => setDomain(d)}
+                  className={`rounded-xl px-3.5 py-1.5 text-[11.5px] font-bold transition-all ${activeDomain === d ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/25' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}>
+                  {d}
+                </button>
+              ))}
+            </div>
             <Badge variant={STUDENT_STATUS_STYLES[data?.status] ?? 'secondary'} className="px-3 py-1">{data?.status}</Badge>
           </div>
         }
@@ -144,7 +183,9 @@ function StudentProfile() {
                     {data?.batch?.examLabel ?? s.examFamily} · {s.academicSession}
                   </span>
                 )}
-                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-white/20">{s.academicSession}</span>
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-white/20">
+                  Latest: {o.latestAccuracy != null ? `${o.latestAccuracy}% accuracy` : 'no exams yet'}
+                </span>
               </div>
             </div>
           </div>
@@ -175,50 +216,29 @@ function StudentProfile() {
         </div>
       )}
 
-      <Tabs value={tab} onValueChange={(v) => { setTab(v); if (v !== 'subjects') setSelectedSubject(null); if (v !== 'chapters') setChapterContext(null) }} className="mt-6">
+      <Tabs value={tab} onValueChange={handleTabChange} className="mt-6">
         <TabsList className="mb-4 flex w-full flex-wrap justify-start sm:w-auto">
           {TABS.map((t) => (
             <TabsTrigger key={t.id} value={t.id}><t.icon className="h-3.5 w-3.5" /> {t.label}</TabsTrigger>
           ))}
         </TabsList>
 
-        {/* ============ Overview ============ */}
+        {/* 1. Overview (KPI + AI summary + exam history deep links) */}
         <TabsContent value="overview">
-          <Student360Panels s360={data} studentId={studentId} domain={activeDomain} />
+          <OverviewPanel s360={data} studentId={studentId} domain={activeDomain} />
         </TabsContent>
 
-        {/* ============ Examinations ============ */}
-        <TabsContent value="exams">
-          <Card className="p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
-                  <ClipboardList className="h-4 w-4 text-indigo-600 dark:text-indigo-400" /> Exam history
-                </h3>
-                <p className="mt-0.5 text-xs text-slate-400">From canonical ExamAgent attempts — demo attempts excluded · official faculty history</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {['All', 'University', 'Competitive'].map((f) => (
-                  <button key={f} onClick={() => { setExamFilter(f); setFamily('All') }}
-                    className={`rounded-full px-3.5 py-1.5 text-[11px] font-bold transition-all ${examFilter === f ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/25' : 'border border-slate-200 bg-white text-slate-500 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
-                    {f === 'All' ? 'All' : f}
-                  </button>
-                ))}
-                {examFilter === 'Competitive' && ['All', 'JEE', 'NEET'].map((f) => (
-                  <button key={f} onClick={() => setFamily(f)}
-                    className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${family === f ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
-                    {f === 'All' ? 'All' : f}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {history.length ? (
-              <div className="mt-4"><ExamHistoryTable attempts={history} studentId={studentId} /></div>
-            ) : <p className="py-8 text-center text-xs text-slate-400">No exam history for this filter.</p>}
-          </Card>
+        {/* 2. Strengths */}
+        <TabsContent value="strengths">
+          <StrengthsPanel s360={data} domain={activeDomain} />
         </TabsContent>
 
-        {/* ============ Subject Intelligence ============ */}
+        {/* 3. Weaknesses (→ evidence questions → suggested intervention) */}
+        <TabsContent value="weaknesses">
+          <WeaknessesPanel s360={data} domain={activeDomain} />
+        </TabsContent>
+
+        {/* 4. Subject Intelligence (drill into chapters) */}
         <TabsContent value="subjects">
           {selectedSubject ? (
             <SubjectDrilldownPanel s360={data} domain={activeDomain} subject={selectedSubject}
@@ -228,64 +248,61 @@ function StudentProfile() {
           )}
         </TabsContent>
 
-        {/* ============ Chapter Intelligence ============ */}
+        {/* 5. Chapter Intelligence (→ topics → evidence questions + intervention) */}
         <TabsContent value="chapters">
           <ChapterIntelligencePanel s360={data} domain={activeDomain} context={chapterContext}
             onNavigate={(ctx) => setChapterContext(ctx)} />
         </TabsContent>
 
-        {/* ============ Question Analysis ============ */}
+        {/* 6. Question Analysis (deepest evidence layer + filters) */}
         <TabsContent value="questions">
           <QuestionAnalysisPanel s360={data} domain={activeDomain} context={questionContext} />
         </TabsContent>
 
-        {/* ============ Time & Behaviour ============ */}
+        {/* 7. Time & Behaviour */}
         <TabsContent value="time">
           <TimeBehaviourPanel s360={data} domain={activeDomain} />
         </TabsContent>
 
-        {/* ============ Trends ============ */}
+        {/* 8. Errors (conservative taxonomy) */}
+        <TabsContent value="errors">
+          <ErrorsPanel s360={data} domain={activeDomain} />
+        </TabsContent>
+
+        {/* 9. Trends */}
         <TabsContent value="trends">
           <TrendsPanel s360={data} domain={activeDomain} />
         </TabsContent>
 
-        {/* ============ Academic DNA ============ */}
+        {/* 10. Comparison (first vs latest, context-isolated) */}
+        <TabsContent value="comparison">
+          <ComparisonPanel s360={data} domain={activeDomain} />
+        </TabsContent>
+
+        {/* 11. Academic DNA (reused engine, no duplicate calc) */}
         <TabsContent value="dna">
           <DnaPanel s360={data} domain={activeDomain} />
         </TabsContent>
-      </Tabs>
 
-      {/* Interventions (Phase 6) */}
-      {(studentIvData?.items ?? []).length > 0 && (
-        <Card className="mt-6 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
-                <ClipboardList className="h-4 w-4 text-teal-600 dark:text-teal-400" /> Interventions
-              </h3>
-              <p className="mt-0.5 text-xs text-slate-400">Assigned targeted practice & re-tests (prototype)</p>
-            </div>
-            <Link to="/faculty/my-students" className="text-[11.5px] font-bold text-indigo-600 hover:underline dark:text-indigo-300">Manage in Intervention Center →</Link>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(studentIvData?.items ?? []).map((iv) => (
-              <Link key={iv.id} to="/faculty/my-students" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200/70 px-3 py-2 text-[12px] font-semibold text-slate-700 transition-colors hover:border-teal-300 dark:border-slate-700 dark:text-slate-200">
-                <Target className="h-3.5 w-3.5 text-teal-500" />
-                {iv.title}
-                <Badge variant={iv.status === 'Resolved' ? 'success' : iv.status === 'Improving' ? 'info' : iv.status === 'Persistent' ? 'danger' : 'secondary'} size="sm">{iv.status}</Badge>
-                {iv.practiceDone && iv.practiceAccuracy != null && <Badge variant="outline" size="sm">{iv.practiceAccuracy}% practice</Badge>}
-              </Link>
-            ))}
-          </div>
-        </Card>
-      )}
+        {/* 12. Similar Issues (Phase 5, domain-isolated, this student) */}
+        <TabsContent value="similar">
+          <SimilarIssuesPanel studentId={studentId} domain={activeDomain} similarIssues={similarIssues} />
+        </TabsContent>
+
+        {/* 13. Interventions (Phase 6 lifecycle, read-only here) */}
+        <TabsContent value="interventions">
+          <Card className="p-5">
+            <StudentInterventionsPanel studentId={studentId} domain={activeDomain} />
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <div className="mt-6 flex flex-wrap gap-2">
         <Link to="/faculty/my-students">
           <Button variant="outline"><ArrowLeft className="h-4 w-4" /> My Students</Button>
         </Link>
         <Link to={`/faculty/my-students/${studentId}/exams/${latest?.id ?? ''}`}>
-          <Button disabled={!latest}><BrainCircuit className="h-4 w-4" /> Latest analysis <ArrowRight className="h-4 w-4" /></Button>
+          <Button disabled={!latest}><BrainCircuit className="h-4 w-4" /> Latest attempt analysis <ArrowRight className="h-4 w-4" /></Button>
         </Link>
       </div>
       <p className="mt-4 text-[11px] font-medium text-slate-400">
