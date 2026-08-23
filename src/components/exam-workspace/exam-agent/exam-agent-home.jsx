@@ -2,7 +2,7 @@
  * AI Exam Conducting Agent — Home (exam selection + attempt history).
  * Lists the 9 practice papers (3 university · 3 JEE · 3 NEET), offers
  * Start Exam (manual) and Demo Monitoring per paper, and surfaces the
- * recent attempt history persisted via the mock API.
+ * recent attempt history persisted via the API layer.
  */
 import { motion } from 'framer-motion'
 import {
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { Badge, Button, Card } from '@/components/ui'
 import { formatDate, formatRelative } from '@/utils/format'
-import { EXAM_AGENT_GROUP_LABELS } from '@/mock-data/exam-agent'
+import { EXAM_AGENT_GROUP_LABELS } from '@/datasets/exams/exam-agent.js'
 import { ExamTypeBadge, AgentChip } from './exam-agent-shared'
 
 const TYPE_ORDER = ['University', 'JEE', 'NEET']

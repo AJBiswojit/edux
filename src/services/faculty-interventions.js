@@ -1,6 +1,6 @@
 /**
  * Faculty — Similar-Issue + Intervention lifecycle service hooks (Phase 5/6).
- * Components consume the mock API; never read localStorage directly.
+ * Components consume the API layer; never read localStorage directly.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import request from '@/api/client'

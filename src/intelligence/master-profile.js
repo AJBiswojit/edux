@@ -38,7 +38,7 @@ export const masterStudentProfile = {
   /* ---------- institution ----------
      City aligned with the institution registry (Phase 27.1 data-consistency
      fix): the Admin institution profile (src/intelligence/admin/master-profile.js)
-     and the user directory (src/mock-data/users.js) both place Meridian
+     and the user directory (src/datasets/platform/users.js) both place Meridian
      Institute of Technology in Pune — the student profile is derived from
      the same registry and no longer contradicts it. */
   institution: 'Meridian Institute of Technology',

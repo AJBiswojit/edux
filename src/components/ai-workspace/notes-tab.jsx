@@ -14,7 +14,7 @@ const NOTE_TYPES = [
   { id: 'notes', label: 'Generate Notes', desc: 'Comprehensive study notes', icon: StickyNote, grad: 'from-indigo-500 to-blue-500' },
   { id: 'short', label: 'Generate Short Notes', desc: 'Condensed one-pagers', icon: Zap, grad: 'from-teal-500 to-emerald-500' },
   { id: 'revision', label: 'Revision Notes', desc: 'Exam-focused revision cards', icon: BookOpen, grad: 'from-amber-500 to-orange-500' },
-  { id: 'mindmap', label: 'Mind Map (Mock)', desc: 'Visual concept map', icon: GitBranch, grad: 'from-violet-500 to-purple-500' },
+  { id: 'mindmap', label: 'Mind Map (Prototype)', desc: 'Visual concept map', icon: GitBranch, grad: 'from-violet-500 to-purple-500' },
   { id: 'formula', label: 'Formula Sheet', desc: 'Key formulas & results', icon: FileText, grad: 'from-rose-500 to-pink-500' },
   { id: 'keypoints', label: 'Key Points', desc: 'Bullet-point takeaways', icon: ListChecks, grad: 'from-sky-500 to-blue-500' },
   { id: 'summary', label: 'Summarize Chapter', desc: 'Chapter condensed to a page', icon: FileText, grad: 'from-emerald-500 to-green-500' },
@@ -95,7 +95,7 @@ function NotesTab({ workspace }) {
       {/* Mind map preview when selected */}
       {noteType.id === 'mindmap' && (
         <Card className="p-6">
-          <p className="mb-4 text-[13px] font-bold text-slate-900 dark:text-white">Mind map preview (mock)</p>
+          <p className="mb-4 text-[13px] font-bold text-slate-900 dark:text-white">Mind map preview (prototype)</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <span className="rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg">{MIND_MAP_EXAMPLE.center}</span>
             <span className="text-slate-300">— connects to —</span>

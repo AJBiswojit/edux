@@ -19,9 +19,9 @@
  * derived from these attempts by the students-directory engine.
  */
 
-import { EXAM_AGENT_EXAMS } from '@/mock-data/exam-agent'
+import { EXAM_AGENT_EXAMS } from '@/datasets/exams/exam-agent.js'
 import { buildExamAgentReport } from '@/intelligence/engine/exam-agent.js'
-import { weakStudentDetection } from '@/mock-data/faculty-extra.js'
+import { weakStudentDetection } from '@/datasets/faculty/teaching.js'
 
 /* ------------------------------------------------------------------ */
 /* Seeded PRNG (deterministic per student)                            */

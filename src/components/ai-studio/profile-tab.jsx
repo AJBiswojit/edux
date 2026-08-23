@@ -1,7 +1,7 @@
 /**
  * MediXO EduX — AI Teaching Studio · Tab 7: Faculty Profile.
  * Professional information, courses, teaching statistics, achievements,
- * certifications, publications (mock), portfolio, student feedback and
+ * certifications, publications (prototype), portfolio, student feedback and
  * teaching-health trend — all derived from the foundation.
  */
 
@@ -43,7 +43,7 @@ function ProfileTab({ data }) {
           <div className="mt-4 flex flex-wrap gap-1.5">
             {(prof.specialization ?? []).map((s) => <Badge key={s} variant="outline" size="sm">{s}</Badge>)}
           </div>
-          <Button variant="outline" size="sm" className="mt-5 w-full" onClick={() => toast.success('Exporting…', 'Faculty profile exported as PDF (mock).')}>
+          <Button variant="outline" size="sm" className="mt-5 w-full" onClick={() => toast.success('Exporting…', 'Faculty profile exported as PDF (prototype).')}>
             <Download className="h-3.5 w-3.5" /> Export faculty profile
           </Button>
         </Card>
@@ -154,7 +154,7 @@ function ProfileTab({ data }) {
           </div>
         </ChartCard>
 
-        <ChartCard title="Publications (mock)" subtitle="Research output">
+        <ChartCard title="Publications (sample data)" subtitle="Research output">
           <div className="space-y-2.5">
             {(p.publications ?? []).map((pub) => (
               <div key={pub.id} className="rounded-2xl border border-slate-100 p-3 dark:border-slate-800">

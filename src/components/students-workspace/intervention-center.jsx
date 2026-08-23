@@ -447,7 +447,7 @@ function InterventionDetailDialog({ id, open, onOpenChange }) {
  * Student 360 and confirms creation. The dialog shows the full context
  * (student · domain · family · subject · chapter · issue · read-only
  * evidence) plus the editable practice configuration. Creation calls the
- * EXISTING lifecycle (single mock API → same localStorage store, status
+ * EXISTING lifecycle (single API layer → same localStorage store, status
  * starts at 'Recommended'). Evidence is read-only; nothing is auto-assigned.
  */
 function ReviewCreateInterventionDialog({

@@ -11,7 +11,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
  *   · retired endpoints are actually gone (mock server answers 404);
  *   · University / JEE / NEET data remains reachable and isolated;
  *   · the memoized snapshots return consistent results.
- * Tests hit the REAL mock-server dispatch the same way the service layer
+ * Tests hit the REAL API router dispatch the same way the service layer
  * does, with latency zeroed.
  */
 
@@ -28,21 +28,13 @@ globalThis.window = { localStorage: storage }
 globalThis.localStorage = storage
 
 let server
-const get = (url, params = {}) => server.handleMockRequest({ method: 'get', url, params }).then((r) => r.data)
+const get = (url, params = {}) => server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
 
 beforeAll(async () => {
   // Registering the route modules mirrors main.jsx exactly.
-  await import('../../src/api/mock-routes.js')
-  await import('../../src/api/mock-routes-extra.js')
-  await import('../../src/api/mock-routes-intelligence.js')
-  await import('../../src/api/mock-routes-faculty-intelligence.js')
-  await import('../../src/api/mock-routes-admin-intelligence.js')
-  await import('../../src/api/mock-routes-exam-agent.js')
-  await import('../../src/api/mock-routes-faculty-students.js')
-  await import('../../src/api/mock-routes-faculty-interventions.js')
-  await import('../../src/api/mock-routes-question-studio.js')
-  server = await import('../../src/api/mock-server.js')
-  server.setMockLatency([0, 0])
+  await import('../../src/api/index.js')
+  server = await import('../../src/api/core/router.js')
+  server.setResponseLatency([0, 0])
 })
 
 describe('canonical intelligence snapshots', () => {
@@ -88,13 +80,13 @@ describe('retired endpoints are gone', () => {
     '/platform/testimonials', '/platform/pricing', '/platform/faqs', '/platform/stats',
     '/faculty/ai-studio', '/faculty/paper-generator/shares', '/faculty/question-studio/approved',
   ])('%s has no mock handler', (path) => {
-    expect(server.hasMockHandler('get', path)).toBe(false)
+    expect(server.hasRouteHandler('get', path)).toBe(false)
   })
 
   it('retired mutation endpoints are gone too', () => {
-    expect(server.hasMockHandler('post', '/ai/generate-quiz')).toBe(false)
-    expect(server.hasMockHandler('post', '/ai/generate-exam')).toBe(false)
-    expect(server.hasMockHandler('post', '/auth/profile-setup')).toBe(false)
+    expect(server.hasRouteHandler('post', '/ai/generate-quiz')).toBe(false)
+    expect(server.hasRouteHandler('post', '/ai/generate-exam')).toBe(false)
+    expect(server.hasRouteHandler('post', '/auth/profile-setup')).toBe(false)
   })
 })
 
@@ -185,11 +177,11 @@ describe('intervention lifecycle remains intact', () => {
   })
 
   it('similar issues, practice, re-test and student intervention surfaces stay live', () => {
-    expect(server.hasMockHandler('get', '/faculty/similar-issues')).toBe(true)
-    expect(server.hasMockHandler('get', '/faculty/interventions/a1')).toBe(true)
-    expect(server.hasMockHandler('get', '/student/interventions')).toBe(true)
-    expect(server.hasMockHandler('post', '/student/interventions/a/practice-attempts')).toBe(true)
-    expect(server.hasMockHandler('get', '/faculty/students/fs_x/interventions')).toBe(true)
+    expect(server.hasRouteHandler('get', '/faculty/similar-issues')).toBe(true)
+    expect(server.hasRouteHandler('get', '/faculty/interventions/a1')).toBe(true)
+    expect(server.hasRouteHandler('get', '/student/interventions')).toBe(true)
+    expect(server.hasRouteHandler('post', '/student/interventions/a/practice-attempts')).toBe(true)
+    expect(server.hasRouteHandler('get', '/faculty/students/fs_x/interventions')).toBe(true)
   })
 })
 

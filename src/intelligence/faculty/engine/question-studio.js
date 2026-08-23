@@ -18,7 +18,7 @@
 import {  } from './scores.js'
 import { questionStudioSources } from '../datasets/question-studio-sources.js'
 import { questionStudioPools, allStudioQuestions } from '../datasets/question-studio-questions.js'
-import { questionBank } from '../../../mock-data/faculty.js'
+import { questionBank } from '@/datasets/faculty/workspace.js'
 import { competitiveQuestions } from '../datasets/competitive-questions.js'
 
 /* ------------------------------------------------------------------ */

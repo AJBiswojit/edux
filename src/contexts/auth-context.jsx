@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { APP_CONFIG } from '@/config'
-import { MOCK_USERS } from '@/mock-data/users'
+import { DEMO_USERS } from '@/datasets/platform/users.js'
 
 const AuthContext = createContext(null)
 
@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
     }
 
     const normalized = email.toLowerCase().trim()
-    const match = MOCK_USERS.find(
+    const match = DEMO_USERS.find(
       (u) => u.email === normalized && (role ? u.role === role : true)
     )
 

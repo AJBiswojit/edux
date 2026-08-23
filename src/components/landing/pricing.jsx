@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Check, Sparkles } from 'lucide-react'
-import { PRICING_PLANS } from '@/mock-data/platform'
+import { PRICING_PLANS } from '@/datasets/platform/content.js'
 import { SectionHeading, Reveal } from '@/components/shared/section-heading'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils/cn'

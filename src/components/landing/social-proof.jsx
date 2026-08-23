@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Quote, Star } from 'lucide-react'
-import { TESTIMONIALS, CASE_STUDIES } from '@/mock-data/platform'
+import { TESTIMONIALS, CASE_STUDIES } from '@/datasets/platform/content.js'
 import { SectionHeading, Reveal } from '@/components/shared/section-heading'
 import { Avatar } from '@/components/ui/avatar'
 function Testimonials() {

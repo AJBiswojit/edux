@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 /**
  * Phase 4 — Student 360 consolidation route/redirect + data-surface tests.
  *
- * Verifies (against the REAL mock-server, no DOM) that:
+ * Verifies (against the REAL API router, no DOM) that:
  *   · the canonical /faculty/students/:id/360 API still serves the bundle;
  *   · the per-student interventions endpoint is domain-isolated;
  *   · weak-topic question evidence is served (never an empty dialog when
@@ -22,20 +22,12 @@ globalThis.window = { localStorage: storage }
 globalThis.localStorage = storage
 
 let server
-const get = (url, params = {}) => server.handleMockRequest({ method: 'get', url, params }).then((r) => r.data)
+const get = (url, params = {}) => server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
 
 beforeAll(async () => {
-  await import('../../src/api/mock-routes.js')
-  await import('../../src/api/mock-routes-extra.js')
-  await import('../../src/api/mock-routes-intelligence.js')
-  await import('../../src/api/mock-routes-faculty-intelligence.js')
-  await import('../../src/api/mock-routes-admin-intelligence.js')
-  await import('../../src/api/mock-routes-exam-agent.js')
-  await import('../../src/api/mock-routes-faculty-students.js')
-  await import('../../src/api/mock-routes-faculty-interventions.js')
-  await import('../../src/api/mock-routes-question-studio.js')
-  server = await import('../../src/api/mock-server.js')
-  server.setMockLatency([0, 0])
+  await import('../../src/api/index.js')
+  server = await import('../../src/api/core/router.js')
+  server.setResponseLatency([0, 0])
 })
 
 describe('canonical Student 360 API surface (unchanged contract)', () => {
@@ -96,10 +88,10 @@ describe('per-student interventions surface (Phase 6, reused)', () => {
   })
 
   it('intervention center endpoints remain available (no duplicate system)', () => {
-    expect(server.hasMockHandler('get', '/faculty/interventions')).toBe(true)
-    expect(server.hasMockHandler('get', '/faculty/similar-issues')).toBe(true)
-    expect(server.hasMockHandler('post', '/faculty/interventions/a/status')).toBe(true)
-    expect(server.hasMockHandler('post', '/faculty/interventions/a/retest')).toBe(true)
+    expect(server.hasRouteHandler('get', '/faculty/interventions')).toBe(true)
+    expect(server.hasRouteHandler('get', '/faculty/similar-issues')).toBe(true)
+    expect(server.hasRouteHandler('post', '/faculty/interventions/a/status')).toBe(true)
+    expect(server.hasRouteHandler('post', '/faculty/interventions/a/retest')).toBe(true)
   })
 })
 

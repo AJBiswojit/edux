@@ -2,7 +2,7 @@
  * MediXO EduX — AI Teaching Studio · Tab 1: AI Teaching Assistant.
  * Enhanced chat — the assistant knows courses, weak chapters, weak
  * students, upcoming classes & assessments and live health scores.
- * 12 contextual prompts · save & pin conversations (mock).
+ * 12 contextual prompts · save & pin conversations (prototype).
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -14,7 +14,7 @@ import { Badge, Button, Card, useToast } from '@/components/ui'
 import { useChatAssistant } from '@/hooks/use-chat-assistant'
 
 /* Frontend-only persistence: new exchanges survive full reloads via
-   localStorage (the mock dataset itself resets with the page). */
+   localStorage (the deterministic dataset itself resets with the page). */
 const HISTORY_KEY = 'aurora_faculty_assistant_history'
 const loadHistory = () => {
   try {

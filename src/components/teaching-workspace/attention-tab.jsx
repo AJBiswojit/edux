@@ -2,7 +2,7 @@
  * Teaching Intelligence Workspace — Tab 6: Students Requiring Attention.
  * AI-flagged students grouped into intervention categories with reason,
  * priority, suggested action, expected improvement and actions:
- * view student · send message (mock) · assign remedial work (mock).
+ * view student · send message (prototype) · assign remedial work (prototype).
  */
 
 import { useState } from 'react'
@@ -36,14 +36,14 @@ function AttentionTab({ data }) {
   const sendMessage = (e) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    toast.success('Message sent ✉️', `Personalised message to ${messaging.name} (${messaging.roll}) queued — delivery via SMS + email (mock).`)
+    toast.success('Message sent ✉️', `Personalised message to ${messaging.name} (${messaging.roll}) queued — delivery via SMS + email (prototype).`)
     setMessaging(null)
   }
 
   const assignWork = (e) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    toast.success('Remedial work assigned', `${workType} assigned to ${remedial.name} with a ${remedial.estimatedImprovement} target (mock).`)
+    toast.success('Remedial work assigned', `${workType} assigned to ${remedial.name} with a ${remedial.estimatedImprovement} target (prototype).`)
     setRemedial(null)
   }
 

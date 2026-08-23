@@ -4,7 +4,7 @@
  * Resolves the audit's roster duplication (3 faculty lists, 2 parent
  * lists, direct student import) into one normalized layer:
  *
- *  · students  → STUDENT_ROSTER (authoritative, src/mock-data/users.js)
+ *  · students  → STUDENT_ROSTER (authoritative, src/datasets/platform/users.js)
  *  · faculty   → FACULTY_LIST (identity) ∪ ADMIN_USERS (email/status) ∪
  *                masterFacultyProfile (authoritative counts) ∪
  *                DEPARTMENTS (dept codes + HODs)
@@ -22,7 +22,7 @@
  * faculty master profile).
  */
 
-import { STUDENT_ROSTER, FACULTY_LIST, ADMIN_USERS, DEPARTMENTS } from '../../../mock-data/users.js'
+import { STUDENT_ROSTER, FACULTY_LIST, ADMIN_USERS, DEPARTMENTS } from '@/datasets/platform/users.js'
 import { masterFacultyProfile } from '../../faculty/master-profile.js'
 
 /* ---------- helpers ---------- */

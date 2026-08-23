@@ -1,7 +1,7 @@
 /**
  * Admin Intelligence Engine — Institution Health (pure functions).
  *
- * Every score is derived deterministically from EXISTING admin mock data —
+ * Every score is derived deterministically from EXISTING deterministic admin datasets —
  * no invented numbers. The factor weights are documented below and are the
  * only "policy" in this file.
  *

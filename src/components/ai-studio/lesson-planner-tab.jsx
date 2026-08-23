@@ -2,7 +2,7 @@
  * MediXO EduX — AI Teaching Studio · Tab 2: Lesson Planner.
  * Configure course/subject/chapter/LO/duration/method/difficulty →
  * AI generates the full lecture flow. Preview · edit · save · duplicate ·
- * export PDF (mock). Saved plans persist via the studio save API.
+ * export PDF (prototype). Saved plans persist via the studio save API.
  */
 
 import { useState } from 'react'

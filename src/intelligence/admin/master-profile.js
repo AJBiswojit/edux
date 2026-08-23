@@ -8,12 +8,12 @@
  *
  * Field strategy mirrors the student/faculty foundations: plain scalar
  * fields for backward compatibility + rich structured views for future
- * modules. Authoritative values are re-used from existing mock data:
+ * modules. Authoritative values are re-used from the existing deterministic datasets:
  *  - 12,480 students  → adminDashboard.kpis + adminDashboard.deptDistribution
  *  - 640 faculty      → adminDashboard.kpis
  *  - 214 courses      → adminDashboard.kpis
- *  - 8 departments    → DEPARTMENTS (src/mock-data/users.js)
- *  - 8 programs       → adminPrograms (src/mock-data/admin-extra.js)
+ *  - 8 departments    → DEPARTMENTS (src/datasets/platform/users.js)
+ *  - 8 programs       → adminPrograms (src/datasets/admin/operations.js)
  *  - Sem 5 · 2026-27  → adminSettings.academics
  *
  * Documented prototype approximations (admin list datasets are samples):

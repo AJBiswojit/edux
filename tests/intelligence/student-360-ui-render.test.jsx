@@ -85,17 +85,9 @@ async function renderPage(path, studentId = STUDENT_ID) {
 }
 
 beforeAll(async () => {
-  await import('../../src/api/mock-routes.js')
-  await import('../../src/api/mock-routes-extra.js')
-  await import('../../src/api/mock-routes-intelligence.js')
-  await import('../../src/api/mock-routes-faculty-intelligence.js')
-  await import('../../src/api/mock-routes-admin-intelligence.js')
-  await import('../../src/api/mock-routes-exam-agent.js')
-  await import('../../src/api/mock-routes-faculty-students.js')
-  await import('../../src/api/mock-routes-faculty-interventions.js')
-  await import('../../src/api/mock-routes-question-studio.js')
-  server = await import('../../src/api/mock-server.js')
-  server.setMockLatency([0, 0])
+  await import('../../src/api/index.js')
+  server = await import('../../src/api/core/router.js')
+  server.setResponseLatency([0, 0])
   ;({ default: request } = await import('../../src/api/client.js'))
   ;({ default: StudentProfile } = await import('../../src/pages/faculty/StudentProfile.jsx'))
   ;({ ToastProvider } = await import('../../src/components/ui/toast.jsx'))

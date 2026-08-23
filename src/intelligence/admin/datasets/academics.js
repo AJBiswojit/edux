@@ -10,12 +10,12 @@
  * below join them by department / program / faculty keys.
  */
 
-import { DEPARTMENTS } from '../../../mock-data/users.js'
+import { DEPARTMENTS } from '@/datasets/platform/users.js'
 import {
   adminPrograms, adminSubjects, adminBatches, adminAcademicCalendar,
   adminExamAnalytics, adminQuestionBank,
-} from '../../../mock-data/admin-extra.js'
-import { adminCourses } from '../../../mock-data/admin.js'
+} from '@/datasets/admin/operations.js'
+import { adminCourses } from '@/datasets/admin/core.js'
 
 /* ---------- re-export authoritative datasets ---------- */
 export {

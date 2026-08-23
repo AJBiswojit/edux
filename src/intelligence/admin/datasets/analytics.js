@@ -11,14 +11,14 @@
 
 import {
   adminAnalytics, adminPerformance, adminPlacements, adminResearch,
-} from '../../../mock-data/admin.js'
+} from '@/datasets/admin/core.js'
 import {
   adminRevenue, adminAttendanceAnalytics, adminAssignmentAnalytics,
   adminExamAnalytics, adminQuestionBank, adminScholarships, adminApiConfig,
-} from '../../../mock-data/admin-extra.js'
+} from '@/datasets/admin/operations.js'
 
 /* Faculty intelligence inputs (institution-level roll-up sources). */
-import { weakStudentDetection } from '../../../mock-data/faculty-extra.js'
+import { weakStudentDetection } from '@/datasets/faculty/teaching.js'
 import { facultyDatasets } from '../../faculty/datasets/index.js'
 
 export {

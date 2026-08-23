@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Github, Linkedin, Mail, MapPin, Phone, Twitter, Youtube } from 'lucide-react'
 import { Logo } from '@/components/shared/logo'
-import { CONTACT_INFO } from '@/mock-data/platform'
+import { CONTACT_INFO } from '@/datasets/platform/content.js'
 
 const COLUMNS = [
   {
