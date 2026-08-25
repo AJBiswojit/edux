@@ -5,6 +5,14 @@ import { Logo } from '@/components/shared/logo'
 import { Badge } from '@/components/ui/badge'
 import { ROLE_HOME } from '@/config'
 
+/* Sidebar destinations are exact by default. A route may opt into descendant
+   matching only when it is intentionally the parent navigation surface (for
+   example My Students → a student profile). This keeps independent siblings
+   such as Question Intelligence and AI Micro-Assessment mutually exclusive. */
+export function sidebarItemEnd(item) {
+  return item.matchDescendants !== true
+}
+
 function Sidebar({ navGroups, role, onNavigate }) {
   return (
     <div className="flex h-full flex-col">
@@ -29,7 +37,7 @@ function Sidebar({ navGroups, role, onNavigate }) {
                     <NavLink
                       to={item.to}
                       onClick={onNavigate}
-                      end={item.to === ROLE_HOME[role]}
+                      end={sidebarItemEnd(item)}
                       className={({ isActive }) =>
                         cn(
                           'group relative flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-[13.5px] font-medium transition-all duration-200',
