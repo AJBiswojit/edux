@@ -227,10 +227,20 @@ export function SourceLibraryTab({ onUseSource }) {
         <Select value={params.domain ?? 'All'} onValueChange={(v) => set('domain', v)}>
           <SelectItem value="All">All domains</SelectItem><SelectItem value="University">University</SelectItem><SelectItem value="Competitive">Competitive</SelectItem>
         </Select>
-        <Select value={params.exam ?? 'All'} onValueChange={(v) => set('exam', v)}>
+        <Select 
+          value={params.exam ?? 'All'} 
+          onValueChange={(v) => set('exam', v)} 
+          disabled={!params.domain || params.domain === 'All' || params.domain === 'University'}
+          helper={!params.domain || params.domain === 'All' || params.domain === 'University' ? 'Select Competitive domain first' : undefined}
+        >
           <SelectItem value="All">All exams</SelectItem><SelectItem value="JEE Main">JEE Main</SelectItem><SelectItem value="NEET UG">NEET UG</SelectItem><SelectItem value="JEE Main + NEET UG">JEE + NEET</SelectItem>
         </Select>
-        <Select value={params.subject ?? 'All'} onValueChange={(v) => set('subject', v)}>
+        <Select 
+          value={params.subject ?? 'All'} 
+          onValueChange={(v) => set('subject', v)} 
+          disabled={!params.domain || params.domain === 'All'}
+          helper={!params.domain || params.domain === 'All' ? 'Select a domain first' : undefined}
+        >
           <SelectItem value="All">All subjects</SelectItem>
           {['Biology', 'Physics', 'Chemistry', 'Mathematics', 'Data Structures & Algorithms', 'Database Management Systems', 'Operating Systems'].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
         </Select>

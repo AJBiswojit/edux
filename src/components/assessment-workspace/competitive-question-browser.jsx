@@ -140,10 +140,18 @@ export function CompetitiveQuestionBrowser({
 
   const updateScope = (key) => (v) => { set(key, v); setPage(0) }
 
-  const filterRow = (label, value, onChange, options, placeholder) => (
+  const filterRow = (label, value, onChange, options, placeholder, disabled = false, helper = undefined) => (
     <div className="min-w-0">
       <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
-      <Select value={value} onValueChange={onChange} placeholder={placeholder} group="competitive-browser" ariaLabel={label + ' filter'}>
+      <Select 
+        value={value} 
+        onValueChange={onChange} 
+        placeholder={placeholder} 
+        group="competitive-browser" 
+        ariaLabel={label + ' filter'}
+        disabled={disabled}
+        helper={helper}
+      >
         {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
       </Select>
     </div>
@@ -163,9 +171,9 @@ export function CompetitiveQuestionBrowser({
       {/* filters */}
       <div className="grid grid-cols-2 gap-2.5 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm md:grid-cols-4 xl:grid-cols-8 dark:border-slate-800 dark:bg-slate-900">
         {showExamFilter && examList.length > 1 && filterRow('Exam', effectiveExam, updateScope('exam'), ['All', ...examList], 'Exam')}
-        {filterRow('Subject', subject, updateScope('subject'), ['All', ...options.subject], 'Subject')}
-        {filterRow('Chapter', chapter, updateScope('chapter'), ['All', ...options.chapter], 'Chapter')}
-        {filterRow('Topic', topic, updateScope('topic'), ['All', ...options.topic], 'Topic')}
+        {filterRow('Subject', subject, updateScope('subject'), ['All', ...options.subject], 'Subject', !effectiveExam || effectiveExam === 'All', !effectiveExam || effectiveExam === 'All' ? 'Select an exam first' : undefined)}
+        {filterRow('Chapter', chapter, updateScope('chapter'), ['All', ...options.chapter], 'Chapter', !subject || subject === 'All', !subject || subject === 'All' ? 'Select a subject first' : undefined)}
+        {filterRow('Topic', topic, updateScope('topic'), ['All', ...options.topic], 'Topic', !chapter || chapter === 'All', !chapter || chapter === 'All' ? 'Select a chapter first' : undefined)}
         {filterRow('Year', year, (v) => { setYear(v); setPage(0) }, ['All', ...years], 'Year')}
         {filterRow('Difficulty', difficulty, (v) => { setDifficulty(v); setPage(0) }, ['All', 'Easy', 'Medium', 'Hard'], 'Difficulty')}
         {filterRow('Type', type, (v) => { setType(v); setPage(0) }, ['All', ...types], 'Type')}

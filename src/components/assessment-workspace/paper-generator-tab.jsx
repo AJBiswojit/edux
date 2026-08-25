@@ -552,19 +552,19 @@ function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = nu
             </Field>
           )}
           <Field label="Subject">
-            <Select value={subject} onValueChange={(v) => { applyScope({ subject: v }); setGenerated(null) }} group="paper-generator">
+            <Select value={subject} onValueChange={(v) => { applyScope({ subject: v }); setGenerated(null) }} group="paper-generator" disabled={mode === 'University' && !course} helper={mode === 'University' && !course ? 'Select a course first' : undefined}>
               <SelectItem value="All subjects">All subjects</SelectItem>
               {scopeOptions.subject.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Chapter">
-            <Select value={chapter} onValueChange={(v) => { applyScope({ chapter: v }); setGenerated(null) }} group="paper-generator">
+            <Select value={chapter} onValueChange={(v) => { applyScope({ chapter: v }); setGenerated(null) }} group="paper-generator" disabled={!subject || subject === 'All subjects'} helper={!subject || subject === 'All subjects' ? 'Select a subject first' : undefined}>
               <SelectItem value="All chapters">All chapters</SelectItem>
               {scopeOptions.chapter.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Topic">
-            <Select value={topic} onValueChange={(v) => { applyScope({ topic: v }); setGenerated(null) }} group="paper-generator">
+            <Select value={topic} onValueChange={(v) => { applyScope({ topic: v }); setGenerated(null) }} group="paper-generator" disabled={!chapter || chapter === 'All chapters'} helper={!chapter || chapter === 'All chapters' ? 'Select a chapter first' : undefined}>
               <SelectItem value="All topics">All topics</SelectItem>
               {scopeOptions.topic.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </Select>
