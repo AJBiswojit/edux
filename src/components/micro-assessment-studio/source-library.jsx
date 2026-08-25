@@ -111,11 +111,11 @@ export function SourceLibrary({ data, filters = INITIAL_FILTERS, onFiltersChange
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <SearchFilter value={filters.search} onChange={(value) => update('search', value)} />
         <FilterSelect label="Domain" value={filters.domain} placeholder="All domains" options={options.domains} onChange={(value) => update('domain', value)} />
-        {domain === 'competitive' && <FilterSelect label="Exam Family" value={filters.examFamily} placeholder="All competitive exams" options={options.examFamilies} onChange={(value) => update('examFamily', value)} />}
+        {domain === 'competitive' && <FilterSelect label="Exam Family" value={filters.examFamily} placeholder="All competitive exams" options={options.examFamilies} onChange={(value) => update('examFamily', value)} disabled={!filters.domain || filters.domain !== 'competitive'} helper={!filters.domain || filters.domain !== 'competitive' ? 'Select Competitive domain first' : undefined} />}
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <FilterSelect label="Subject" value={filters.subject} placeholder="All subjects" options={options.subjects} onChange={(value) => update('subject', value)} />
-        <FilterSelect label="Chapter" value={filters.chapter} placeholder="All chapters" options={options.chapters} onChange={(value) => update('chapter', value)} />
+        <FilterSelect label="Subject" value={filters.subject} placeholder="All subjects" options={options.subjects} onChange={(value) => update('subject', value)} disabled={!filters.domain} helper={!filters.domain ? 'Select a domain first' : undefined} />
+        <FilterSelect label="Chapter" value={filters.chapter} placeholder="All chapters" options={options.chapters} onChange={(value) => update('chapter', value)} disabled={!filters.subject} helper={!filters.subject ? 'Select a subject first' : undefined} />
         <FilterSelect label="Topic" value={filters.topic} placeholder="All topics" options={options.topics} onChange={(value) => update('topic', value)} disabled={!filters.chapter} helper={!filters.chapter ? 'Select a chapter first' : undefined} />
         <FilterSelect label="Source Type" value={filters.sourceType} placeholder="All source types" options={options.sourceTypes} onChange={(value) => update('sourceType', value)} />
       </div>

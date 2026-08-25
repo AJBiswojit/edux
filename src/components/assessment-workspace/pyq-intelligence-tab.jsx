@@ -88,13 +88,13 @@ function CompetitivePyqPanel({ data }) {
           </div>
           <div>
             {step(2, 'Subject')}
-            <Select value={values.subject} onValueChange={(v) => setValues((p) => ({ ...p, subject: v, chapter: '' }))} placeholder={values.program ? 'Select subject…' : 'Pick a program first'}>
+            <Select value={values.subject} onValueChange={(v) => setValues((p) => ({ ...p, subject: v, chapter: '' }))} placeholder={values.program ? 'Select subject…' : 'Pick a program first'} disabled={!values.program} helper={!values.program ? 'Select a program first' : undefined}>
               {subjects.map((s) => <SelectItem key={s.code} value={s.code}>{s.code} — {s.name}</SelectItem>)}
             </Select>
           </div>
           <div>
             {step(3, 'Chapter', 'optional')}
-            <Select value={values.chapter} onValueChange={(v) => setValues((p) => ({ ...p, chapter: v }))} placeholder={values.subject ? 'All chapters…' : 'Pick a subject first'}>
+            <Select value={values.chapter} onValueChange={(v) => setValues((p) => ({ ...p, chapter: v }))} placeholder={values.subject ? 'All chapters…' : 'Pick a subject first'} disabled={!values.subject} helper={!values.subject ? 'Select a subject first' : undefined}>
               {(selectedSubject?.chapters ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </Select>
           </div>

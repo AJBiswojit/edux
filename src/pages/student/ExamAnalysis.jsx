@@ -114,7 +114,14 @@ function SelectionCard({
           </StepField>
 
           <StepField n={2} title="Select subject" hint={exam ? 'subjects of this exam' : 'pick an exam first'}>
-            <Select value={subject ?? ''} onValueChange={onSubjectChange} placeholder={examId ? 'Choose a subject…' : 'Pick an exam first'} group="exam-analysis">
+            <Select 
+              value={subject ?? ''} 
+              onValueChange={onSubjectChange} 
+              placeholder={examId ? 'Choose a subject…' : 'Pick an exam first'} 
+              group="exam-analysis"
+              disabled={!examId}
+              helper={!examId ? 'Select an exam first' : undefined}
+            >
               {(exam?.subjects ?? ['All Subjects']).map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}

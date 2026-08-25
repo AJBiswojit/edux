@@ -68,19 +68,40 @@ function PYQFilterCard({ filters, values, onChange, onAnalyze, analyzing, hasAna
           </div>
           <div>
             {step(2, 'Subject')}
-            <Select value={values.subject ?? ''} onValueChange={(v) => onChange({ subject: v })} group="pyq-filters" placeholder={values.program ? 'Select subject…' : 'Pick a program first'}>
+            <Select 
+              value={values.subject ?? ''} 
+              onValueChange={(v) => onChange({ subject: v })} 
+              group="pyq-filters" 
+              disabled={!values.program}
+              placeholder={values.program ? 'Select subject…' : 'Pick a program first'}
+              helper={!values.program ? 'Select a program first' : undefined}
+            >
               {subjects.map((s) => <SelectItem key={s.code} value={s.code}>{s.code} — {s.name}</SelectItem>)}
             </Select>
           </div>
           <div>
             {step(3, 'Chapter', 'optional')}
-            <Select value={values.chapter ?? ''} onValueChange={(v) => onChange({ chapter: v })} group="pyq-filters" placeholder={values.subject ? 'All chapters…' : 'Pick a subject first'}>
+            <Select 
+              value={values.chapter ?? ''} 
+              onValueChange={(v) => onChange({ chapter: v })} 
+              group="pyq-filters" 
+              disabled={!values.subject}
+              placeholder={values.subject ? 'All chapters…' : 'Pick a subject first'}
+              helper={!values.subject ? 'Select a subject first' : undefined}
+            >
               {(selectedSubject?.chapters ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </Select>
           </div>
           <div>
             {step(4, 'Topic', 'optional')}
-            <Select value={values.topic ?? ''} onValueChange={(v) => onChange({ topic: v })} group="pyq-filters" placeholder={values.chapter ? 'All topics…' : 'Pick a chapter first'}>
+            <Select 
+              value={values.topic ?? ''} 
+              onValueChange={(v) => onChange({ topic: v })} 
+              group="pyq-filters" 
+              disabled={!values.chapter}
+              placeholder={values.chapter ? 'All topics…' : 'Pick a chapter first'}
+              helper={!values.chapter ? 'Select a chapter first' : undefined}
+            >
               {chapterTopics.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </Select>
           </div>
