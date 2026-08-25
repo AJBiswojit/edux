@@ -70,3 +70,13 @@ export {
   regenerateQuestion, qualityScore, difficultyDistribution, computeStudioMetrics,
   syncStudioQuestionsToBank,
 } from './question-studio.js'
+export {
+  MICRO_ASSESSMENT_COUNTS, MICRO_ASSESSMENT_DIFFICULTIES,
+  normalizeMicroDomain, normalizeExamFamily, sameMicroContext,
+  sourceContextLabel, validateMicroSourceInput, buildMicroSource,
+  findMicroSource, filterMicroSources, processMicroSource,
+  generateMicroQuestions, regenerateMicroQuestion, computeQuestionDiversity,
+  computeConceptCoverage, validateGeneratedQuestion, generateMissingCoverage,
+  buildPrototypeMicroAttempts, computeMicroAssessmentResults, studentAttemptStatus,
+  sourceFilterOptions, QUESTION_TYPES,
+} from './micro-assessments.js'

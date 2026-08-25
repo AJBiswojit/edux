@@ -44,6 +44,14 @@ import {
   analyzeSource, suitablePatternsFor, recommendDistribution, generateQuestions,
   regenerateQuestion, qualityScore, difficultyDistribution, computeStudioMetrics,
   syncStudioQuestionsToBank,
+  MICRO_ASSESSMENT_COUNTS, MICRO_ASSESSMENT_DIFFICULTIES,
+  normalizeMicroDomain, normalizeExamFamily, sameMicroContext,
+  sourceContextLabel, validateMicroSourceInput, buildMicroSource,
+  findMicroSource, filterMicroSources, processMicroSource,
+  generateMicroQuestions, regenerateMicroQuestion, computeQuestionDiversity,
+  computeConceptCoverage, validateGeneratedQuestion, generateMissingCoverage,
+  buildPrototypeMicroAttempts, computeMicroAssessmentResults, studentAttemptStatus,
+  sourceFilterOptions, QUESTION_TYPES,
 } from './engine/index.js'
 
 export {
@@ -76,6 +84,14 @@ export {
   analyzeSource, suitablePatternsFor, recommendDistribution, generateQuestions,
   regenerateQuestion, qualityScore, difficultyDistribution, computeStudioMetrics,
   syncStudioQuestionsToBank,
+  MICRO_ASSESSMENT_COUNTS, MICRO_ASSESSMENT_DIFFICULTIES,
+  normalizeMicroDomain, normalizeExamFamily, sameMicroContext,
+  sourceContextLabel, validateMicroSourceInput, buildMicroSource,
+  findMicroSource, filterMicroSources, processMicroSource,
+  generateMicroQuestions, regenerateMicroQuestion, computeQuestionDiversity,
+  computeConceptCoverage, validateGeneratedQuestion, generateMissingCoverage,
+  buildPrototypeMicroAttempts, computeMicroAssessmentResults, studentAttemptStatus,
+  sourceFilterOptions, QUESTION_TYPES,
 }
 
 /* ---------- Derived intelligence — recomputed on every call ---------- */

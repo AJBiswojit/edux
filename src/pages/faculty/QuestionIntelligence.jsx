@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   BrainCircuit, CopyPlus, Database, FilePlus2, FileText, LayoutDashboard, Library, ListChecks,
@@ -84,6 +84,9 @@ function QuestionIntelligence() {
               </Badge>
             )}
             <Badge variant="gradient" className="px-3 py-1">{pyqData.overview.totalQuestions} PYQs · {qbData.summary.total} bank</Badge>
+            <Link to="/faculty/question-intelligence/micro-assessment">
+              <Button size="sm"><Sparkles className="h-3.5 w-3.5" /> AI Micro-Assessment Studio</Button>
+            </Link>
           </>
         }
       />
