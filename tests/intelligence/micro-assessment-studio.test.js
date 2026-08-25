@@ -13,6 +13,7 @@ import {
 import { microAssessmentSources } from '../../src/datasets/faculty/micro-assessments.js'
 import { activeSourceFilters, deriveSourceFilterOptions, sanitizeSourceFilters, sourceMatchesFilters } from '../../src/components/micro-assessment-studio/source-library-filters.js'
 import { Select, SelectItem } from '../../src/components/ui/select.jsx'
+import { containsInternalGenerationLabel, formatFacultyAnswer } from '../../src/components/micro-assessment-studio/question-presentation.js'
 import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
 
 const { storage, clear } = installTestStorage()
@@ -168,6 +169,37 @@ describe('deterministic understanding, question generation and coverage', () => 
       expect(first.questions).toEqual(second.questions)
       expect(new Set(first.questions.map((question) => question.id)).size).toBe(count)
     }
+  })
+
+  it('does not leak internal Source check labels into question text while keeping source metadata', () => {
+    const result = generateMicroQuestions({ source: microAssessmentSources[9], count: 20 })
+    expect(result.questions).toHaveLength(20)
+    expect(result.questions.every((question) => !containsInternalGenerationLabel(question.question))).toBe(true)
+    expect(result.questions.every((question) => !/source check/i.test(question.question))).toBe(true)
+    expect(result.questions.every((question) => question.sourceId && question.chapter && question.topic && question.sourceTitle && question.sourceReference)).toBe(true)
+    expect(result.questions.some((question) => question.generationMetadata?.kind === 'source-pool-extension')).toBe(true)
+  })
+
+  it('formats answers by question type without inventing explanations', () => {
+    const mcq = { questionType: 'Direct MCQ', options: ['Nucleus', 'Mitochondria', 'Ribosome', 'Golgi'], answerIndex: 1, correctAnswer: 'Mitochondria' }
+    const blank = { questionType: 'Fill in the Blank', options: [], correctAnswer: 'Ionic' }
+    const statement = { questionType: 'Statement Based', options: [], correctAnswer: 'Statement I is correct; Statement II is incorrect.' }
+    const match = { questionType: 'Match the Following', options: [], correctAnswer: 'A–3, B–1, C–4, D–2' }
+    expect(formatFacultyAnswer(mcq)).toBe('B. Mitochondria')
+    expect(formatFacultyAnswer(blank)).toBe('Ionic')
+    expect(formatFacultyAnswer(statement)).toBe('Statement I is correct; Statement II is incorrect.')
+    expect(formatFacultyAnswer(match)).toBe('A–3, B–1, C–4, D–2')
+  })
+
+  it('renders the selected assessment size and never leaves a Select placeholder after a choice', () => {
+    const html = renderToString(React.createElement(Select, { value: '20', ariaLabel: 'Choose the size of the micro-assessment', placeholder: 'Select size' }, [
+      React.createElement(SelectItem, { key: '5', value: '5' }, '5 questions'),
+      React.createElement(SelectItem, { key: '20', value: '20' }, '20 questions'),
+    ]))
+    expect(html).toContain('20 questions')
+    expect(html).toContain('Choose the size of the micro-assessment: 20 questions')
+    expect(html).not.toContain('Select size')
+    expect(html).not.toContain('Select…')
   })
 
   it('returns varied question types and complete visible metadata', () => {

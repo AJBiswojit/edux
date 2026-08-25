@@ -90,7 +90,7 @@ function MicroAssessmentStudio() {
   const [processing, setProcessing] = useState(false)
   const [processingStage, setProcessingStage] = useState(0)
   const [activeStep, setActiveStep] = useState(1)
-  const [generationCount, setGenerationCount] = useState('10')
+  const [generationCount, setGenerationCount] = useState('')
   const [generationDifficulty, setGenerationDifficulty] = useState('Mixed')
   const [questions, setQuestions] = useState([])
   const [coverage, setCoverage] = useState([])
@@ -149,6 +149,7 @@ function MicroAssessmentStudio() {
     setQuestions([])
     setCoverage([])
     setDiversity(0)
+    setGenerationCount('')
     setSentAssessment(null)
     setInterventionCreated(false)
     toast.info('Source selection cleared', 'The selected source no longer matches the active library filters.')
@@ -156,12 +157,12 @@ function MicroAssessmentStudio() {
   const useSource = (source) => {
     setSelectedLibraryId(source.id)
     setDraft({ ...source })
-    setUnderstanding(null); setQuestions([]); setCoverage([]); setDiversity(0); setSentAssessment(null); setInterventionCreated(false); setProcessErrors({}); setSendError(''); setActiveStep(1)
+    setUnderstanding(null); setQuestions([]); setCoverage([]); setDiversity(0); setGenerationCount(''); setSentAssessment(null); setInterventionCreated(false); setProcessErrors({}); setSendError(''); setActiveStep(1)
     setConfig((current) => ({ ...current, title: `${source.topic} · Micro Check`, description: `A short formative check on ${source.topic}.`, instructions: '', difficulty: 'Mixed' }))
     window.setTimeout(() => document.getElementById('source-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
   const startCustom = () => {
-    setSelectedLibraryId(null); setDraft({ ...EMPTY_SOURCE }); setUnderstanding(null); setQuestions([]); setCoverage([]); setDiversity(0); setSentAssessment(null); setInterventionCreated(false); setProcessErrors({}); setActiveStep(1); setConfig((current) => ({ ...current, title: '', description: '', instructions: '' }))
+    setSelectedLibraryId(null); setDraft({ ...EMPTY_SOURCE }); setUnderstanding(null); setQuestions([]); setCoverage([]); setDiversity(0); setGenerationCount(''); setSentAssessment(null); setInterventionCreated(false); setProcessErrors({}); setActiveStep(1); setConfig((current) => ({ ...current, title: '', description: '', instructions: '' }))
     window.setTimeout(() => document.getElementById('source-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
 
@@ -178,6 +179,7 @@ function MicroAssessmentStudio() {
   }
   const runGenerate = async () => {
     if (!understanding) { toast.warning('Process the source first', 'Review the AI Understanding panel before generating questions.'); setActiveStep(2); return }
+    if (!generationCount) { toast.warning('Select a size', 'Choose how many questions to generate before continuing.'); return }
     setGenerating(true)
     try {
       const response = await generate.mutateAsync({ ...sourcePayload(), count: Number(generationCount), difficulty: generationDifficulty })
@@ -247,7 +249,7 @@ function MicroAssessmentStudio() {
       <div id="source-editor"><SourceEditor draft={draft} onChange={setDraft} errors={processErrors} onProcess={runProcess} processing={processing} processed={!!understanding} /></div>
       {processing && <ProcessingState stage={processingStage} />}
       {understanding && <UnderstandingPanel understanding={understanding} />}
-      {draft && <Card className="p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">Step 4 · Generate Questions</p><h2 className="mt-1 text-[17px] font-bold text-slate-900 dark:text-white">Choose the size of the micro-assessment</h2><p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Generation uses this source's deterministic curated pool. The default demo path is ten questions.</p></div><Button size="sm" variant="outline" onClick={startCustom}><FileQuestion className="h-3.5 w-3.5" /> Paste custom source</Button></div><div className="mt-4 flex flex-wrap items-end gap-3"><Field label="Question count"><Select value={generationCount} onValueChange={setGenerationCount}>{[5, 10, 15, 20].map((value) => <SelectItem key={value} value={String(value)}>{value} questions</SelectItem>)}</Select></Field><Field label="Preferred difficulty"><Select value={generationDifficulty} onValueChange={setGenerationDifficulty}><SelectItem value="Mixed">Mixed</SelectItem><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></Select></Field><Button onClick={runGenerate} disabled={!understanding || generating}>{generating ? <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> Generating…</> : <><Sparkles className="h-3.5 w-3.5" /> Generate Questions</>}</Button>{!understanding && <span className="text-[11px] font-semibold text-slate-400">Process the source first.</span>}</div></Card>}
+      {draft && <Card className="p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">Step 4 · Generate Questions</p><h2 className="mt-1 text-[17px] font-bold text-slate-900 dark:text-white">Choose the size of the micro-assessment</h2><p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Generation uses this source's deterministic curated pool. Select 5, 10, 15 or 20 questions.</p></div><Button size="sm" variant="outline" onClick={startCustom}><FileQuestion className="h-3.5 w-3.5" /> Paste custom source</Button></div><div className="mt-4 flex flex-wrap items-end gap-3"><Field label="Question count" className="min-w-[12.5rem]"><Select value={generationCount} placeholder="Select question count" ariaLabel="Question count" onValueChange={setGenerationCount}>{[5, 10, 15, 20].map((value) => <SelectItem key={value} value={String(value)}>{value} questions</SelectItem>)}</Select></Field><Field label="Preferred difficulty"><Select value={generationDifficulty} ariaLabel="Preferred difficulty" onValueChange={setGenerationDifficulty}><SelectItem value="Mixed">Mixed</SelectItem><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></Select></Field><Button onClick={runGenerate} disabled={!understanding || generating || !generationCount}>{generating ? <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> Generating…</> : <><Sparkles className="h-3.5 w-3.5" /> Generate Questions</>}</Button>{!understanding && <span className="text-[11px] font-semibold text-slate-400">Process the source first.</span>}{understanding && !generationCount && <span className="text-[11px] font-semibold text-slate-400">Select a size to generate.</span>}</div></Card>}
       {(questions.length || understanding) && <QuestionReview questions={questions} coverage={coverage} diversity={diversity} onUpdate={updateQuestion} onRegenerate={regenerateOne} onDelete={deleteQuestion} onGenerateMissing={generateMissing} regeneratingId={regeneratingId} />}
       {questions.length > 0 && <AssessmentConfiguration source={sourceData} questions={questions} config={config} setConfig={setConfig} participants={participantData} audience={audience} setAudience={setAudience} batchIds={batchIds} setBatchIds={setBatchIds} studentIds={studentIds} setStudentIds={setStudentIds} studentSearch={studentSearch} setStudentSearch={setStudentSearch} onOpenSend={openSend} invalid={sendError} />}
       {sentAssessment && (resultsLoading ? <DashboardSkeleton cards={2} /> : resultsError ? <ErrorState title="Results unavailable" onRetry={() => refetchResults()} /> : <ResultsPanel result={resultsData} assessment={sentAssessment} onCreateIntervention={createSuggestedIntervention} interventionCreated={interventionCreated} creatingIntervention={createIntervention.isPending} onViewStudents={() => navigate('/faculty/my-students?view=interventions')} />)}

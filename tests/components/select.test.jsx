@@ -28,6 +28,68 @@ async function closedMenu(view, label) {
 
 const SUBJECTS = ['Physics', 'Chemistry', 'Mathematics']
 
+describe('Select — composite option labels (question count)', () => {
+  it('shows the placeholder before a count is chosen', () => {
+    const view = mount(
+      { value: '', placeholder: 'Select question count', ariaLabel: 'Question count' },
+      [5, 10, 15, 20].map((n) => <SelectItem key={n} value={String(n)}>{n} questions</SelectItem>),
+    )
+    expect(triggerOf(view.container, 'Question count').textContent).toContain('Select question count')
+    expect(view.container.textContent).not.toContain('Selected option')
+  })
+
+  it('resolves interpolated children so 5 / 10 / 15 / 20 display as “N questions”, not Selected option', () => {
+    for (const n of [5, 10, 15, 20]) {
+      const view = mount(
+        { value: String(n), placeholder: 'Select question count', ariaLabel: 'Question count' },
+        [5, 10, 15, 20].map((count) => <SelectItem key={count} value={String(count)}>{count} questions</SelectItem>),
+      )
+      const trigger = triggerOf(view.container, 'Question count')
+      expect(trigger.textContent).toContain(`${n} questions`)
+      expect(trigger.getAttribute('aria-label')).toBe(`Question count: ${n} questions`)
+      expect(trigger.textContent).not.toContain('Selected option')
+    }
+  })
+
+  it('keeps the checkmark and trigger label in sync after changing count, and clear restores the placeholder', async () => {
+    const onValueChange = vi.fn()
+    const StatefulCount = () => {
+      const [value, setValue] = useState('')
+      return (
+        <Select
+          ariaLabel="Question count"
+          placeholder="Select question count"
+          value={value}
+          clearable
+          onValueChange={(next) => {
+            onValueChange(next)
+            setValue(next)
+          }}
+        >
+          {[5, 10, 15, 20].map((n) => <SelectItem key={n} value={String(n)}>{n} questions</SelectItem>)}
+        </Select>
+      )
+    }
+    const view = renderDom(<StatefulCount />)
+    cleanups.push(view.unmount)
+    const trigger = triggerOf(view.container, 'Question count')
+    await openSelect(trigger)
+    await act(async () => { optionsOf(menuOf(view.container, 'Question count'))[0].click() })
+    expect(onValueChange).toHaveBeenLastCalledWith('5')
+    expect(Number(onValueChange.mock.calls.at(-1)[0])).toBe(5)
+    expect(trigger.textContent).toContain('5 questions')
+    await openSelect(trigger)
+    expect(optionsOf(menuOf(view.container, 'Question count'))[0].getAttribute('aria-selected')).toBe('true')
+    await act(async () => { optionsOf(menuOf(view.container, 'Question count'))[3].click() })
+    expect(onValueChange).toHaveBeenLastCalledWith('20')
+    expect(trigger.textContent).toContain('20 questions')
+    await openSelect(trigger)
+    expect(optionsOf(menuOf(view.container, 'Question count'))[3].getAttribute('aria-selected')).toBe('true')
+    await act(async () => { trigger.querySelector('[role="button"]').click() })
+    expect(trigger.textContent).toContain('Select question count')
+  })
+})
+
 describe('Select — selected value & placeholder', () => {
   it('shows the placeholder when nothing is selected', () => {
     const view = mount({ value: '' })

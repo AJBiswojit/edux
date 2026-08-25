@@ -16,7 +16,7 @@ The canonical route is `/faculty/question-intelligence/micro-assessment`.
 2. **Process Content** — a short deterministic sequence shows Reading source → Identifying concepts → Finding question opportunities → Preparing assessment.
 3. **Review AI Understanding** — the source chapter, topic, detected concepts, important-fact prompts and question opportunities are shown before generation.
 4. **Generate Questions** — choose 5, 10, 15 or 20 questions and a preferred difficulty. The default path is 10.
-5. **Review Assessment** — each question exposes chapter, topic, concept, difficulty, question type, answer, explanation and Prototype AI Validation. Faculty can edit, regenerate one question, delete, change difficulty/type, inspect concept coverage and request missing coverage.
+5. **Review Assessment** — each question exposes chapter, topic, concept, difficulty and question type. The answer stays hidden until faculty chooses **Show answer**. Explanation appears only when present. Prototype AI Validation remains a secondary honesty check. Faculty can edit, regenerate one question, delete, change difficulty/type, inspect concept coverage and request missing coverage.
 6. **Send to Students** — configure title, description, question count, difficulty, duration, audience, deadline and optional instructions. Existing faculty batches/students are filtered by canonical domain and exam family.
 7. **Results / Insights** — after the prototype response set is available, the workspace shows completion, average accuracy, most difficult concept, most missed question, concept performance, question-level insight and a suggested intervention.
 
@@ -65,7 +65,22 @@ Generated questions contain:
 - `explanation`
 - `sourceId`
 
-The ten curated questions per source are deterministic. Stable source-pool extensions make the 15- and 20-question controls usable without random refreshes or a real model.
+The ten curated questions per source are deterministic. Stable source-pool extensions make the 15- and 20-question controls usable without random refreshes or a real model. Extensions keep the same source-grounded stem and do **not** prefix student-facing text with internal labels such as `Source check N:`. Variant identity lives on `generationMetadata`.
+
+Numbering (`Q1`, `Q2`, …) is assigned from review position, not embedded in `question`.
+
+## Question presentation and answer reveal
+
+- `question` / presentation text is student-facing wording only.
+- Source provenance (`sourceId`, `sourceTitle`, `sourceReference`, chapter, topic, concept) stays on the object and is shown as faculty metadata.
+- Internal generation/validation labels stay on `validation` / `generationMetadata`.
+- Each card has its own answer visibility. **Show answer** / **Hide answer** uses `aria-expanded` and does not share state across the assessment.
+- Revealed content separates **Answer** from **Why**. Missing explanations are omitted, never invented.
+- MCQ-style answers render as `B. Mitochondria`; fill-in, statement and match answers keep their authored wording.
+
+## Assessment size
+
+The Step 4 control uses the canonical EduX `Select` (portal + collision positioning). Options remain 5 / 10 / 15 / 20 questions. The trigger shows **Select size** until a value is chosen, then the selected label (`20 questions`). Generate stays disabled until a size is selected. The chosen count is the value sent to generation.
 
 ## Question Types
 
@@ -86,7 +101,7 @@ Each source has an intentionally mixed, subject-appropriate set rather than rand
 
 ## Metadata
 
-Question cards visibly show Chapter, Topic, Concept, Difficulty and Question Type. The same metadata is retained through generation, review, assessment creation and results. The review card also shows the expected answer and explanation.
+Question cards visibly show Chapter, Topic, Concept, Difficulty and Question Type. The same metadata is retained through generation, review, assessment creation and results. The expected answer and explanation are available on demand via Show answer.
 
 ## Domain Isolation
 
