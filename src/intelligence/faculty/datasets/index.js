@@ -37,6 +37,7 @@ import {
 import {
   facultyBatches, facultyStudents,
 } from './students-directory.js'
+import { microAssessmentSources, MICRO_ASSESSMENT_SOURCE_TYPES, MICRO_ASSESSMENT_DOMAINS, MICRO_ASSESSMENT_EXAM_FAMILIES } from '@/datasets/faculty/micro-assessments.js'
 
 export const facultyDatasets = {
   /* core */
@@ -117,6 +118,14 @@ export const facultyDatasets = {
   /* student directory (Phase 3) */
   facultyBatches,
   facultyStudents,
+
+  /* formative assessment studio */
+  microAssessments: {
+    sources: microAssessmentSources,
+    sourceTypes: MICRO_ASSESSMENT_SOURCE_TYPES,
+    domains: MICRO_ASSESSMENT_DOMAINS,
+    examFamilies: MICRO_ASSESSMENT_EXAM_FAMILIES,
+  },
 }
 
 export {
@@ -136,6 +145,8 @@ export {
   assistantPrompts, contentStudioTypes, evaluationWorkflows, studioResources,
   studioRecentUploads, facultyPortfolio, aiStudioHistory, savedLessonPlans,
   facultyBatches, facultyStudents,
+  microAssessmentSources, MICRO_ASSESSMENT_SOURCE_TYPES,
+  MICRO_ASSESSMENT_DOMAINS, MICRO_ASSESSMENT_EXAM_FAMILIES,
 }
 
 export default facultyDatasets

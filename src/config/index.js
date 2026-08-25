@@ -45,6 +45,7 @@ export const NAV_GROUPS = {
         { label: 'Assignments', to: '/student/assignments', icon: 'FileText' },
         { label: 'Attendance', to: '/student/attendance', icon: 'CalendarCheck2' },
         { label: 'Examinations', to: '/student/examinations', icon: 'ClipboardList' },
+        { label: 'Micro-Assessments', to: '/student/micro-assessments', icon: 'ClipboardCheck', badge: 'New', matchDescendants: true },
       ],
     },
     {
@@ -75,7 +76,8 @@ export const NAV_GROUPS = {
         { label: 'Dashboard', to: '/faculty', icon: 'LayoutDashboard' },
         { label: 'Teaching', to: '/faculty/teaching', icon: 'Presentation', badge: '★' },
         { label: 'Assessment Intelligence', to: '/faculty/question-intelligence', icon: 'BrainCircuit' },
-        { label: 'My Students', to: '/faculty/my-students', icon: 'UsersRound' },
+        { label: 'AI Micro-Assessment Studio', to: '/faculty/question-intelligence/micro-assessment', icon: 'Sparkles', badge: 'New' },
+        { label: 'My Students', to: '/faculty/my-students', icon: 'UsersRound', matchDescendants: true },
         { label: 'Reports', to: '/faculty/reports', icon: 'FileBarChart' },
         { label: 'AI Workspace', to: '/faculty/ai-assistant', icon: 'Sparkles' },
         { label: 'Calendar', to: '/faculty/timetable', icon: 'CalendarDays' },

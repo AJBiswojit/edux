@@ -32,6 +32,7 @@ import './faculty/papers'
 import './faculty/pyq-analysis'
 import './faculty/students'
 import './faculty/question-studio'
+import './faculty/micro-assessments'
 import './faculty/intelligence'
 
 /* Admin */

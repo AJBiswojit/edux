@@ -142,8 +142,11 @@ export function qualityScore(q, source, settings = {}) {
  * (topic/concept filters, question-type mix, difficulty distribution).
  * Deterministic per (sessionId). Returns { questions, insufficient, used }.
  */
-export function generateQuestions({ source, settings = {}, sessionId }) {
-  const pool = questionStudioPools[source.sourceId] ?? []
+export function generateQuestions({ source, settings = {}, sessionId, poolOverride = null }) {
+  /* Micro-Assessment Studio can pass its curated source pool through this
+     same selection engine; the existing AI Question Studio remains the
+     default consumer when no override is supplied. */
+  const pool = poolOverride ?? questionStudioPools[source.sourceId] ?? []
   const count = Math.max(1, Math.min(30, Number(settings.count ?? 20)))
   const topicFilter = settings.topic && settings.topic !== 'All topics' ? settings.topic : null
   const conceptFilter = settings.concept && settings.concept !== 'All concepts' ? settings.concept : null

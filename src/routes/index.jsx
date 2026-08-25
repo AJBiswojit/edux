@@ -49,6 +49,7 @@ const FacultyQuizBuilder = lazy(() => import('@/pages/faculty/QuizBuilder'))
 const FacultyTimetable = lazy(() => import('@/pages/faculty/Timetable'))
 const FacultyAnnouncements = lazy(() => import('@/pages/faculty/Announcements'))
 const QuestionIntelligence = lazy(() => import('@/pages/faculty/QuestionIntelligence'))
+const MicroAssessmentStudio = lazy(() => import('@/pages/faculty/MicroAssessmentStudio'))
 const MyStudents = lazy(() => import('@/pages/faculty/MyStudents'))
 const StudentProfile = lazy(() => import('@/pages/faculty/StudentProfile'))
 const FacultyAttemptAnalysis = lazy(() => import('@/pages/faculty/FacultyAttemptAnalysis'))
@@ -95,6 +96,7 @@ const ProgressReport = lazy(() => import('@/pages/student/ProgressReport'))
 const Examinations = lazy(() => import('@/pages/student/Examinations'))
 const ExamAgent = lazy(() => import('@/pages/student/ExamAgent'))
 const StudentInterventions = lazy(() => import('@/pages/student/Interventions'))
+const StudentMicroAssessments = lazy(() => import('@/pages/student/MicroAssessments'))
 const Mentor = lazy(() => import('@/pages/student/Mentor'))
 
 /* ---------- Faculty ---------- */
@@ -254,6 +256,8 @@ function AppRoutes() {
         <Route path="mock-tests" element={withSuspense(MockTests)} />
         <Route path="exams" element={withSuspense(Exams)} />
         <Route path="examinations" element={withSuspense(Examinations)} />
+        <Route path="micro-assessments" element={withSuspense(StudentMicroAssessments)} />
+        <Route path="micro-assessments/:assessmentId" element={withSuspense(StudentMicroAssessments)} />
         <Route path="exam-agent" element={withSuspense(ExamAgent)} />
         <Route path="interventions" element={withSuspense(StudentInterventions)} />
         <Route path="exam-analysis" element={withSuspense(ExamAnalysis)} />
@@ -283,6 +287,7 @@ function AppRoutes() {
         <Route path="assignments" element={withSuspense(FacultyAssignments)} />
         <Route path="question-bank" element={<LegacyFacultyRedirect to="/faculty/question-intelligence?tab=question-intelligence" />} />
         <Route path="question-intelligence" element={withSuspense(QuestionIntelligence)} />
+        <Route path="question-intelligence/micro-assessment" element={withSuspense(MicroAssessmentStudio)} />
         <Route path="paper-generator" element={<LegacyFacultyRedirect to="/faculty/question-intelligence?tab=paper-generator" />} />
         <Route path="pyq-analysis" element={<LegacyFacultyRedirect to="/faculty/question-intelligence?tab=pyq" />} />
         <Route path="ai-assistant" element={withSuspense(AITeachingAssistant)} />
