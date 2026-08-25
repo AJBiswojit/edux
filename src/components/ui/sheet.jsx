@@ -49,7 +49,8 @@ function SheetContent({ className, children, side = 'left', ...props }) {
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100]" role="presentation">
+        /* data-portal-scope: see DialogContent — nested dropdowns portal here. */
+        <div data-portal-scope className="fixed inset-0 z-[100]" role="presentation">
           <motion.div
             className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}

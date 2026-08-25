@@ -5,10 +5,12 @@
  * Regenerate / Delete / Approve / Reject (approved → Question Bank sync).
  * Everything is deterministic "Prototype Question Generation".
  */
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Loader2, Sparkles, Wand2 } from 'lucide-react'
 import { Badge, Button, Card, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { useQuestionStudioSources, useQuestionStudioSource, useAnalyzeSource, useGenerateStudioQuestions, useStudioQuestionAction } from '@/services/question-studio'
+import { createFilterCascade } from '@/utils/filter-cascade'
+import { buildStudioCascade } from './studio-cascade'
 import { SourcePreviewDialog, SourceAnalysisPanel } from './source-library'
 import { StudioQuestionCard } from './question-card'
 
@@ -50,8 +52,16 @@ export function StudioWorkflow() {
   const action = useStudioQuestionAction()
 
   const source = sourceData?.source ?? sourcesData?.items?.find((s) => s.sourceId === activeSourceId)
-  const topics = source?.topics ?? []
-  const conceptsForTopic = topics.find((t) => t.topic === settings.topic)?.concepts ?? source?.concepts ?? []
+
+  /* Topic → Concept cascade: declared per feature (studio-cascade.js),
+     validated by the shared engine. The settings object carries extra
+     independent form fields, which the engine passes through untouched. */
+  const cascade = useMemo(() => createFilterCascade(buildStudioCascade(source)), [source])
+  const topicOptions = cascade.options(settings).topic
+  const conceptOptions = cascade.options(settings).concept
+  useEffect(() => {
+    setSettings((s) => cascade.sanitize(s))
+  }, [cascade])
 
   const toggleType = (t) => setSettings((s) => ({ ...s, questionTypes: s.questionTypes.includes(t) ? s.questionTypes.filter((x) => x !== t) : [...s.questionTypes, t] }))
 
@@ -113,7 +123,7 @@ export function StudioWorkflow() {
       <Card className="p-5">
         <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">Step 1 · Choose a source</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Select value={useSourceId ?? selectedId ?? 'none'} onValueChange={(v) => { setUseSourceId(v); setSelectedId(v); setAnalysis(null); setSession(null); setStep(1) }}>
+          <Select value={useSourceId ?? selectedId ?? 'none'} onValueChange={(v) => { setUseSourceId(v); setSelectedId(v); setAnalysis(null); setSession(null); setStep(1); setSettings((s) => ({ ...s, topic: 'All topics', concept: 'All concepts' })) }}>
             <SelectItem value="none">— Select a demo source —</SelectItem>
             {(sourcesData?.items ?? []).map((s) => (
               <SelectItem key={s.sourceId} value={s.sourceId}>{s.featured ? '⭐ ' : ''}{s.shortTitle} · {s.domain}{s.exam ? ` · ${s.exam}` : ''}</SelectItem>
@@ -159,15 +169,15 @@ export function StudioWorkflow() {
             </Select>
           </Field>
           <Field label="Topic">
-            <Select value={settings.topic} onValueChange={(v) => setSettings((s) => ({ ...s, topic: v, concept: 'All concepts' }))}>
+            <Select value={settings.topic} onValueChange={(v) => setSettings((s) => cascade.sanitize({ ...s, topic: v }))} group="question-studio">
               <SelectItem value="All topics">All topics</SelectItem>
-              {(topics ?? []).map((t) => <SelectItem key={t.topic} value={t.topic}>{t.topic}</SelectItem>)}
+              {topicOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Concept">
-            <Select value={settings.concept} onValueChange={(v) => setSettings((s) => ({ ...s, concept: v }))}>
+            <Select value={settings.concept} onValueChange={(v) => setSettings((s) => cascade.sanitize({ ...s, concept: v }))} group="question-studio">
               <SelectItem value="All concepts">All concepts</SelectItem>
-              {conceptsForTopic.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {conceptOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Marks"><Input type="number" value={settings.marks} onChange={(e) => setSettings((s) => ({ ...s, marks: e.target.value }))} /></Field>

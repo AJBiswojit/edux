@@ -1,146 +1,277 @@
-import { Children, createContext, forwardRef, useContext, useEffect, useId, useRef, useState } from 'react'
+import {
+  Children,
+  Fragment,
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useAnchoredDropdown } from '@/hooks/use-anchored-dropdown'
+
+/**
+ * EduX canonical selection dropdown (primitive).
+ *
+ * ONE interaction architecture for every selection dropdown in EduX:
+ *
+ *   - controlled (`value` + `onValueChange`) or uncontrolled (`defaultValue`)
+ *   - options via `<SelectItem value>label</SelectItem>` children
+ *   - placeholder · disabled · loading · clearable · searchable · helper text
+ *   - correct selected-value display (never a stale placeholder after a
+ *     selection; a value missing from the current options shows itself)
+ *   - portal rendering into `document.body` — or the nearest
+ *     `data-portal-scope` (dialog/sheet) — so overflow-hidden cards,
+ *     transforms, filters and stacking contexts can never clip the menu
+ *   - viewport-aware placement (down / up) + horizontal collision via
+ *     `computeDropdownPosition`, with a max-height bounded by the available
+ *     vertical space (long lists scroll internally; the page never scrolls)
+ *   - repositions on scroll/resize and closes when the trigger scrolls fully
+ *     out of view (no floating stale menus)
+ *   - keyboard: Enter/Space/ArrowUp/ArrowDown open, ArrowUp/Down + Home/End
+ *     navigate, Enter selects, Escape closes and returns focus to the
+ *     trigger; outside click closes; visible focus throughout
+ *   - aria-expanded / aria-haspopup="listbox" / aria-controls, role=listbox
+ *     + role=option with aria-selected, disabled options
+ *   - `group`: within one filter group only one dropdown stays open —
+ *     opening a sibling closes the other (state/dependency logic itself
+ *     stays feature-specific — see src/utils/filter-cascade.js)
+ *
+ * Feature-specific cascading (Domain → Exam Family → Subject → Chapter →
+ * Topic, …) is NOT built into this primitive; features declare their
+ * dependency graph with useFilterCascade / createFilterCascade.
+ */
 
 const SelectContext = createContext(null)
 
-const Select = forwardRef(function Select({ value, defaultValue, onValueChange, children, className, disabled, placeholder, id, ariaLabel, active = false, collision = false }, ref) {
+/* ------------------------- option collection ------------------------- */
+
+function isSelectableElement(node) {
+  return node != null && typeof node === 'object' && node.type === SelectItem
+}
+
+function collectSelectItems(children) {
+  const out = []
+  const walk = (child) => {
+    if (child == null || typeof child === 'boolean') return
+    if (Array.isArray(child)) {
+      child.forEach(walk)
+      return
+    }
+    if (typeof child !== 'object') return
+    if (child.type === SelectItem) {
+      out.push(child)
+      return
+    }
+    if (child.type === Fragment && child.props?.children != null) {
+      walk(child.props.children)
+    }
+  }
+  Children.toArray(children).forEach(walk)
+  return out
+}
+
+function itemSearchText(item) {
+  const raw = item.props.searchText ?? item.props.children
+  return typeof raw === 'string' || typeof raw === 'number' ? String(raw).toLowerCase() : ''
+}
+
+/* ------------------------------ Select ------------------------------- */
+
+const Select = forwardRef(function Select(
+  {
+    value,
+    defaultValue,
+    onValueChange,
+    children,
+    className,
+    disabled,
+    loading,
+    placeholder,
+    id,
+    ariaLabel,
+    active = false,
+    clearable = false,
+    clearValue = '',
+    searchable = true,
+    emptyText,
+    helper,
+    group = null,
+    // deprecated no-op — portal + collision positioning is now always on
+    collision = undefined,
+  },
+  ref,
+) {
   const [internal, setInternal] = useState(defaultValue)
   const [open, setOpen] = useState(false)
+  /* the portal stays mounted through the exit animation; AnimatePresence
+     lives INSIDE the portal (a createPortal as a direct child of
+     AnimatePresence breaks presence tracking) */
+  const [menuMounted, setMenuMounted] = useState(false)
   const [search, setSearch] = useState('')
-  const [menuStyle, setMenuStyle] = useState(null)
-  const rootRef = useRef(null)
   const searchRef = useRef(null)
   const listRef = useRef(null)
-  const menuRef = useRef(null)
-  const triggerRef = useRef(null)
   const menuId = useId()
   const current = value ?? internal
+  const isDisabled = !!disabled || !!loading
+
+  const { triggerRef, menuRef, styles, container, zIndex, closeMenu } = useAnchoredDropdown({
+    open,
+    onClose: () => {
+      setOpen(false)
+      setSearch('')
+    },
+    align: 'start',
+    group,
+  })
+
+  const setTriggerRef = useCallback(
+    (node) => {
+      triggerRef.current = node
+      if (typeof ref === 'function') ref(node)
+      else if (ref) ref.current = node
+    },
+    [ref],
+  )
+
+  const items = useMemo(() => collectSelectItems(children), [children])
+  const visibleItems = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!searchable || !query) return items
+    return items.filter((item) => itemSearchText(item).includes(query))
+  }, [items, search, searchable])
+
+  const selectedItem = items.find((item) => item.props.value === current)
+  const hasValue = current != null && current !== ''
+  /* Selected-value contract: a matched option renders its label; a value
+     that is NOT in the current option set still displays itself (never a
+     stale "Select…" after e.g. a parent filter change); empty → placeholder. */
+  const rawLabel = selectedItem ? (selectedItem.props.searchText ?? selectedItem.props.children) : null
+  const displayLabel = selectedItem
+    ? typeof rawLabel === 'string' || typeof rawLabel === 'number'
+      ? String(rawLabel)
+      : 'Selected option'
+    : hasValue
+      ? String(current)
+      : (placeholder ?? 'Select…')
+
+  const setCurrent = useCallback(
+    (next) => {
+      setInternal(next)
+      onValueChange?.(next)
+      setOpen(false)
+      setSearch('')
+      triggerRef.current?.focus()
+    },
+    [onValueChange, triggerRef],
+  )
+
+  const clear = useCallback(() => {
+    const next = clearValue
+    setInternal(next)
+    onValueChange?.(next)
+    setOpen(false)
+    setSearch('')
+    triggerRef.current?.focus()
+  }, [clearValue, onValueChange, triggerRef])
 
   useEffect(() => {
+    if (open) setMenuMounted(true)
+  }, [open])
+
+  /* focus the search field (or first option) shortly after open */
+  const focusFirst = useCallback(() => {
+    const list = listRef.current
+    if (!list) return false
+    const buttons = [...list.querySelectorAll('button[role="option"]:not(:disabled)')]
+    buttons[0]?.focus()
+    return buttons.length > 0
+  }, [])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const timer = window.setTimeout(() => {
+      if (searchable) searchRef.current?.focus()
+      else focusFirst()
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [open, searchable, focusFirst])
+
+  const optionButtons = useCallback(() => {
+    const list = listRef.current
+    if (!list) return []
+    return [...list.querySelectorAll('button[role="option"]:not(:disabled)')]
+  }, [])
+
+  const focusOptionAt = useCallback(
+    (index) => {
+      const buttons = optionButtons()
+      if (!buttons.length) return
+      buttons[Math.max(0, Math.min(index, buttons.length - 1))]?.focus()
+    },
+    [optionButtons],
+  )
+
+  const onTriggerKeyDown = (event) => {
+    if (isDisabled) return
     if (!open) {
-      setMenuStyle(null)
-      return undefined
-    }
-    const onDoc = (e) => rootRef.current && !rootRef.current.contains(e.target) && setOpen(false)
-    const onKey = (e) => e.key === 'Escape' && setOpen(false)
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-
-    const positionMenu = () => {
-      const trigger = triggerRef.current
-      const menu = menuRef.current
-      if (!trigger || !menu) return
-      const triggerBox = trigger.getBoundingClientRect()
-      if (!collision) {
-        /* Preserve the original absolute-menu behaviour for the rest of
-           EduX; Source Library filters opt into the fixed collision mode. */
-        const menuBox = menu.getBoundingClientRect()
-        const below = window.innerHeight - triggerBox.bottom
-        const above = triggerBox.top
-        if (below < menuBox.height + 8 && above > below) {
-          menu.style.bottom = `${window.innerHeight - triggerBox.top + 8}px`
-          menu.style.top = 'auto'
-        } else {
-          menu.style.top = ''
-          menu.style.bottom = ''
-        }
-        return
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault()
+        setOpen(true)
       }
-      const viewportPadding = 8
-      const width = Math.min(Math.max(triggerBox.width, 192), Math.max(1, window.innerWidth - viewportPadding * 2))
-      const left = Math.min(Math.max(triggerBox.left, viewportPadding), Math.max(viewportPadding, window.innerWidth - width - viewportPadding))
-      const measuredHeight = Math.min(288, Math.max(menu.scrollHeight, menu.getBoundingClientRect().height))
-      const below = Math.max(0, window.innerHeight - triggerBox.bottom - viewportPadding)
-      const above = Math.max(0, triggerBox.top - viewportPadding)
-      const openUp = below < measuredHeight && above > below
-      const available = Math.max(48, openUp ? above : below)
-      setMenuStyle({
-        left,
-        width,
-        maxHeight: available,
-        top: openUp ? 'auto' : triggerBox.bottom + viewportPadding,
-        bottom: openUp ? window.innerHeight - triggerBox.top + viewportPadding : 'auto',
-      })
-    }
-
-    let settleTimer
-    const raf = requestAnimationFrame(() => {
-      positionMenu()
-      // The menu's list/search field can settle after its first paint.
-      settleTimer = window.setTimeout(positionMenu, 60)
-    })
-    window.addEventListener('resize', positionMenu)
-    window.addEventListener('scroll', positionMenu, true)
-    // Focus the menu search field for keyboard-first filtering.
-    const focusTimer = window.setTimeout(() => searchRef.current?.focus(), 40)
-    return () => {
-      cancelAnimationFrame(raf)
-      clearTimeout(settleTimer)
-      clearTimeout(focusTimer)
-      window.removeEventListener('resize', positionMenu)
-      window.removeEventListener('scroll', positionMenu, true)
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open, collision, search])
-
-  const focusItem = (index) => {
-    const items = listRef.current ? [...listRef.current.querySelectorAll('button')] : []
-    if (items.length) items[Math.max(0, Math.min(index, items.length - 1))].focus()
-  }
-
-  const onTriggerKeyDown = (e) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (!open) setOpen(true)
-      else focusItem(0)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      if (!open) setOpen(true)
-      else {
-        const items = listRef.current ? [...listRef.current.querySelectorAll('button')] : []
-        focusItem(items.length - 1)
-      }
-    } else if ((e.key === 'Enter' || e.key === ' ') && !open) {
-      e.preventDefault()
-      setOpen(true)
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      focusOptionAt(0)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      const buttons = optionButtons()
+      focusOptionAt(buttons.length - 1)
     }
   }
 
-  const onListKeyDown = (e) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      const items = [...listRef.current.querySelectorAll('button')]
-      const idx = items.indexOf(document.activeElement)
-      focusItem(idx + 1)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      const items = [...listRef.current.querySelectorAll('button')]
-      const idx = items.indexOf(document.activeElement)
-      focusItem(idx - 1)
+  const onMenuKeyDown = (event) => {
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      const buttons = optionButtons()
+      if (!buttons.length) return
+      event.preventDefault()
+      const idx = buttons.indexOf(document.activeElement)
+      if (event.key === 'Home') focusOptionAt(0)
+      else if (event.key === 'End') focusOptionAt(buttons.length - 1)
+      else if (event.key === 'ArrowDown') focusOptionAt(idx === -1 ? 0 : idx + 1)
+      else focusOptionAt(idx === -1 ? buttons.length - 1 : idx - 1)
     }
   }
 
-  const selectedItem = Children.toArray(children).find((child) => child?.props?.value === current)
-  const selectedLabel = selectedItem?.props?.children ?? placeholder ?? 'Select…'
-  const selectedLabelText = typeof selectedLabel === 'string' || typeof selectedLabel === 'number' ? String(selectedLabel) : 'Selected option'
+  const onSearchKeyDown = (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      event.stopPropagation()
+      focusOptionAt(0)
+    }
+  }
 
   return (
-    <SelectContext.Provider value={{ current, setCurrent: (v) => { setInternal(v); onValueChange?.(v); setOpen(false) }, open, setOpen, search, setSearch }}>
-      <div ref={rootRef} className={cn('relative', className)}>
+    <SelectContext.Provider value={{ current, setCurrent }}>
+      <div className={cn('relative', className)}>
         <button
-          ref={(node) => { triggerRef.current = node; if (typeof ref === 'function') ref(node); else if (ref) ref.current = node }}
+          ref={setTriggerRef}
           type="button"
           id={id}
-          disabled={disabled}
-          onClick={() => setOpen(!open)}
+          disabled={isDisabled}
+          onClick={() => (open ? closeMenu({ reason: 'trigger' }) : setOpen(true))}
           onKeyDown={onTriggerKeyDown}
           aria-expanded={open}
           aria-haspopup="listbox"
-          aria-controls={open ? menuId : undefined}
-          aria-label={ariaLabel ? `${ariaLabel}: ${selectedLabelText}` : placeholder ?? selectedLabelText}
+          aria-controls={menuId}
+          aria-label={ariaLabel ? `${ariaLabel}: ${displayLabel}` : undefined}
+          aria-busy={loading || undefined}
           className={cn(
             'flex h-11 w-full items-center justify-between gap-2 rounded-xl border bg-white px-4 text-sm font-medium transition-all dark:bg-slate-950/60',
             active && !open && 'border-indigo-300 bg-indigo-50/40 text-indigo-700 dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-indigo-300',
@@ -150,67 +281,122 @@ const Select = forwardRef(function Select({ value, defaultValue, onValueChange, 
             'disabled:cursor-not-allowed disabled:opacity-50'
           )}
         >
-          <span className={cn('truncate', active ? 'text-indigo-700 dark:text-indigo-200' : 'text-slate-900 dark:text-slate-100')}>{selectedLabel}</span>
+          <span className={cn('min-w-0 flex-1 truncate text-left', active ? 'text-indigo-700 dark:text-indigo-200' : 'text-slate-900 dark:text-slate-100')}>
+            {displayLabel}
+          </span>
+          {clearable && hasValue && !isDisabled && (
+            <span
+              role="button"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={(event) => {
+                event.stopPropagation()
+                clear()
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  clear()
+                }
+              }}
+              className="-mr-1.5 shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              <X className="h-3.5 w-3.5" />
+            </span>
+          )}
           <ChevronDown className={cn('h-4 w-4 shrink-0 text-slate-400 transition-transform duration-300', open && 'rotate-180')} />
         </button>
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ opacity: 0, y: 6, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 4, scale: 0.98 }}
-              transition={{ duration: 0.16 }}
-              ref={menuRef}
-              id={menuId}
-              data-select-menu
-              style={collision ? { ...(menuStyle ?? {}), visibility: menuStyle ? 'visible' : 'hidden' } : undefined}
-              className={cn(
-                'z-[70] flex max-h-72 min-w-[12rem] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lift backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95',
-                collision ? 'fixed' : 'absolute mt-2 w-full'
-              )}
-            >
-              <div className="relative mb-1.5">
-                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                <input
-                  ref={searchRef}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault()
-                      focusItem(0)
-                    }
+
+        {helper && <p className="mt-1 px-1 text-[10px] font-medium text-slate-400">{helper}</p>}
+
+        {menuMounted &&
+          container &&
+          createPortal(
+            <AnimatePresence onExitComplete={() => setMenuMounted(false)}>
+              {open && (
+                <motion.div
+                  ref={menuRef}
+                  id={menuId}
+                  role="listbox"
+                  aria-label={ariaLabel ?? placeholder ?? 'Options'}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.14 }}
+                  onKeyDown={onMenuKeyDown}
+                  className={cn(
+                    'fixed flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lift backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95'
+                  )}
+                  style={{
+                    zIndex,
+                    top: styles?.top ?? 'auto',
+                    bottom: styles?.bottom ?? 'auto',
+                    left: styles ? styles.left : 'auto',
+                    width: styles ? styles.width : 'auto',
+                    maxHeight: styles ? styles.maxHeight : 'none',
+                    visibility: styles ? 'visible' : 'hidden',
                   }}
-                  placeholder="Search…"
-                  aria-label="Search options"
-                  className="h-9 w-full rounded-lg border-0 bg-slate-100 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 dark:bg-slate-800"
-                />
-              </div>
-              <div ref={listRef} role="listbox" onKeyDown={onListKeyDown} className="min-h-0 max-h-52 flex-1 overflow-y-auto scrollbar-thin">{children}</div>
-            </motion.div>
+                >
+                  {searchable && (
+                    <div className="relative mb-1.5">
+                      <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                      <input
+                        ref={searchRef}
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        onKeyDown={onSearchKeyDown}
+                        placeholder="Search…"
+                        aria-label="Search options"
+                        className="h-9 w-full rounded-lg border-0 bg-slate-100 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 dark:bg-slate-800"
+                      />
+                    </div>
+                  )}
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2 px-3 py-6 text-xs font-medium text-slate-400">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500 dark:border-slate-600 dark:border-t-indigo-400" />
+                      Loading options…
+                    </div>
+                  ) : visibleItems.length ? (
+                    <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+                      {visibleItems}
+                    </div>
+                  ) : (
+                    <div className="px-3 py-6 text-center text-xs font-medium text-slate-400">
+                      {searchable && search.trim() ? 'No matching options' : emptyText ?? 'No options'}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            container,
           )}
-        </AnimatePresence>
       </div>
     </SelectContext.Provider>
   )
 })
 
-const SelectItem = forwardRef(function SelectItem({ value, className, children, ...props }, ref) {
-  const { current, setCurrent, search } = useContext(SelectContext)
+/* ----------------------------- SelectItem ---------------------------- */
+
+const SelectItem = forwardRef(function SelectItem({ value, className, children, disabled: optionDisabled, searchText, ...props }, ref) {
+  const { current, setCurrent } = useContext(SelectContext)
   const selected = current === value
-  if (search && !String(children).toLowerCase().includes(search.toLowerCase())) return null
   return (
     <button
       ref={ref}
       type="button"
       role="option"
       aria-selected={selected}
-      onClick={() => setCurrent(value)}
+      disabled={optionDisabled}
+      onClick={() => {
+        if (!optionDisabled) setCurrent(value)
+      }}
       className={cn(
         'flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors',
         selected
           ? 'bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
           : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800',
+        optionDisabled && 'cursor-not-allowed opacity-40',
         className
       )}
       {...props}
@@ -221,6 +407,7 @@ const SelectItem = forwardRef(function SelectItem({ value, className, children, 
   )
 })
 
+/* Passthroughs kept for API compatibility with existing call sites. */
 const SelectTrigger = ({ children }) => children
 const SelectContent = ({ children }) => children
 const SelectValue = ({ children }) => children

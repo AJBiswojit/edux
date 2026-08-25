@@ -5,7 +5,16 @@
  * it never imports the source dataset. Hierarchy options are derived from
  * the catalog with downstream filters deliberately ignored so a parent can
  * always be changed and invalid children can be cleared.
+ *
+ * The dependency graph (Domain → Exam Family → Subject → Chapter → Topic)
+ * is declared here for this feature only and validated through the shared
+ * EduX cascade engine (`src/utils/filter-cascade.js`) — the project-wide
+ * invalid-state prevention. Search and Source Type are INDEPENDENT keys:
+ * they are not part of the graph and a no-match state they create must
+ * never clear hierarchy values (they are neutralized during sanitizing).
  */
+
+import { sanitizeCascadeValues } from '@/utils/filter-cascade'
 
 const HIERARCHY_KEYS = ['domain', 'examFamily', 'subject', 'chapter', 'topic']
 const LABELS = {
@@ -87,10 +96,50 @@ export function deriveSourceFilterOptions(filters = {}, catalog = []) {
   }
 }
 
+/**
+ * Feature-declared Source Library cascade (used by the shared engine).
+ * Strict mode: an empty option list invalidates the current value — e.g.
+ * Exam Family has no options outside Competitive, and Topic has no options
+ * without a Chapter, and both must clear.
+ */
+export const SOURCE_FILTER_DEPENDENCIES = {
+  domain: [],
+  examFamily: ['domain'],
+  subject: ['domain', 'examFamily'],
+  chapter: ['domain', 'examFamily', 'subject'],
+  topic: ['domain', 'examFamily', 'subject', 'chapter'],
+}
+
+const SOURCE_KEY_OPTIONS = {
+  domain: 'domains',
+  examFamily: 'examFamilies',
+  subject: 'subjects',
+  chapter: 'chapters',
+  topic: 'topics',
+}
+
+export function buildSourceFilterCascade(catalog = []) {
+  return {
+    dependencies: SOURCE_FILTER_DEPENDENCIES,
+    treatEmptyOptionsAsInvalid: true,
+    deriveOptions: (key, values, purpose = 'display') => {
+      const effective =
+        purpose === 'sanitize'
+          ? { ...(values ?? {}), search: '', sourceType: '' }
+          : (values ?? {})
+      const derived = deriveSourceFilterOptions(effective, catalog)
+      return derived[SOURCE_KEY_OPTIONS[key]] ?? []
+    },
+  }
+}
+
 /** Clears only downstream values that are no longer valid after a parent
- * change. Search and sourceType intentionally survive hierarchy changes. */
+ * change. Search and sourceType intentionally survive hierarchy changes.
+ * Implemented on the shared cascade engine — one invalid-state rule for
+ * the whole project. */
 export function sanitizeSourceFilters(nextFilters = {}, catalog = []) {
-  let next = {
+  const normalized = {
+    ...nextFilters,
     search: nextFilters.search ?? '',
     domain: optionalValue(nextFilters.domain),
     examFamily: optionalValue(nextFilters.examFamily),
@@ -99,26 +148,7 @@ export function sanitizeSourceFilters(nextFilters = {}, catalog = []) {
     topic: optionalValue(nextFilters.topic),
     sourceType: optionalValue(nextFilters.sourceType),
   }
-  /* Search and source type are independent filters. They may produce a
-     legitimate no-match state, so they must never make a hierarchy value
-     look invalid and silently clear it. */
-  const hierarchyOptions = () => deriveSourceFilterOptions({ ...next, search: '', sourceType: '' }, catalog)
-  let options = hierarchyOptions()
-  if (next.domain && !options.domains.includes(next.domain)) {
-    next = { ...next, domain: '', examFamily: '', subject: '', chapter: '', topic: '' }
-  }
-  if (next.domain !== 'competitive') next = { ...next, examFamily: '' }
-  options = hierarchyOptions()
-  if (next.examFamily && !options.examFamilies.includes(next.examFamily)) {
-    next = { ...next, examFamily: '', subject: '', chapter: '', topic: '' }
-  }
-  options = hierarchyOptions()
-  if (next.subject && !options.subjects.includes(next.subject)) next = { ...next, subject: '', chapter: '', topic: '' }
-  options = hierarchyOptions()
-  if (next.chapter && !options.chapters.includes(next.chapter)) next = { ...next, chapter: '', topic: '' }
-  options = hierarchyOptions()
-  if (next.topic && !options.topics.includes(next.topic)) next = { ...next, topic: '' }
-  return next
+  return sanitizeCascadeValues(normalized, buildSourceFilterCascade(catalog))
 }
 
 export function activeSourceFilters(filters = {}) {

@@ -25,6 +25,8 @@ import {
 import { usePaperGenerator, usePaperDelete, usePaperDuplicate, usePaperCreate, usePaperRegenerate, usePaperArchive } from '@/services/extra'
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
+import { useFilterCascade } from '@/hooks/use-filter-cascade'
+import { buildPaperGeneratorCascade } from './paper-generator-cascade'
 import {
   PaperCard, PaperPreviewDialog, PaperDeleteDialog, SharePaperDialog,
   QuestionEditDialog, QuestionReplaceDialog, PaperQualityPanel, PaperPrintPreview, ShareHistoryList,
@@ -253,24 +255,10 @@ function Section({ n, title, subtitle, children, right }) {
 function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = null }) {
   const { data: paperData, isLoading, isError, refetch } = usePaperGenerator()
   const [searchParams] = useSearchParams()
-  /* Phase 6 — re-test prefill: ?mode=&exam=&subject=&chapter=&topic=&difficulty=&count=&duration=&marks=&intervention= */
+  /* Phase 6 — re-test prefill: ?mode=&exam=&subject=&chapter=&topic=&difficulty=&count=&duration=&marks=&intervention=
+     Prefill happens through state initializers so the first render is
+     already consistent (no effect-after-mount flash, no stale cascade). */
   const interventionId = searchParams.get('intervention') ?? null
-  useEffect(() => {
-    const sp = searchParams
-    const modeParam = sp.get('mode')
-    if (modeParam === 'Competitive') setMode('Competitive')
-    else if (modeParam === 'University') setMode('University')
-    if (sp.get('exam') === 'JEE' || sp.get('exam') === 'NEET') setExam(sp.get('exam'))
-    if (sp.get('subject') && sp.get('subject') !== 'All subjects') setSubject(sp.get('subject'))
-    if (sp.get('chapter') && sp.get('chapter') !== 'All chapters') setChapter(sp.get('chapter'))
-    if (sp.get('topic') && sp.get('topic') !== 'All topics') setTopic(sp.get('topic'))
-    if (sp.get('difficulty')) setDifficulty(sp.get('difficulty'))
-    if (sp.get('count')) setQuestionCount(sp.get('count'))
-    if (sp.get('duration')) setDuration(sp.get('duration'))
-    if (sp.get('marks')) setMarks(sp.get('marks'))
-    if (sp.get('title')) setTitle(sp.get('title'))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
   const { mutateAsync: deletePaper } = usePaperDelete()
   const { mutateAsync: duplicatePaper } = usePaperDuplicate()
   const { mutateAsync: createPaper } = usePaperCreate()
@@ -279,20 +267,38 @@ function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = nu
   const [overlay, setOverlay] = useState({ added: [], removed: [] })
 
   /* ---- form state ---- */
-  const [mode, setMode] = useState('University')
-  const [title, setTitle] = useState('')
+  const [mode, setMode] = useState(() => (searchParams.get('mode') === 'Competitive' ? 'Competitive' : 'University'))
+  const [title, setTitle] = useState(() => searchParams.get('title') ?? '')
   const [paperType, setPaperType] = useState('Mid Semester')
   const [program, setProgram] = useState('B.Tech — CSE')
-  const [course, setCourse] = useState('CS501 — DSA')
-  const [subject, setSubject] = useState('All subjects')
-  const [chapter, setChapter] = useState('All chapters')
-  const [topic, setTopic] = useState('All topics')
-  const [exam, setExam] = useState('JEE')
-  const [marks, setMarks] = useState('50')
-  const [duration, setDuration] = useState('120')
-  const [questionCount, setQuestionCount] = useState('Auto')
+  const [exam, setExam] = useState(() => (searchParams.get('exam') === 'NEET' ? 'NEET' : 'JEE'))
+  const [marks, setMarks] = useState(() => searchParams.get('marks') ?? '50')
+  const [duration, setDuration] = useState(() => searchParams.get('duration') ?? '120')
+  const [questionCount, setQuestionCount] = useState(() => searchParams.get('count') ?? 'Auto')
   const [qTypes, setQTypes] = useState(['MCQ', 'Short Answer', 'Long Answer'])
-  const [difficulty, setDifficulty] = useState('Mixed')
+  const [difficulty, setDifficulty] = useState(() => searchParams.get('difficulty') ?? 'Mixed')
+
+  /* ---- cascading academic scope: Course → Subject → Chapter → Topic ----
+     Declared per feature (paper-generator-cascade.js) and validated by the
+     shared cascade engine. URL-prefilled values are sanitized against the
+     datasets once they load — an invalid ?subject= can never survive. */
+  const cfg = paperData?.config ?? null
+  const compQuestions = intelData?.derived?.competitiveQuestionIntelligence?.pyqRecords ?? []
+  const bankQuestions = intelData?.datasets?.questionBank?.questions ?? []
+  const cascadeConfig = useMemo(
+    () => ({
+      ...buildPaperGeneratorCascade({ mode, exam, cfg, bankQuestions, compQuestions }),
+      initialValues: {
+        course: 'CS501 — DSA',
+        subject: searchParams.get('subject') ?? 'All subjects',
+        chapter: searchParams.get('chapter') ?? 'All chapters',
+        topic: searchParams.get('topic') ?? 'All topics',
+      },
+    }),
+    [mode, exam, cfg, bankQuestions, compQuestions, searchParams],
+  )
+  const { values: scopeValues, options: scopeOptions, apply: applyScope } = useFilterCascade(cascadeConfig)
+  const { course, subject, chapter, topic } = scopeValues
   const [bloomPreset, setBloomPreset] = useState('Balanced')
   const [weightagePreset, setWeightagePreset] = useState('Balanced chapters')
   const [customWeights, setCustomWeights] = useState({})
@@ -331,10 +337,12 @@ function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = nu
       setTitle(editPaper.title ?? '')
       setMode(editPaper.mode ?? 'University')
       setPaperType(editPaper.paperType ?? editPaper.examType ?? 'Mid Semester')
-      setCourse(editPaper.course ? `${editPaper.course} — ${editPaper.subject ?? ''}`.trim() : 'CS501 — DSA')
-      setSubject(editPaper.subject ?? 'All subjects')
-      setChapter(editPaper.chapter ?? 'All chapters')
-      setTopic(editPaper.topic ?? 'All topics')
+      applyScope({
+        course: editPaper.course ? `${editPaper.course} — ${editPaper.subject ?? ''}`.trim() : 'CS501 — DSA',
+        subject: editPaper.subject ?? 'All subjects',
+        chapter: editPaper.chapter ?? 'All chapters',
+        topic: editPaper.topic ?? 'All topics',
+      })
       setExam(editPaper.exam ?? 'JEE')
       setMarks(String(editPaper.totalMarks ?? 50))
       setDuration(String(editPaper.duration ?? 120))
@@ -358,24 +366,13 @@ function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = nu
   if (isLoading) return <DashboardSkeleton cards={3} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
-  const cfg = paperData.config
-  const compQuestions = intelData?.derived?.competitiveQuestionIntelligence?.pyqRecords ?? []
-  const bankQuestions = intelData?.datasets?.questionBank?.questions ?? []
-
-  /* ---- dependent option lists ---- */
-  const compSubjects = (cfg.competitiveSubjects ?? {})[exam] ?? []
-  const examFamily = exam === 'NEET' ? 'NEET UG' : 'JEE Main'
-  const scopeQuestions = mode === 'Competitive'
-    ? compQuestions.filter((q) => q.exam === examFamily)
-    : bankQuestions
-  const compChapters = [...new Set(scopeQuestions.filter((q) => subject === 'All subjects' || q.subject === subject).map((q) => q.chapter))]
-  const compTopics = [...new Set(scopeQuestions.filter((q) => (subject === 'All subjects' || q.subject === subject) && (chapter === 'All chapters' || q.chapter === chapter)).map((q) => q.topic))]
-  const universityChapters = [...new Set(bankQuestions.filter((q) => subject === 'All subjects' || q.subject === subject).map((q) => q.chapter))]
+  /* ---- dependent option lists (derived by the shared cascade engine) ---- */
+  const scopeChapterList = scopeOptions.chapter
 
   const toggleQType = (t) => setQTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
   const TYPE_OPTIONS = mode === 'Competitive' ? ['MCQ', 'Integer', 'Numerical', 'Assertion Reason', 'Case Based'] : ['MCQ', 'Short Answer', 'Long Answer', 'Numerical', 'Assertion Reason', 'Case Based']
 
-  const resetFilters = () => { setSubject('All subjects'); setChapter('All chapters'); setTopic('All topics'); setInsufficient(null) }
+  const resetFilters = () => { applyScope({ subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }); setInsufficient(null) }
 
   const handleDemoGenerate = () => {
     if (!title.trim()) { toast.error('Paper name required', 'Give the paper a name before generating.'); return }
@@ -473,7 +470,6 @@ function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = nu
     }
   }
 
-  const scopeChapterList = mode === 'Competitive' ? compChapters : universityChapters
   const paper = generated?.paper
 
   return (
@@ -519,7 +515,7 @@ function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = nu
                 {['JEE', 'NEET'].map((e) => (
                   <button
                     key={e}
-                    onClick={() => { setExam(e); resetFilters(); setGenerated(null) }}
+                    onClick={() => { setExam(e); setGenerated(null) }}
                     className={`flex-1 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${exam === e ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
                   >
                     {e}
@@ -550,27 +546,27 @@ function PaperGeneratorTab({ data: intelData, editPaper = null, onClearEdit = nu
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           {mode === 'University' && (
             <Field label="Course">
-              <Select value={course} onValueChange={(v) => { setCourse(v); setSubject(v.split(' ')[0] ?? 'All subjects'); setChapter('All chapters'); setTopic('All topics'); setGenerated(null) }}>
-                {(cfg.courses ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              <Select value={course} onValueChange={(v) => { applyScope({ course: v, subject: v.split(' ')[0] ?? 'All subjects' }); setGenerated(null) }} group="paper-generator">
+                {scopeOptions.course.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </Select>
             </Field>
           )}
           <Field label="Subject">
-            <Select value={subject} onValueChange={(v) => { setSubject(v); setChapter('All chapters'); setTopic('All topics'); setGenerated(null) }}>
+            <Select value={subject} onValueChange={(v) => { applyScope({ subject: v }); setGenerated(null) }} group="paper-generator">
               <SelectItem value="All subjects">All subjects</SelectItem>
-              {(mode === 'Competitive' ? compSubjects : [...new Set(bankQuestions.map((q) => q.subject))]).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {scopeOptions.subject.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Chapter">
-            <Select value={chapter} onValueChange={(v) => { setChapter(v); setTopic('All topics'); setGenerated(null) }}>
+            <Select value={chapter} onValueChange={(v) => { applyScope({ chapter: v }); setGenerated(null) }} group="paper-generator">
               <SelectItem value="All chapters">All chapters</SelectItem>
-              {(mode === 'Competitive' ? compChapters : universityChapters).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {scopeOptions.chapter.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Topic">
-            <Select value={topic} onValueChange={(v) => { setTopic(v); setGenerated(null) }}>
+            <Select value={topic} onValueChange={(v) => { applyScope({ topic: v }); setGenerated(null) }} group="paper-generator">
               <SelectItem value="All topics">All topics</SelectItem>
-              {(mode === 'Competitive' ? compTopics : []).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              {scopeOptions.topic.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </Select>
           </Field>
           {mode === 'Competitive' && (

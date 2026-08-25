@@ -13,6 +13,8 @@ import { motion } from 'framer-motion'
 import { BookOpen, ChevronLeft, ChevronRight, Eye, Search, Sparkles, Target } from 'lucide-react'
 import { Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, Select, SelectItem } from '@/components/ui'
 import { cn } from '@/utils/cn'
+import { useFilterCascade } from '@/hooks/use-filter-cascade'
+import { buildCompetitiveBrowserCascade, browserExamList } from './competitive-browser-cascade'
 
 const DIFF_STYLE = { Easy: 'success', Medium: 'warning', Hard: 'danger' }
 const PAGE_SIZE = 8
@@ -91,10 +93,23 @@ export function CompetitiveQuestionBrowser({
   exams = [], defaultExam = null, showExamFilter = true, badge = null,
   defaultSubject = null, defaultChapter = null, defaultQuery = null,
 }) {
-  const [exam, setExam] = useState(defaultExam ?? (exams[0] ?? 'All'))
-  const [subject, setSubject] = useState(defaultSubject ?? 'All')
-  const [chapter, setChapter] = useState(defaultChapter ?? 'All')
-  const [topic, setTopic] = useState('All')
+  /* Exam → Subject → Chapter → Topic cascade: declared per feature
+     (competitive-browser-cascade.js), validated by the shared engine.
+     Year / Difficulty / Type / search stay independent. */
+  const cascadeConfig = useMemo(
+    () => ({
+      ...buildCompetitiveBrowserCascade({ questions, exams }),
+      initialValues: {
+        exam: defaultExam ?? (exams[0] ?? 'All'),
+        subject: defaultSubject ?? 'All',
+        chapter: defaultChapter ?? 'All',
+        topic: 'All',
+      },
+    }),
+    [questions, exams, defaultExam, defaultSubject, defaultChapter],
+  )
+  const { values, options, set } = useFilterCascade(cascadeConfig)
+  const { exam, subject, chapter, topic } = values
   const [year, setYear] = useState('All')
   const [difficulty, setDifficulty] = useState('All')
   const [type, setType] = useState('All')
@@ -102,12 +117,9 @@ export function CompetitiveQuestionBrowser({
   const [page, setPage] = useState(0)
   const [detail, setDetail] = useState(null)
 
-  const examList = exams.length ? exams : [...new Set(questions.map((q) => q.exam))]
+  const examList = browserExamList(questions, exams)
   const effectiveExam = exam === 'All' && examList.length === 1 ? examList[0] : exam
 
-  const subjects = useMemo(() => [...new Set(questions.filter((q) => effectiveExam === 'All' || q.exam === effectiveExam).map((q) => q.subject))], [questions, effectiveExam])
-  const chapters = useMemo(() => [...new Set(questions.filter((q) => (effectiveExam === 'All' || q.exam === effectiveExam) && (subject === 'All' || q.subject === subject)).map((q) => q.chapter))], [questions, effectiveExam, subject])
-  const topics = useMemo(() => [...new Set(questions.filter((q) => (effectiveExam === 'All' || q.exam === effectiveExam) && (subject === 'All' || q.subject === subject) && (chapter === 'All' || q.chapter === chapter)).map((q) => q.topic))], [questions, effectiveExam, subject, chapter])
   const years = useMemo(() => [...new Set(questions.filter((q) => (effectiveExam === 'All' || q.exam === effectiveExam)).map((q) => q.year))].sort(), [questions, effectiveExam])
   const types = useMemo(() => [...new Set(questions.map((q) => q.questionType))], [questions])
 
@@ -126,13 +138,12 @@ export function CompetitiveQuestionBrowser({
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
 
-  const resetPage = (fn) => (v) => { fn(v); setPage(0) }
-  const select = (value, list, fallback) => (list.includes(value) ? value : fallback)
+  const updateScope = (key) => (v) => { set(key, v); setPage(0) }
 
   const filterRow = (label, value, onChange, options, placeholder) => (
     <div className="min-w-0">
       <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
-      <Select value={value} onValueChange={onChange} placeholder={placeholder}>
+      <Select value={value} onValueChange={onChange} placeholder={placeholder} group="competitive-browser" ariaLabel={label + ' filter'}>
         {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
       </Select>
     </div>
@@ -151,13 +162,13 @@ export function CompetitiveQuestionBrowser({
 
       {/* filters */}
       <div className="grid grid-cols-2 gap-2.5 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm md:grid-cols-4 xl:grid-cols-8 dark:border-slate-800 dark:bg-slate-900">
-        {showExamFilter && examList.length > 1 && filterRow('Exam', effectiveExam, resetPage(setExam), ['All', ...examList], 'Exam')}
-        {filterRow('Subject', subject, (v) => { setSubject(select(v, subjects, 'All')); setChapter('All'); setTopic('All'); setPage(0) }, ['All', ...subjects], 'Subject')}
-        {filterRow('Chapter', chapter, (v) => { setChapter(select(v, chapters, 'All')); setTopic('All'); setPage(0) }, ['All', ...chapters], 'Chapter')}
-        {filterRow('Topic', topic, resetPage((v) => setTopic(select(v, topics, 'All'))), ['All', ...topics], 'Topic')}
-        {filterRow('Year', year, resetPage(setYear), ['All', ...years], 'Year')}
-        {filterRow('Difficulty', difficulty, resetPage(setDifficulty), ['All', 'Easy', 'Medium', 'Hard'], 'Difficulty')}
-        {filterRow('Type', type, resetPage(setType), ['All', ...types], 'Type')}
+        {showExamFilter && examList.length > 1 && filterRow('Exam', effectiveExam, updateScope('exam'), ['All', ...examList], 'Exam')}
+        {filterRow('Subject', subject, updateScope('subject'), ['All', ...options.subject], 'Subject')}
+        {filterRow('Chapter', chapter, updateScope('chapter'), ['All', ...options.chapter], 'Chapter')}
+        {filterRow('Topic', topic, updateScope('topic'), ['All', ...options.topic], 'Topic')}
+        {filterRow('Year', year, (v) => { setYear(v); setPage(0) }, ['All', ...years], 'Year')}
+        {filterRow('Difficulty', difficulty, (v) => { setDifficulty(v); setPage(0) }, ['All', 'Easy', 'Medium', 'Hard'], 'Difficulty')}
+        {filterRow('Type', type, (v) => { setType(v); setPage(0) }, ['All', ...types], 'Type')}
         <div className="min-w-0">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">Search</p>
           <div className="relative">

@@ -50,7 +50,10 @@ function DialogContent({ className, children, hideClose = false, ...props }) {
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center" role="presentation">
+        /* data-portal-scope: dropdowns opened inside this dialog portal into
+           this fixed container (no transform here), so they stack above the
+           dialog content while staying under toasts/command palette. */
+        <div data-portal-scope className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center" role="presentation">
           <motion.div
             className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}

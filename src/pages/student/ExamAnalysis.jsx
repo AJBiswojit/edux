@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle, BrainCircuit, CheckCircle2, Download, FileText, ListChecks, MessageSquare,
@@ -12,6 +12,13 @@ import { AreaTrend, BarCompare, DonutChart } from '@/components/charts'
 import { ProgressRing } from '@/components/shared/progress-ring'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, CardTitle, Select, SelectItem, useToast } from '@/components/ui'
+import { useFilterCascade } from '@/hooks/use-filter-cascade'
+import {
+  buildExamAnalysisCascade,
+  competitiveExamFamilies,
+  examFamilyOf,
+  visibleExamOptions,
+} from './exam-analysis-filters'
 
 const MASTERY_STYLES = { Strong: 'success', Average: 'info', Weak: 'warning', Critical: 'danger' }
 const PRIORITY_STYLES = { Critical: 'danger', High: 'warning', Medium: 'info' }
@@ -97,7 +104,7 @@ function SelectionCard({
         {/* Fixed-width step columns — dropdowns float above, never clipped */}
         <div className="mt-5 grid items-end gap-5 md:grid-cols-2 xl:grid-cols-[minmax(300px,380px)_minmax(300px,380px)_minmax(190px,auto)]">
           <StepField n={1} title="Select exam" hint={context === 'University' ? 'university paper' : `${family === 'NEET' ? 'NEET' : 'JEE'} paper / mock`}>
-            <Select value={examId ?? ''} onValueChange={onExamChange} placeholder="Choose an exam attempt…">
+            <Select value={examId ?? ''} onValueChange={onExamChange} placeholder="Choose an exam attempt…" group="exam-analysis">
               {(options ?? []).map((o) => (
                 <SelectItem key={o.id} value={o.id}>
                   {o.category === 'University' ? '🏛️ ' : '🎯 '}{o.shortName} · {o.date}
@@ -107,7 +114,7 @@ function SelectionCard({
           </StepField>
 
           <StepField n={2} title="Select subject" hint={exam ? 'subjects of this exam' : 'pick an exam first'}>
-            <Select value={subject ?? ''} onValueChange={onSubjectChange} placeholder={examId ? 'Choose a subject…' : 'Pick an exam first'}>
+            <Select value={subject ?? ''} onValueChange={onSubjectChange} placeholder={examId ? 'Choose a subject…' : 'Pick an exam first'} group="exam-analysis">
               {(exam?.subjects ?? ['All Subjects']).map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
@@ -623,50 +630,45 @@ export function AnalysisDashboard({ data, subject }) {
 /* ------------------------------------------------------------------ */
 /* Page — workflow: select exam → select subject → generate.           */
 /* ------------------------------------------------------------------ */
-/* Exam-family detection for the competitive context (JEE vs NEET). */
-const examFamilyOf = (o) => (/NEET|Biology/i.test(`${o.shortName ?? ''} ${o.name ?? ''} ${o.pattern ?? ''}`) ? 'NEET' : 'JEE')
-
 function ExamAnalysis() {
   const { data: optionsData, isLoading, isError, refetch } = useExamAnalysisOptions()
-  const [context, setContext] = useState('University')
-  const [family, setFamily] = useState('All')
-  const [examId, setExamId] = useState('')
-  const [subject, setSubject] = useState('')
   const [generated, setGenerated] = useState(false)
   const [generating, setGenerating] = useState(false)
   const toast = useToast()
 
+  const options = optionsData?.items ?? []
+  /* Context isolation (Part 10): university and competitive options are
+     filtered before they ever reach the selectors — no mixed lists.
+     State cascades through the shared engine: context → family → exam →
+     subject; switching context/family clears any exam/subject that no
+     longer belongs to the new context (JEE/NEET/University stay isolated). */
+  const cascadeConfig = useMemo(
+    () => ({ ...buildExamAnalysisCascade(options), initialValues: { context: 'University', family: 'All', examId: '', subject: '' } }),
+    [options],
+  )
+  const { values, set } = useFilterCascade(cascadeConfig)
+  const { context, family, examId, subject } = values
+
   const { data: analysisData, isLoading: analysisLoading, isFetching: analysisFetching } = useExamAnalysisById(generated ? examId : null)
+  const availableFamilies = useMemo(() => competitiveExamFamilies(options), [options])
+  const visibleOptions = useMemo(() => visibleExamOptions(options, context, family), [options, context, family])
 
   if (isLoading) return <DashboardSkeleton cards={2} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
-  const options = optionsData?.items ?? []
-  /* Context isolation (Part 10): university and competitive options are
-     filtered before they ever reach the selectors — no mixed lists. */
-  const availableFamilies = [...new Set(options.filter((o) => o.category !== 'University').map(examFamilyOf))]
-  const visibleOptions = context === 'University'
-    ? options.filter((o) => o.category === 'University')
-    : options.filter((o) => o.category !== 'University' && (family === 'All' || examFamilyOf(o) === family))
   const selectedExam = visibleOptions.find((o) => o.id === examId)
 
   const handleContextChange = (c) => {
-    setContext(c)
-    setFamily('All')
-    setExamId('')
-    setSubject('')
+    set('context', c)
     setGenerated(false)
   }
   const handleFamilyChange = (f) => {
-    setFamily(f)
-    setExamId('')
-    setSubject('')
+    set('family', f)
     setGenerated(false)
   }
 
   const handleExamChange = (id) => {
-    setExamId(id)
-    setSubject('')
+    set('examId', id)
     setGenerated(false)
   }
 
@@ -721,7 +723,7 @@ function ExamAnalysis() {
         onContextChange={handleContextChange}
         onFamilyChange={handleFamilyChange}
         onExamChange={handleExamChange}
-        onSubjectChange={(s) => { setSubject(s); setGenerated(false) }}
+        onSubjectChange={(s) => { set('subject', s); setGenerated(false) }}
         onGenerate={handleGenerate}
         generating={generating}
         hasGenerated={generated}
