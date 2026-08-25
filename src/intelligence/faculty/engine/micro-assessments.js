@@ -173,11 +173,16 @@ export function findMicroSource(id) {
 
 export function filterMicroSources(filters = {}, sources = microAssessmentSources) {
   let items = [...sources]
-  const domain = normalizeMicroDomain(filters.domain)
-  const examFamily = normalizeExamFamily(filters.examFamily)
-  const sourceType = filters.sourceType
-  const subject = String(filters.subject ?? '').trim()
-  const chapter = String(filters.chapter ?? '').trim()
+  const optionalFilter = (value) => {
+    const normalized = String(value ?? '').trim()
+    return !normalized || normalized.toLowerCase().startsWith('all') ? '' : normalized
+  }
+  const domain = optionalFilter(filters.domain) ? normalizeMicroDomain(optionalFilter(filters.domain)) : null
+  const examFamily = optionalFilter(filters.examFamily) ? normalizeExamFamily(optionalFilter(filters.examFamily)) : null
+  const sourceType = optionalFilter(filters.sourceType)
+  const subject = optionalFilter(filters.subject)
+  const chapter = optionalFilter(filters.chapter)
+  const topic = optionalFilter(filters.topic)
   const search = String(filters.search ?? '').trim().toLowerCase()
   if (domain) items = items.filter((source) => normalizeMicroDomain(source.domain) === domain)
   /* Exam family is meaningful only inside Competitive. This prevents a
@@ -185,9 +190,10 @@ export function filterMicroSources(filters = {}, sources = microAssessmentSource
   if (examFamily) items = items.filter((source) => normalizeMicroDomain(source.domain) === 'competitive' && source.examFamily === examFamily)
   if (subject && subject !== 'All') items = items.filter((source) => source.subject === subject)
   if (chapter && chapter !== 'All') items = items.filter((source) => source.chapter === chapter)
+  if (topic && topic !== 'All') items = items.filter((source) => source.topic === topic)
   if (sourceType && sourceType !== 'All') items = items.filter((source) => source.sourceType === sourceType)
   if (search) {
-    items = items.filter((source) => [source.title, source.subject, source.chapter, source.topic, source.sourceType, source.examFamily]
+    items = items.filter((source) => [source.title, source.subject, source.chapter, source.topic, source.sourceType, source.examFamily, source.content]
       .filter(Boolean).join(' ').toLowerCase().includes(search))
   }
   return items
@@ -510,6 +516,7 @@ export function sourceFilterOptions(sources = microAssessmentSources) {
     examFamilies: [...new Set(sources.map((source) => source.examFamily).filter(Boolean))],
     subjects: [...new Set(sources.map((source) => source.subject))],
     chapters: [...new Set(sources.map((source) => source.chapter))],
+    topics: [...new Set(sources.map((source) => source.topic))],
     sourceTypes: [...new Set(sources.map((source) => source.sourceType))],
     questionTypes: QUESTION_TYPES,
   }

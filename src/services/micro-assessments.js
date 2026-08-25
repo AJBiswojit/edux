@@ -8,6 +8,7 @@ import request from '@/api/client'
 export const useMicroAssessmentSources = (params = {}) => useQuery({
   queryKey: ['faculty', 'micro-assessments', 'sources', params],
   queryFn: () => request({ url: '/faculty/micro-assessments/sources', params }).then((response) => response.data),
+  placeholderData: (previousData) => previousData,
 })
 
 export const useMicroAssessmentSource = (id) => useQuery({

@@ -1,9 +1,12 @@
-import { BookOpen, Check, FileText, Filter, Library, Search, Sparkles } from 'lucide-react'
+import { useEffect, useMemo } from 'react'
+import { BookOpen, Check, FileText, Filter, Library, Search, Sparkles, X } from 'lucide-react'
 import { Badge, Button, Card, Field, Input, Select, SelectItem, Textarea } from '@/components/ui'
 import { EmptyState } from '@/components/shared/empty-state'
+import { activeSourceFilters, deriveSourceFilterOptions, sanitizeSourceFilters, sourceMatchesFilters } from './source-library-filters'
 
 const DOMAIN_LABELS = { university: 'University', competitive: 'Competitive' }
 const DOMAIN_BADGES = { university: 'info', competitive: 'warning' }
+const INITIAL_FILTERS = { search: '', domain: '', examFamily: '', subject: '', chapter: '', topic: '', sourceType: '' }
 
 function SourceContext({ source }) {
   return (
@@ -42,11 +45,58 @@ export function SourceCard({ source, onUseSource }) {
   )
 }
 
-export function SourceLibrary({ data, filters, onFiltersChange, onUseSource, onStartCustom }) {
-  const filterOptions = data?.filters ?? {}
-  const update = (key, value) => onFiltersChange((current) => ({ ...current, [key]: value }))
-  const items = data?.items ?? []
+function FilterSelect({ label, value, placeholder, options = [], onChange, disabled = false, helper }) {
+  const current = value || 'All'
+  /* Keep an active value visible even in a deliberate no-match state caused by
+     Search or Source Type. It remains selected and can be cleared to All. */
+  const visibleOptions = current !== 'All' && !options.includes(current) ? [current, ...options] : options
+  return (
+    <div className="min-w-0 space-y-1">
+      <p className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400">{label}</p>
+      <Select
+        value={current}
+        onValueChange={(next) => onChange(next === 'All' ? '' : next)}
+        disabled={disabled}
+        active={current !== 'All'}
+        collision
+        ariaLabel={`${label} filter`}
+      >
+        <SelectItem value="All">{placeholder}</SelectItem>
+        {visibleOptions.map((option) => <SelectItem key={option} value={option}>{option === 'university' ? 'University' : option === 'competitive' ? 'Competitive' : option}</SelectItem>)}
+      </Select>
+      {helper && <p className="text-[10px] font-medium text-slate-400">{helper}</p>}
+    </div>
+  )
+}
+
+function SearchFilter({ value, onChange }) {
+  return (
+    <div className="min-w-0 space-y-1 lg:col-span-2">
+      <label htmlFor="micro-source-search" className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400">Search</label>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        <Input id="micro-source-search" value={value} onChange={(event) => onChange(event.target.value)} placeholder="Search title, subject, chapter, topic or content…" className={`h-11 pl-9 text-xs ${value ? 'pr-9 border-indigo-300 bg-indigo-50/30 dark:border-indigo-500/50 dark:bg-indigo-500/5' : ''}`} aria-label="Search source library" />
+        {value && <button type="button" onClick={() => onChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:hover:bg-slate-700" aria-label="Clear search"><X className="h-3.5 w-3.5" /></button>}
+      </div>
+    </div>
+  )
+}
+
+export function SourceLibrary({ data, filters = INITIAL_FILTERS, onFiltersChange, onUseSource, onStartCustom, selectedSourceId, onSourceNoLongerVisible }) {
+  const catalog = data?.filterCatalog ?? data?.items ?? []
+  const options = deriveSourceFilterOptions(filters, catalog)
+  const active = activeSourceFilters(filters)
+  const update = (key, value) => {
+    const proposed = { ...filters, [key]: value }
+    onFiltersChange(sanitizeSourceFilters(proposed, catalog))
+  }
+  const clearAll = () => onFiltersChange({ ...INITIAL_FILTERS })
+  const items = useMemo(() => catalog.length ? catalog.filter((source) => sourceMatchesFilters(source, filters)) : (data?.items ?? []), [catalog, filters, data?.items])
   const domain = filters.domain
+  useEffect(() => {
+    if (!selectedSourceId || !active.length || !onSourceNoLongerVisible) return
+    if (!items.some((source) => source.id === selectedSourceId)) onSourceNoLongerVisible()
+  }, [active.length, items, onSourceNoLongerVisible, selectedSourceId])
   return (
     <Card className="p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -58,38 +108,23 @@ export function SourceLibrary({ data, filters, onFiltersChange, onUseSource, onS
         <div className="flex flex-wrap items-center gap-2"><Badge variant="gradient" size="sm">{data?.total ?? 10} sample sources</Badge>{onStartCustom && <Button type="button" size="sm" variant="outline" onClick={onStartCustom}><FileText className="h-3 w-3" /> Paste custom</Button>}</div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <div className="relative xl:col-span-2">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-          <Input value={filters.search} onChange={(event) => update('search', event.target.value)} placeholder="Search source, subject or topic…" className="h-10 pl-9 text-xs" aria-label="Search source library" />
-        </div>
-        <Select value={filters.domain || 'All'} onValueChange={(value) => onFiltersChange((current) => ({ ...current, domain: value === 'All' ? '' : value, examFamily: value === 'competitive' ? current.examFamily : '' }))}>
-          <SelectItem value="All">All domains</SelectItem>
-          {(filterOptions.domains ?? ['university', 'competitive']).map((value) => <SelectItem key={value} value={value}>{DOMAIN_LABELS[value] ?? value}</SelectItem>)}
-        </Select>
-        {domain === 'competitive' ? (
-          <Select value={filters.examFamily || 'All'} onValueChange={(value) => update('examFamily', value === 'All' ? '' : value)}>
-            <SelectItem value="All">All exams</SelectItem>
-            {(filterOptions.examFamilies ?? ['JEE', 'NEET']).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-          </Select>
-        ) : <div className="hidden lg:block" aria-hidden="true" />}
-        <Select value={filters.subject || 'All'} onValueChange={(value) => update('subject', value === 'All' ? '' : value)}>
-          <SelectItem value="All">All subjects</SelectItem>
-          {(filterOptions.subjects ?? []).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-        </Select>
-        <Select value={filters.chapter || 'All'} onValueChange={(value) => update('chapter', value === 'All' ? '' : value)}>
-          <SelectItem value="All">All chapters</SelectItem>
-          {(filterOptions.chapters ?? []).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-        </Select>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <SearchFilter value={filters.search} onChange={(value) => update('search', value)} />
+        <FilterSelect label="Domain" value={filters.domain} placeholder="All domains" options={options.domains} onChange={(value) => update('domain', value)} />
+        {domain === 'competitive' && <FilterSelect label="Exam Family" value={filters.examFamily} placeholder="All competitive exams" options={options.examFamilies} onChange={(value) => update('examFamily', value)} />}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Filter className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-        <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400">Source type</span>
-        <Select value={filters.sourceType || 'All'} onValueChange={(value) => update('sourceType', value === 'All' ? '' : value)}>
-          <SelectItem value="All">All types</SelectItem>
-          {(filterOptions.sourceTypes ?? []).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-        </Select>
-        <span className="text-[11px] font-semibold text-slate-400">{items.length} matching source{items.length === 1 ? '' : 's'}</span>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <FilterSelect label="Subject" value={filters.subject} placeholder="All subjects" options={options.subjects} onChange={(value) => update('subject', value)} />
+        <FilterSelect label="Chapter" value={filters.chapter} placeholder="All chapters" options={options.chapters} onChange={(value) => update('chapter', value)} />
+        <FilterSelect label="Topic" value={filters.topic} placeholder="All topics" options={options.topics} onChange={(value) => update('topic', value)} disabled={!filters.chapter} helper={!filters.chapter ? 'Select a chapter first' : undefined} />
+        <FilterSelect label="Source Type" value={filters.sourceType} placeholder="All source types" options={options.sourceTypes} onChange={(value) => update('sourceType', value)} />
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400"><Filter className="h-3.5 w-3.5" /> {active.length ? `${active.length} filter${active.length === 1 ? '' : 's'} active` : 'No filters active'}</span>
+        {active.length > 0 && <div className="flex min-w-0 flex-wrap gap-1.5">{active.map((item) => <span key={item.key} className="inline-flex max-w-full items-center gap-1 rounded-lg bg-indigo-50 px-2 py-1 text-[10.5px] font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"><span className="text-indigo-400">{item.label}:</span><span className="max-w-[12rem] truncate" title={String(item.value)}>{item.value}</span></span>)}</div>}
+        {active.length > 0 && <Button type="button" size="sm" variant="ghost" className="ml-auto h-7 text-[11px] text-indigo-600 dark:text-indigo-300" onClick={clearAll}>Clear all filters</Button>}
+        <span className="ml-auto text-[11px] font-semibold text-slate-400">{items.length} matching source{items.length === 1 ? '' : 's'}</span>
       </div>
 
       {items.length ? (
@@ -97,7 +132,7 @@ export function SourceLibrary({ data, filters, onFiltersChange, onUseSource, onS
           {items.map((source) => <SourceCard key={source.id} source={source} onUseSource={onUseSource} />)}
         </div>
       ) : (
-        <div className="mt-4"><EmptyState compact icon={BookOpen} title="No sources match these filters" description="Try a different domain, exam family, subject or source type." /></div>
+        <div className="mt-4"><EmptyState compact icon={BookOpen} title="No sources match these filters" description="Try changing or clearing one of your filters." action={active.length > 0 ? <Button type="button" size="sm" variant="outline" onClick={clearAll}>Clear all filters</Button> : undefined} /></div>
       )}
     </Card>
   )

@@ -80,7 +80,7 @@ function AssessmentHistory({ items, onOpen }) {
 function MicroAssessmentStudio() {
   const toast = useToast()
   const navigate = useNavigate()
-  const [sourceFilters, setSourceFilters] = useState({ domain: '', examFamily: '', subject: '', chapter: '', sourceType: '', search: '' })
+  const [sourceFilters, setSourceFilters] = useState({ domain: '', examFamily: '', subject: '', chapter: '', topic: '', sourceType: '', search: '' })
   const { data: sourcesData, isLoading: sourcesLoading, isError: sourcesError, refetch: refetchSources } = useMicroAssessmentSources(sourceFilters)
   const { data: assessmentHistory } = useFacultyMicroAssessments()
   const [draft, setDraft] = useState(null)
@@ -142,6 +142,17 @@ function MicroAssessmentStudio() {
     ? `${studentIds.length} selected students`
     : `${audience}: ${(participantData?.batches ?? []).filter((batch) => batchIds.includes(batch.id)).map((batch) => batch.name).join(', ') || 'no batch selected'}`
 
+  const clearSelectedSource = () => {
+    setSelectedLibraryId(null)
+    setDraft(null)
+    setUnderstanding(null)
+    setQuestions([])
+    setCoverage([])
+    setDiversity(0)
+    setSentAssessment(null)
+    setInterventionCreated(false)
+    toast.info('Source selection cleared', 'The selected source no longer matches the active library filters.')
+  }
   const useSource = (source) => {
     setSelectedLibraryId(source.id)
     setDraft({ ...source })
@@ -232,7 +243,7 @@ function MicroAssessmentStudio() {
     <WorkspaceStepper activeStep={activeStep} completed={completedStep} onSelect={setActiveStep} />
     <div className="mt-5 space-y-5">
       {!sentAssessment && <AssessmentHistory items={assessmentHistory?.items} onOpen={restoreAssessment} />}
-      <SourceLibrary data={sourcesData} filters={sourceFilters} onFiltersChange={setSourceFilters} onUseSource={useSource} onStartCustom={startCustom} />
+      <SourceLibrary data={sourcesData} filters={sourceFilters} onFiltersChange={setSourceFilters} onUseSource={useSource} onStartCustom={startCustom} selectedSourceId={selectedLibraryId} onSourceNoLongerVisible={clearSelectedSource} />
       <div id="source-editor"><SourceEditor draft={draft} onChange={setDraft} errors={processErrors} onProcess={runProcess} processing={processing} processed={!!understanding} /></div>
       {processing && <ProcessingState stage={processingStage} />}
       {understanding && <UnderstandingPanel understanding={understanding} />}

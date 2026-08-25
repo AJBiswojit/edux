@@ -1,4 +1,6 @@
+import React from 'react'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { renderToString } from 'react-dom/server'
 import {
   MICRO_ASSESSMENT_COUNTS,
   buildMicroSource,
@@ -9,6 +11,8 @@ import {
   sameMicroContext,
 } from '../../src/intelligence/faculty/engine/micro-assessments.js'
 import { microAssessmentSources } from '../../src/datasets/faculty/micro-assessments.js'
+import { activeSourceFilters, deriveSourceFilterOptions, sanitizeSourceFilters, sourceMatchesFilters } from '../../src/components/micro-assessment-studio/source-library-filters.js'
+import { Select, SelectItem } from '../../src/components/ui/select.jsx'
 import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
 
 const { storage, clear } = installTestStorage()
@@ -66,8 +70,13 @@ describe('curated source contract and canonical context isolation', () => {
     const response = await get('/faculty/micro-assessments/sources', { domain: 'competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', sourceType: 'NCERT / Study Material' })
     expect(response.items).toHaveLength(1)
     expect(response.items[0].id).toBe('mas-jee-physics-rotational-motion')
+    expect(response.filters.subjects).toEqual(['Physics'])
+    expect(response.filters.chapters).toEqual(['Rotational Motion'])
+    expect(response.filters.topics).toEqual(['Torque and Angular Momentum'])
     const filtered = await get('/faculty/micro-assessments/sources', { domain: 'competitive', examFamily: 'NEET' })
     expect(filtered.items.every((source) => source.domain === 'competitive' && source.examFamily === 'NEET')).toBe(true)
+    expect(filtered.filters.subjects).toEqual(expect.arrayContaining(['Biology', 'Chemistry']))
+    expect(filtered.filters.subjects).not.toContain('Mathematics')
     expect(server.hasRouteHandler('get', '/faculty/micro-assessments/sources')).toBe(true)
     expect(server.hasRouteHandler('post', '/faculty/micro-assessments/process')).toBe(true)
     expect(server.hasRouteHandler('post', '/faculty/micro-assessments/generate')).toBe(true)
@@ -78,6 +87,74 @@ describe('curated source contract and canonical context isolation', () => {
     const response = await get('/faculty/micro-assessments/participants', { sourceId: 'mas-uni-physics-wave-particle', domain: 'university' })
     expect(response.students).toEqual([])
     expect(response.batches).toEqual([])
+  })
+})
+
+describe('connected Source Library filters', () => {
+  const catalog = microAssessmentSources.map(({ generatedQuestions: _generatedQuestions, ...metadata }) => metadata)
+  const base = { search: '', domain: '', examFamily: '', subject: '', chapter: '', topic: '', sourceType: '' }
+
+  it('derives downstream options from the selected canonical context', () => {
+    const jee = deriveSourceFilterOptions({ ...base, domain: 'competitive', examFamily: 'JEE' }, catalog)
+    expect(jee.examFamilies).toEqual(['JEE', 'NEET'])
+    expect(jee.subjects).toEqual(expect.arrayContaining(['Physics', 'Chemistry', 'Mathematics']))
+    expect(jee.subjects).not.toContain('Biology')
+    const neetPhysics = deriveSourceFilterOptions({ ...base, domain: 'competitive', examFamily: 'NEET', subject: 'Physics' }, catalog)
+    expect(neetPhysics.chapters).toEqual([])
+    expect(neetPhysics.topics).toEqual([])
+  })
+
+  it('derives subject, chapter and topic options in the hierarchy', () => {
+    const subject = deriveSourceFilterOptions({ ...base, domain: 'competitive', examFamily: 'JEE', subject: 'Physics' }, catalog)
+    expect(subject.chapters).toEqual(['Rotational Motion'])
+    expect(subject.topics).toEqual([])
+    const chapter = deriveSourceFilterOptions({ ...base, domain: 'competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion' }, catalog)
+    expect(chapter.topics).toEqual(['Torque and Angular Momentum'])
+  })
+
+  it('keeps Source Type independent while combining it with hierarchy filters', () => {
+    const options = deriveSourceFilterOptions({ ...base, domain: 'competitive', examFamily: 'JEE', sourceType: 'Study Material' }, catalog)
+    expect(options.subjects).toEqual(expect.arrayContaining(['Chemistry', 'Mathematics']))
+    expect(options.domains).toEqual(['competitive'])
+  })
+
+  it('resets invalid downstream values when a parent changes', () => {
+    const current = { ...base, domain: 'competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque and Angular Momentum' }
+    expect(sanitizeSourceFilters({ ...current, examFamily: 'NEET' }, catalog)).toMatchObject({ domain: 'competitive', examFamily: 'NEET', subject: '', chapter: '', topic: '' })
+    expect(sanitizeSourceFilters({ ...current, subject: 'Chemistry' }, catalog)).toMatchObject({ examFamily: 'JEE', subject: 'Chemistry', chapter: '', topic: '' })
+    expect(sanitizeSourceFilters({ ...current, chapter: 'Chemical Equilibrium' }, catalog)).toMatchObject({ subject: 'Physics', chapter: '', topic: '' })
+  })
+
+  it('does not clear valid hierarchy values just because search/source type creates no matches', () => {
+    const current = { ...base, domain: 'university', subject: 'Physics', chapter: 'Quantum Mechanics', topic: 'Wave-Particle Duality' }
+    const next = sanitizeSourceFilters({ ...current, search: 'torque' }, catalog)
+    expect(next).toMatchObject({ ...current, search: 'torque' })
+    expect(sourceMatchesFilters(microAssessmentSources[4], next)).toBe(false)
+  })
+
+  it('supports case-insensitive content search and combined final matching', () => {
+    expect(sourceMatchesFilters(microAssessmentSources[5], { ...base, domain: 'competitive', examFamily: 'JEE', subject: 'Physics', search: 'ANGULAR MOMENTUM' })).toBe(true)
+    expect(filterMicroSources({ domain: 'competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque and Angular Momentum', search: 'torque' })).toHaveLength(1)
+    expect(filterMicroSources({ domain: 'university', subject: 'Physics', sourceType: 'Textbook' })).toHaveLength(1)
+    expect(filterMicroSources({ domain: 'competitive', examFamily: 'JEE', sourceType: 'NCERT / Study Material' })).toHaveLength(1)
+    expect(filterMicroSources({ search: 'not-a-real-source' })).toHaveLength(0)
+  })
+
+  it('normalizes All placeholders, exposes active filters, and supports clear-all state', () => {
+    expect(sanitizeSourceFilters({ domain: 'All', examFamily: 'All competitive exams', subject: 'All subjects', chapter: 'All chapters', topic: 'All topics', sourceType: 'All source types' }, catalog)).toEqual(base)
+    const active = activeSourceFilters({ ...base, domain: 'university', subject: 'Physics', search: 'wave' })
+    expect(active.map((item) => item.key)).toEqual(['search', 'domain', 'subject'])
+    expect(sanitizeSourceFilters(base, catalog)).toEqual(base)
+  })
+
+  it('renders the selected filter value in the trigger, not a generic Select placeholder', () => {
+    const html = renderToString(React.createElement(Select, { value: 'Physics', ariaLabel: 'Subject filter', collision: true }, [
+      React.createElement(SelectItem, { key: 'all', value: 'All' }, 'All subjects'),
+      React.createElement(SelectItem, { key: 'physics', value: 'Physics' }, 'Physics'),
+    ]))
+    expect(html).toContain('Physics')
+    expect(html).toContain('Subject filter: Physics')
+    expect(html).not.toContain('Select…')
   })
 })
 

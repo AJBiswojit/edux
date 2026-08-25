@@ -110,15 +110,42 @@ function storedAssessment(id) {
 function studentIdFrom(params = {}, body = {}) {
   return params.studentId ?? params.student ?? body.studentId ?? 'u_stu_001'
 }
+function filterValue(value) {
+  const normalized = String(value ?? '').trim()
+  return !normalized || normalized.toLowerCase().startsWith('all') ? '' : normalized
+}
+function optionValues(filters, key) {
+  return [...new Set(filterMicroSources(filters, microAssessmentSources).map((source) => source[key]).filter(Boolean))]
+}
+function cascadingFilterOptions(params = {}) {
+  const independent = { search: params.search, sourceType: filterValue(params.sourceType) }
+  const domain = filterValue(params.domain).toLowerCase()
+  const examFamily = filterValue(params.examFamily).toUpperCase()
+  const context = { ...independent, domain: domain || undefined, examFamily: examFamily || undefined }
+  return {
+    domains: optionValues(independent, 'domain'),
+    examFamilies: domain === 'competitive' ? optionValues({ ...independent, domain: 'competitive' }, 'examFamily') : [],
+    subjects: optionValues(context, 'subject'),
+    chapters: optionValues({ ...context, subject: filterValue(params.subject) }, 'chapter'),
+    topics: filterValue(params.chapter) ? optionValues({ ...context, subject: filterValue(params.subject), chapter: filterValue(params.chapter) }, 'topic') : [],
+    sourceTypes: optionValues({ ...context, subject: filterValue(params.subject), chapter: filterValue(params.chapter), topic: filterValue(params.topic), sourceType: '' }, 'sourceType'),
+  }
+}
 
 /* ---------------- Source library ---------------- */
 defineRoute('get', '/faculty/micro-assessments/sources', ({ params }) => {
   const items = filterMicroSources(params ?? {}, microAssessmentSources)
+  /* The catalog is returned through the API boundary so the Source Library
+     can update counts/options immediately while the filtered request settles.
+     It is read-only UI data; the dataset itself is never mutated. */
+  const filterCatalog = microAssessmentSources
   return {
     items,
     count: items.length,
     total: microAssessmentSources.length,
-    filters: sourceFilterOptions(microAssessmentSources),
+    filterCatalog,
+    filters: cascadingFilterOptions(params),
+    allFilters: sourceFilterOptions(microAssessmentSources),
     domains: MICRO_ASSESSMENT_DOMAINS,
     examFamilies: MICRO_ASSESSMENT_EXAM_FAMILIES,
     sourceTypes: MICRO_ASSESSMENT_SOURCE_TYPES,
