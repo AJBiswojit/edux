@@ -58,7 +58,7 @@ function FilterSelect({ label, value, placeholder, options = [], onChange, disab
         onValueChange={(next) => onChange(next === 'All' ? '' : next)}
         disabled={disabled}
         active={current !== 'All'}
-        collision
+        group="source-library"
         ariaLabel={`${label} filter`}
       >
         <SelectItem value="All">{placeholder}</SelectItem>

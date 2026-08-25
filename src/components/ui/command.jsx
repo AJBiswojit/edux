@@ -104,7 +104,7 @@ function CommandDialog({ open, onOpenChange, children, className }) {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[110] flex items-start justify-center px-4 pt-[16vh]" role="presentation">
+        <div data-portal-scope className="fixed inset-0 z-[110] flex items-start justify-center px-4 pt-[16vh]" role="presentation">
           <motion.div
             className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}

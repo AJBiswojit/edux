@@ -12,6 +12,8 @@ import { ChartCard } from '@/components/shared/chart-card'
 import { BarCompare, DonutChart } from '@/components/charts'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Select, SelectItem, useToast } from '@/components/ui'
+import { useFilterCascade } from '@/hooks/use-filter-cascade'
+import { buildPyqFilterCascade } from './pyq-filter-cascade'
 import { formatRelative } from '@/utils/format'
 
 const UPLOAD_STATUS = { Processed: 'success', Processing: 'info', Failed: 'danger' }
@@ -60,31 +62,31 @@ function PYQFilterCard({ filters, values, onChange, onAnalyze, analyzing, hasAna
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div>
             {step(1, 'Class / Program')}
-            <Select value={values.program ?? ''} onValueChange={(v) => onChange({ program: v })} placeholder="Select program…">
+            <Select value={values.program ?? ''} onValueChange={(v) => onChange({ program: v })} group="pyq-filters" placeholder="Select program…">
               {(filters?.programs ?? []).map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
             </Select>
           </div>
           <div>
             {step(2, 'Subject')}
-            <Select value={values.subject ?? ''} onValueChange={(v) => onChange({ subject: v })} placeholder={values.program ? 'Select subject…' : 'Pick a program first'}>
+            <Select value={values.subject ?? ''} onValueChange={(v) => onChange({ subject: v })} group="pyq-filters" placeholder={values.program ? 'Select subject…' : 'Pick a program first'}>
               {subjects.map((s) => <SelectItem key={s.code} value={s.code}>{s.code} — {s.name}</SelectItem>)}
             </Select>
           </div>
           <div>
             {step(3, 'Chapter', 'optional')}
-            <Select value={values.chapter ?? ''} onValueChange={(v) => onChange({ chapter: v })} placeholder={values.subject ? 'All chapters…' : 'Pick a subject first'}>
+            <Select value={values.chapter ?? ''} onValueChange={(v) => onChange({ chapter: v })} group="pyq-filters" placeholder={values.subject ? 'All chapters…' : 'Pick a subject first'}>
               {(selectedSubject?.chapters ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </Select>
           </div>
           <div>
             {step(4, 'Topic', 'optional')}
-            <Select value={values.topic ?? ''} onValueChange={(v) => onChange({ topic: v })} placeholder={values.chapter ? 'All topics…' : 'Pick a chapter first'}>
+            <Select value={values.topic ?? ''} onValueChange={(v) => onChange({ topic: v })} group="pyq-filters" placeholder={values.chapter ? 'All topics…' : 'Pick a chapter first'}>
               {chapterTopics.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </Select>
           </div>
           <div>
             {step(5, 'Year range')}
-            <Select value={values.yearRange ?? ''} onValueChange={(v) => onChange({ yearRange: v })} placeholder="All years…">
+            <Select value={values.yearRange ?? ''} onValueChange={(v) => onChange({ yearRange: v })} group="pyq-filters" placeholder="All years…">
               {(filters?.yearRanges ?? []).map((y) => <SelectItem key={y.id} value={y.id}>{y.label}</SelectItem>)}
             </Select>
           </div>
@@ -488,7 +490,14 @@ export function PYQAnalysisContent({ toolbar = false }) {
   const { data: filtersData } = usePYQFilters()
   const { data: patternsData } = usePYQPatterns()
   const { data: qbData } = useQuestionBank()
-  const [values, setValues] = useState({ program: '', subject: '', chapter: '', topic: '', yearRange: '' })
+
+  /* Filter state: Program + Year range are INDEPENDENT (no declared data
+     dependency); Subject → Chapter → Topic cascade through the shared
+     engine so a changed subject can never leave a stale chapter/topic. */
+  const [independent, setIndependent] = useState({ program: '', yearRange: '' })
+  const cascadeConfig = useMemo(() => buildPyqFilterCascade(filtersData), [filtersData])
+  const { values: cascading, apply: applyCascading, reset: resetCascading } = useFilterCascade(cascadeConfig)
+  const values = { ...independent, ...cascading }
   const [analyzed, setAnalyzed] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -521,19 +530,23 @@ export function PYQAnalysisContent({ toolbar = false }) {
   if (isLoading) return <DashboardSkeleton cards={3} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
+  const CASCADING_KEYS = ['subject', 'chapter', 'topic']
   const handleChange = (patch) => {
     if (patch.reset) {
-      setValues({ program: '', subject: '', chapter: '', topic: '', yearRange: '' })
+      setIndependent({ program: '', yearRange: '' })
+      resetCascading()
       setAnalyzed(false)
       setSelectedQbIds([])
       return
     }
-    setValues((v) => {
-      const next = { ...v, ...patch }
-      if (patch.subject && patch.subject !== v.subject) { next.chapter = ''; next.topic = '' }
-      if (patch.chapter && patch.chapter !== v.chapter) next.topic = ''
-      return next
-    })
+    const independentPatch = {}
+    const cascadingPatch = {}
+    for (const [key, value] of Object.entries(patch)) {
+      if (CASCADING_KEYS.includes(key)) cascadingPatch[key] = value
+      else independentPatch[key] = value
+    }
+    if (Object.keys(independentPatch).length) setIndependent((prev) => ({ ...prev, ...independentPatch }))
+    if (Object.keys(cascadingPatch).length) applyCascading(cascadingPatch)
     setAnalyzed(false)
     setSelectedQbIds([])
   }
