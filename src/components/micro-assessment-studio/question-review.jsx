@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { Check, CheckCircle2, ChevronDown, FileQuestion, RefreshCw, Sparkles, Trash2, XCircle } from 'lucide-react'
+import { useEffect, useId, useState } from 'react'
+import { Check, CheckCircle2, FileQuestion, RefreshCw, Sparkles, Trash2, XCircle } from 'lucide-react'
 import { Badge, Button, Card, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea } from '@/components/ui'
 import { EmptyState } from '@/components/shared/empty-state'
+import { LETTERS, formatFacultyAnswer, presentationQuestionText } from '@/components/micro-assessment-studio/question-presentation.js'
 
 export const MICRO_QUESTION_TYPES = [
   'Short Answer', 'Fill in the Blank', 'Direct MCQ', 'Statement Based',
@@ -11,7 +12,6 @@ export const MICRO_QUESTION_TYPES = [
 export const MICRO_DIFFICULTIES = ['Easy', 'Medium', 'Hard']
 
 const DIFFICULTY_BADGE = { Easy: 'success', Medium: 'warning', Hard: 'danger' }
-const LETTERS = ['A', 'B', 'C', 'D']
 
 function ValidationList({ validation }) {
   const checks = [
@@ -20,8 +20,8 @@ function ValidationList({ validation }) {
     ['noDuplicate', 'No duplicate detected'],
   ]
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2 text-[10.5px] font-semibold dark:border-slate-800 dark:bg-slate-800/50" aria-label="Prototype AI Validation">
-      <span className="font-bold uppercase tracking-wider text-indigo-500">Prototype AI Validation</span>
+    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-medium text-slate-400" aria-label="AI validation">
+      <span className="font-semibold uppercase tracking-wider text-slate-400">AI validation</span>
       {checks.map(([key, label]) => (
         <span key={key} className={validation?.[key] ? 'inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400' : 'inline-flex items-center gap-1 text-amber-600 dark:text-amber-400'}>
           {validation?.[key] ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}{label}
@@ -71,49 +71,87 @@ function QuestionEditor({ question, open, onOpenChange, onSave }) {
   )
 }
 
+function AnswerReveal({ question }) {
+  const [revealed, setRevealed] = useState(false)
+  const panelId = useId()
+  const formatted = formatFacultyAnswer(question)
+  return (
+    <div className="mt-3">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-expanded={revealed}
+        aria-controls={panelId}
+        onClick={() => setRevealed((current) => !current)}
+      >
+        <Sparkles className="h-3 w-3" />
+        {revealed ? 'Hide answer' : 'Show answer'}
+      </Button>
+      <div
+        id={panelId}
+        hidden={!revealed}
+        className={`grid overflow-hidden transition-[grid-template-rows] duration-200 ${revealed ? 'mt-2 grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="min-h-0">
+          {revealed && (
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/90 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-800/60">
+              <p className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Answer</p>
+              <p className="mt-1 break-words text-[13px] font-semibold text-slate-900 dark:text-slate-100">{formatted || 'Faculty review required'}</p>
+              {question.explanation ? (
+                <>
+                  <p className="mt-3 text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Why</p>
+                  <p className="mt-1 break-words text-[12px] leading-relaxed text-slate-600 dark:text-slate-300">{question.explanation}</p>
+                </>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function QuestionCard({ question, index, onUpdate, onRegenerate, onDelete, regenerating }) {
   const [editorOpen, setEditorOpen] = useState(false)
-  const answerIndex = question.answerIndex ?? (question.options ?? []).findIndex((option) => option === question.correctAnswer)
+  const sourceLabel = question.sourceTitle || question.sourceReference || question.sourceId
   return (
     <article className="rounded-3xl border border-slate-200/70 bg-white p-4 shadow-card sm:p-5 dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <Badge variant="gradient" size="sm">Q{index + 1}</Badge>
-          <Badge variant="secondary" size="sm">{question.questionType}</Badge>
-          <Badge variant={DIFFICULTY_BADGE[question.difficulty] ?? 'secondary'} size="sm">{question.difficulty}</Badge>
-        </div>
-        <span className="text-[10.5px] font-semibold text-slate-400">{question.sourceId}</span>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <Badge variant="gradient" size="sm">Q{index + 1}</Badge>
+        <Badge variant="secondary" size="sm">{question.questionType}</Badge>
+        <Badge variant={DIFFICULTY_BADGE[question.difficulty] ?? 'secondary'} size="sm">{question.difficulty}</Badge>
       </div>
 
-      <p className="mt-3 text-[13.5px] font-semibold leading-relaxed text-slate-900 dark:text-slate-100">{question.question}</p>
+      <p className="mt-3 text-[13.5px] font-semibold leading-relaxed text-slate-900 dark:text-slate-100">{presentationQuestionText(question)}</p>
       {(question.options ?? []).length > 0 && (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {question.options.map((option, optionIndex) => (
-            <div key={optionIndex} className={`flex min-w-0 items-start gap-2 rounded-xl px-3 py-2 text-[12px] ${optionIndex === answerIndex ? 'bg-emerald-50 font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30' : 'bg-slate-50 text-slate-600 dark:bg-slate-800/70 dark:text-slate-300'}`}>
+            <div key={optionIndex} className="flex min-w-0 items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[12px] text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
               <span className="font-bold">{LETTERS[optionIndex]}.</span><span className="min-w-0 break-words">{option}</span>
             </div>
           ))}
         </div>
       )}
-      <div className="mt-3 rounded-2xl bg-slate-50 px-3.5 py-2.5 text-[11.5px] leading-relaxed text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-        <span className="font-bold text-slate-700 dark:text-slate-100">Answer:</span> {question.correctAnswer || 'Faculty review required'}
-        {question.explanation && <><span className="mx-1.5 text-slate-300">·</span><span className="font-bold text-slate-700 dark:text-slate-100">Why:</span> {question.explanation}</>}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Chapter</p><p className="mt-0.5 break-words text-[12px] font-semibold text-slate-700 dark:text-slate-200">{question.chapter}</p></div>
+        <div><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Topic</p><p className="mt-0.5 break-words text-[12px] font-semibold text-slate-700 dark:text-slate-200">{question.topic}</p></div>
+        <div><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Concept</p><p className="mt-0.5 break-words text-[12px] font-semibold text-slate-700 dark:text-slate-200">{question.concept}</p></div>
       </div>
 
-      <div className="mt-3 grid gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3 dark:border-indigo-500/20 dark:bg-indigo-500/5 sm:grid-cols-5">
-        <div><p className="text-[9px] font-bold uppercase tracking-wider text-indigo-500">Chapter</p><p className="mt-0.5 truncate text-[11.5px] font-semibold text-slate-700 dark:text-slate-200" title={question.chapter}>{question.chapter}</p></div>
-        <div><p className="text-[9px] font-bold uppercase tracking-wider text-indigo-500">Topic</p><p className="mt-0.5 truncate text-[11.5px] font-semibold text-slate-700 dark:text-slate-200" title={question.topic}>{question.topic}</p></div>
-        <div><p className="text-[9px] font-bold uppercase tracking-wider text-indigo-500">Concept</p><p className="mt-0.5 truncate text-[11.5px] font-semibold text-slate-700 dark:text-slate-200" title={question.concept}>{question.concept}</p></div>
-        <Field label="Change difficulty" className="space-y-1"><Select value={question.difficulty} onValueChange={(value) => onUpdate({ ...question, difficulty: value })}>{MICRO_DIFFICULTIES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</Select></Field>
-        <Field label="Change question type" className="space-y-1"><Select value={question.questionType} onValueChange={(value) => onUpdate({ ...question, questionType: value })}>{MICRO_QUESTION_TYPES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</Select></Field>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <Field label="Difficulty" className="space-y-1"><Select value={question.difficulty} ariaLabel="Difficulty" onValueChange={(value) => onUpdate({ ...question, difficulty: value })}>{MICRO_DIFFICULTIES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</Select></Field>
+        <Field label="Question type" className="space-y-1"><Select value={question.questionType} ariaLabel="Question type" onValueChange={(value) => onUpdate({ ...question, questionType: value })}>{MICRO_QUESTION_TYPES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</Select></Field>
       </div>
 
+      <AnswerReveal question={question} />
       <ValidationList validation={question.validation} />
       <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
         <Button size="sm" variant="outline" onClick={() => setEditorOpen(true)}><FileQuestion className="h-3 w-3" /> Edit</Button>
         <Button size="sm" variant="outline" onClick={() => onRegenerate(question)} disabled={regenerating}><RefreshCw className={regenerating ? 'h-3 w-3 animate-spin' : 'h-3 w-3'} /> {regenerating ? 'Regenerating…' : 'Regenerate'}</Button>
         <Button size="sm" variant="ghost" className="text-rose-600 dark:text-rose-400" onClick={() => onDelete(question)}><Trash2 className="h-3 w-3" /> Delete</Button>
-        <span className="ml-auto inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-slate-400"><Sparkles className="h-3 w-3 text-indigo-500" /> Source: {question.sourceId}</span>
+        <span className="ml-auto inline-flex min-w-0 items-center gap-1.5 text-[10.5px] font-semibold text-slate-400"><Sparkles className="h-3 w-3 shrink-0 text-indigo-500" /> Source: <span className="truncate">{sourceLabel}</span></span>
       </div>
       <QuestionEditor question={question} open={editorOpen} onOpenChange={setEditorOpen} onSave={onUpdate} />
     </article>

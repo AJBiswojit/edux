@@ -226,9 +226,15 @@ function stableVariants(source, baseQuestions) {
     variants.push({
       ...question,
       id: `${question.id}-extension-${variantNumber}`,
-      question: `Source check ${variantNumber}: ${question.question} Use the same source-grounded reasoning and select the answer that remains consistent.`,
+      question: `${question.question} Use the same source-grounded reasoning and select the answer that remains consistent.`,
       explanation: `${question.explanation} This deterministic extension keeps the same source concept and answer while checking transfer.`,
       sourceId: source.id,
+      sourceTitle: source.title,
+      sourceReference: `${source.chapter} · ${source.topic}`,
+      generationMetadata: {
+        kind: 'source-pool-extension',
+        variantNumber,
+      },
     })
   })
   return variants
@@ -332,7 +338,10 @@ export function generateMicroQuestions({ source: sourceInput, count = 10, diffic
       answerIndex: question.answerIndex ?? null,
       explanation: question.explanation,
       sourceId: source.id,
+      sourceTitle: source.title,
+      sourceReference: `${source.chapter} · ${source.topic}`,
       sequence: index + 1,
+      generationMetadata: question.generationMetadata ?? null,
     }
     normalized.validation = validateGeneratedQuestion(normalized, source, generatedIds)
     generatedIds.push(normalized.id)

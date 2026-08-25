@@ -315,6 +315,24 @@ Pages requiring manual browser verification:
 4. **Browser testing** on key pages
 5. **Document any remaining issues**
 
+### Question Count Trigger Display Bug
+
+**Symptom:** After choosing **5 questions** in AI Micro-Assessment, the menu checkmark was correct but the closed trigger showed **Selected option**.
+
+**Root cause:** The option is written as `{value} questions`. React stores that as an array of children (`[5, " questions"]`), not a string. The canonical `Select` only accepted string/number children as the trigger label and otherwise fell back to the literal `"Selected option"`. Selection itself (`value === "5"`) was already correct — this was display resolution only.
+
+**Canonical value:** `"5"` / `"10"` / `"15"` / `"20"` (string option identity).  
+**Generation value:** `Number(generationCount)` — still numeric.  
+**Display label:** flattened children → `"5 questions"`.
+
+**Fix:** Shared helpers in `src/utils/select-option.js` (`flattenSelectLabel`, `sameSelectValue`, `resolveSelectedOption`, `resolveSelectTriggerLabel`) are used by `Select`. Composite labels such as `{code} — {name}` and icon+text items now resolve the same way. `"Selected option"` is no longer a trigger fallback.
+
+**Affected:** Every `Select` whose label is interpolated children. Question count is the confirmed case; other interpolated labels inherit the primitive fix.
+
+**Regression tests:** `tests/utils/select-option.test.js`, composite-label cases in `tests/components/select.test.jsx`.
+
+**Generation:** Unchanged engine. UI still sends `count: Number(generationCount)`. Empty selection keeps Generate disabled and the placeholder **Select question count**.
+
 ## Conclusion
 
 The core infrastructure for proper dropdown selection and cascading filter dependencies is now in place. The Select component already supports all required features (disabled, helper, proper value display). The main work was adding the disabled props and helper messages to the existing cascading filter implementations.

@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { useAnchoredDropdown } from '@/hooks/use-anchored-dropdown'
+import { flattenSelectLabel, resolveSelectTriggerLabel, sameSelectValue } from '@/utils/select-option'
 
 /**
  * EduX canonical selection dropdown (primitive).
@@ -79,8 +80,8 @@ function collectSelectItems(children) {
 }
 
 function itemSearchText(item) {
-  const raw = item.props.searchText ?? item.props.children
-  return typeof raw === 'string' || typeof raw === 'number' ? String(raw).toLowerCase() : ''
+  const raw = item.props.searchText ?? flattenSelectLabel(item.props.children)
+  return String(raw).toLowerCase()
 }
 
 /* ------------------------------ Select ------------------------------- */
@@ -148,19 +149,16 @@ const Select = forwardRef(function Select(
     return items.filter((item) => itemSearchText(item).includes(query))
   }, [items, search, searchable])
 
-  const selectedItem = items.find((item) => item.props.value === current)
   const hasValue = current != null && current !== ''
-  /* Selected-value contract: a matched option renders its label; a value
-     that is NOT in the current option set still displays itself (never a
-     stale "Select…" after e.g. a parent filter change); empty → placeholder. */
-  const rawLabel = selectedItem ? (selectedItem.props.searchText ?? selectedItem.props.children) : null
-  const displayLabel = selectedItem
-    ? typeof rawLabel === 'string' || typeof rawLabel === 'number'
-      ? String(rawLabel)
-      : 'Selected option'
-    : hasValue
-      ? String(current)
-      : (placeholder ?? 'Select…')
+  /* Selected-value contract: flatten option children (including
+     `{count} questions` arrays) into the trigger label. Never show
+     "Selected option" after a real match. A value missing from the
+     current option set still displays itself. Empty → placeholder. */
+  const displayLabel = resolveSelectTriggerLabel({
+    value: current,
+    options: items,
+    placeholder: placeholder ?? 'Select…',
+  })
 
   const setCurrent = useCallback(
     (next) => {
@@ -380,7 +378,7 @@ const Select = forwardRef(function Select(
 
 const SelectItem = forwardRef(function SelectItem({ value, className, children, disabled: optionDisabled, searchText, ...props }, ref) {
   const { current, setCurrent } = useContext(SelectContext)
-  const selected = current === value
+  const selected = sameSelectValue(current, value)
   return (
     <button
       ref={ref}
@@ -412,5 +410,5 @@ const SelectTrigger = ({ children }) => children
 const SelectContent = ({ children }) => children
 const SelectValue = ({ children }) => children
 
-export { Select, SelectItem, SelectTrigger, SelectContent, SelectValue }
+export { Select, SelectItem, SelectTrigger, SelectContent, SelectValue, flattenSelectLabel, resolveSelectTriggerLabel, sameSelectValue }
 export default Select
