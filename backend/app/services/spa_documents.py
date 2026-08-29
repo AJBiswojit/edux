@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.data.platform_site import EXAM_AGENT_GROUP_LABELS, PLATFORM_SITE
 from app.models.ops import AppKv
 from app.services.spa_payloads import DATA_DIR, clone, load
+from app.services.spa_question_cleanup import AFFECTED_DOCUMENTS, clean_spa_document
 from app.services.spa_store import kv_get, kv_put
 
 SPA_PREFIX = "spa:"
@@ -29,9 +30,18 @@ def document(db: Session, name: str) -> Any:
 
 
 def seed_spa_documents(db: Session) -> dict[str, int]:
-    """Copy JSON fixtures into app_kv once. Existing rows are left alone so mutations persist."""
+    """Copy JSON fixtures into app_kv once. Existing rows are left alone so mutations persist.
+
+    Phase G: stored copies of the question-carrying documents are healed with
+    the spa_question_cleanup transform — seeded question records physically
+    removed, fabricated question-derived values neutralised. The transform is
+    pure + idempotent + scoped to AFFECTED_DOCUMENTS, so unrelated documents
+    and any legitimate mutations in other documents are never touched, and a
+    re-seed can never reintroduce the removed records.
+    """
     pending: dict[str, Any] = {}
     skipped = 0
+    healed = 0
 
     for path in sorted(DATA_DIR.glob("*.json")):
         key = spa_key(path.stem)
@@ -39,6 +49,13 @@ def seed_spa_documents(db: Session) -> dict[str, int]:
             pending[key] = json.loads(path.read_text(encoding="utf-8"))
         else:
             skipped += 1
+            if path.stem in AFFECTED_DOCUMENTS:
+                stored = kv_get(db, key, None)
+                if stored is not None:
+                    cleaned, _ = clean_spa_document(stored)
+                    if cleaned != stored:
+                        pending[key] = cleaned
+                        healed += 1
 
     platform_key = spa_key("platform")
     platform = pending.get(platform_key)
@@ -64,4 +81,4 @@ def seed_spa_documents(db: Session) -> dict[str, int]:
         kv_put(db, key, value, commit=False)
         written += 1
     db.commit()
-    return {"written": written, "skipped": skipped}
+    return {"written": written, "skipped": skipped, "healed": healed}

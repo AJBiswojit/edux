@@ -1,1 +1,768 @@
-{"config":{"patterns":["JEE Main","JEE Advanced","NEET","Board / Custom"],"examModes":["University","Competitive"],"universityTypes":["Mid Semester","End Semester","Unit Test","Internal Assessment","Model Examination"],"competitiveTypes":["Full Mock Test","Subject Test","Chapter Test","PYQ Practice Paper","Mixed Practice Test"],"competitiveExams":["JEE","NEET"],"competitiveSubjects":{"JEE":["Physics","Mathematics","Chemistry"],"NEET":["Physics","Chemistry","Biology"]},"negativeMarking":["None","−1 per incorrect answer","−0.25 per incorrect answer"],"pyqPreferences":["No preference","Prefer PYQ questions","PYQ only"],"departments":["Computer Science","Electronics & Comm.","Mechanical","Mathematics","Business School"],"programs":["B.Tech — CSE","B.Tech — ECE","B.Tech — ME","M.Sc — Data Science","MBA"],"semesters":["Sem 1","Sem 2","Sem 3","Sem 4","Sem 5","Sem 6","Sem 7","Sem 8"],"courses":["CS501 — DSA","CS502 — DBMS","CS503 — OS","CS504 — Networks","CS505 — ML","CS506 — ToC"],"subjects":["Data Structures & Algorithms","Database Management Systems","Operating Systems","Computer Networks","Machine Learning","Theory of Computation"],"chapters":["Graph Algorithms","Dynamic Programming","Sorting & Searching","Trees & Heaps","Complexity Analysis","String Algorithms"],"topics":["Dijkstra & shortest paths","MST (Kruskal/Prim)","Topological sort","0/1 Knapsack","Big-O analysis","AVL rotations","KMP string matching"],"durations":[60,90,120,150,180],"difficulties":["Easy","Medium","Hard","Mixed"],"blooms":["Remember","Understand","Apply","Analyze","Evaluate","Create"],"questionTypes":["MCQ","Assertion Reason","Case Based","Diagram Based","Integer","Numerical","Statement Based","Short Answer","Long Answer"]},"generatedPapers":[{"id":"gp1","paperCode":"PAPER-UNI-001","mode":"University","examType":"Mid Semester","faculty":"Dr. Meera Krishnan","versions":2,"archived":false,"title":"Midsem — DSA (Paper A)","course":"CS501","totalMarks":50,"duration":180,"difficulty":"Mixed","questions":22,"status":"Ready","generated":"2026-08-01","created":"2026-08-01","modified":"2026-08-02","coverage":92,"sets":1,"downloads":3,"downloadStatus":"PDF & DOCX exported","deleteStatus":"Active","questionList":[{"id":"GP1-Q-01","no":1,"text":"Which data structure does Dijkstra's algorithm use to extract the minimum-distance vertex efficiently?","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Graph Algorithms","topic":"Shortest paths","options":["Min-heap","Queue","Stack","Unsorted array"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-02","no":2,"text":"A topological ordering exists if and only if the directed graph is a…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Graph Algorithms","topic":"Topological sort","options":["DAG","Cyclic graph","Complete graph","Multigraph"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-03","no":3,"text":"Kruskal's algorithm builds a minimum spanning tree by…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Graph Algorithms","topic":"MST","options":["Sorting edges by weight","Sorting vertices by degree","Removing heaviest edges","BFS on the graph"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-04","no":4,"text":"Which algorithm can detect a negative-weight cycle?","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Apply","chapter":"Graph Algorithms","topic":"Negative cycles","options":["Bellman-Ford","Dijkstra","Prim","Kruskal"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-05","no":5,"text":"In an unweighted graph, BFS from a source vertex returns…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Graph Algorithms","topic":"BFS","options":["Shortest paths by edge count","Shortest paths by weight","Longest paths","The MST"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-06","no":6,"text":"In a max-heap of n elements, the minimum element is always…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Understand","chapter":"Trees & Heaps","topic":"Heaps","options":["A leaf","The root","At depth 1","The rightmost child"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-07","no":7,"text":"An AVL tree with n nodes maintains a height of…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Trees & Heaps","topic":"AVL trees","options":["O(log n)","O(n)","O(n log n)","O(√n)"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-08","no":8,"text":"An in-order traversal of a binary search tree visits keys in…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Trees & Heaps","topic":"BST","options":["Ascending order","Descending order","Level order","Random order"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-09","no":9,"text":"A tree with n nodes has exactly how many edges?","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Trees & Heaps","topic":"Tree edges","options":["n − 1","n","n + 1","2n"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-10","no":10,"text":"Deleting the root of a heap and reheapifying costs…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Apply","chapter":"Trees & Heaps","topic":"Heap delete","options":["O(log n)","O(1)","O(n)","O(n log n)"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-11","no":11,"text":"Trace Dijkstra's algorithm on a 5-vertex weighted graph from a given source and list the shortest-path tree edges.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Apply","chapter":"Graph Algorithms","topic":"Dijkstra trace","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-12","no":12,"text":"Explain why Dijkstra's algorithm fails with negative edge weights and give one correct alternative.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Analyze","chapter":"Graph Algorithms","topic":"Negative edges","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-13","no":13,"text":"Show the AVL rotations when inserting 30, 20, 10 into an empty AVL tree.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Apply","chapter":"Trees & Heaps","topic":"AVL rotations","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-14","no":14,"text":"Compare Kruskal and Prim MST approaches — when is each preferable?","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Analyze","chapter":"Graph Algorithms","topic":"MST comparison","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-15","no":15,"text":"Write the recurrence for merge sort and solve it using the master theorem.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Apply","chapter":"Sorting & Searching","topic":"Merge sort recurrence","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-16","no":16,"text":"Explain the difference between stable and unstable sorting with one example of each.","type":"Short Answer","difficulty":"Easy","marks":3,"bloom":"Understand","chapter":"Sorting & Searching","topic":"Stability","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-17","no":17,"text":"Convert the expression (a + b) * c into a binary expression tree and give its postfix traversal.","type":"Short Answer","difficulty":"Easy","marks":3,"bloom":"Apply","chapter":"Trees & Heaps","topic":"Expression trees","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-18","no":18,"text":"State the master theorem and apply it to T(n) = 4T(n/2) + n².","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Apply","chapter":"Complexity Analysis","topic":"Master theorem","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-19","no":19,"text":"Outline how BFS finds the connected components of an undirected graph.","type":"Short Answer","difficulty":"Easy","marks":3,"bloom":"Understand","chapter":"Graph Algorithms","topic":"Connected components","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-20","no":20,"text":"Explain the role of the sentinel value in insertion sort.","type":"Short Answer","difficulty":"Easy","marks":3,"bloom":"Understand","chapter":"Sorting & Searching","topic":"Sentinel","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-21","no":21,"text":"Design a data structure supporting push, pop and getMin in O(1) time. Justify each operation with invariants.","type":"Long Answer","difficulty":"Hard","marks":5,"bloom":"Create","chapter":"Trees & Heaps","topic":"Min-stack design","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP1-Q-22","no":22,"text":"Solve the 0/1 Knapsack instance with 5 items and capacity 10 — write the DP table and list the chosen items.","type":"Long Answer","difficulty":"Hard","marks":5,"bloom":"Create","chapter":"Dynamic Programming","topic":"Knapsack solve","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null}],"blooms":{"Remember":15,"Understand":20,"Apply":30,"Analyze":20,"Evaluate":10,"Create":5}},{"id":"gp2","paperCode":"PAPER-UNI-002","mode":"University","examType":"Mid Semester","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"Midsem — DSA (Paper B)","course":"CS501","totalMarks":50,"duration":180,"difficulty":"Mixed","questions":22,"status":"Ready","generated":"2026-08-01","created":"2026-08-01","modified":"2026-08-02","coverage":94,"sets":1,"downloads":2,"downloadStatus":"PDF exported","deleteStatus":"Active","questionList":[{"id":"GP2-Q-01","no":1,"text":"Which comparison sort is stable and runs in O(n log n) worst case?","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Sorting & Searching","topic":"Merge sort","options":["Merge sort","Quick sort","Selection sort","Heap sort"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-02","no":2,"text":"Binary search requires the input array to be…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Sorting & Searching","topic":"Binary search","options":["Sorted","Unsorted","Hash-mapped","Sparse"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-03","no":3,"text":"Quick sort's worst-case time complexity is…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Apply","chapter":"Sorting & Searching","topic":"Quick sort","options":["O(n²)","O(n log n)","O(n)","O(log n)"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-04","no":4,"text":"Insertion sort is most suitable for…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Evaluate","chapter":"Sorting & Searching","topic":"Insertion sort","options":["Nearly sorted small arrays","Huge random arrays","External sorting","Graph edges"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-05","no":5,"text":"The recurrence T(n) = T(n/2) + O(1) solves to…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Complexity Analysis","topic":"Recurrences","options":["O(log n)","O(n)","O(n log n)","O(√n)"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-06","no":6,"text":"O(1) auxiliary space means the algorithm uses…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Complexity Analysis","topic":"Space complexity","options":["Constant extra memory","No memory at all","Linear extra memory","Exponential memory"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-07","no":7,"text":"Which function grows the fastest asymptotically?","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Analyze","chapter":"Complexity Analysis","topic":"Growth rates","options":["n!","2ⁿ","n³","n log n"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-08","no":8,"text":"The 0/1 Knapsack DP with n items and capacity W runs in…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Apply","chapter":"Dynamic Programming","topic":"0/1 Knapsack","options":["O(nW)","O(n²)","O(2ⁿ)","O(W)"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-09","no":9,"text":"Fibonacci computed with memoised DP runs in…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Dynamic Programming","topic":"Memoisation","options":["O(n)","O(n²)","O(2ⁿ)","O(log n)"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-10","no":10,"text":"KMP pattern matching precomputes the…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Apply","chapter":"String Algorithms","topic":"KMP","options":["Failure function","Suffix array","Hash table","Balance factor"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-11","no":11,"text":"Why is a stack the natural data structure for iterative DFS?","type":"Short Answer","difficulty":"Easy","marks":3,"bloom":"Understand","chapter":"Graph Algorithms","topic":"DFS stack","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-12","no":12,"text":"Describe the heapify procedure and argue why building a heap takes O(n).","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Analyze","chapter":"Trees & Heaps","topic":"Heapify","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-13","no":13,"text":"Compare open addressing and chaining in hash tables.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Apply","chapter":"Sorting & Searching","topic":"Hashing","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-14","no":14,"text":"What is the amortised cost of appending to a dynamic array, and why?","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Analyze","chapter":"Complexity Analysis","topic":"Amortised analysis","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-15","no":15,"text":"Give the invariant that keeps binary search correct across iterations.","type":"Short Answer","difficulty":"Easy","marks":3,"bloom":"Understand","chapter":"Sorting & Searching","topic":"Binary search invariant","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-16","no":16,"text":"Explain how the failure function speeds up KMP matching after a mismatch.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Analyze","chapter":"String Algorithms","topic":"KMP speedup","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-17","no":17,"text":"Show the DP table for the LCS of \"ABCBDAB\" and \"BDCABA\" and state the result.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Apply","chapter":"Dynamic Programming","topic":"LCS table","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-18","no":18,"text":"Why does the greedy coin-change strategy fail for some denominations?","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Evaluate","chapter":"Dynamic Programming","topic":"Greedy limits","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-19","no":19,"text":"Describe the structure of a segment tree and the cost of a range query.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Apply","chapter":"Trees & Heaps","topic":"Segment trees","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-20","no":20,"text":"Prove that every connected graph has at least one spanning tree.","type":"Short Answer","difficulty":"Medium","marks":3,"bloom":"Evaluate","chapter":"Graph Algorithms","topic":"Spanning tree proof","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-21","no":21,"text":"Implement and explain a string matcher that finds a pattern of length m in a text of length n in O(n + m).","type":"Long Answer","difficulty":"Hard","marks":5,"bloom":"Create","chapter":"String Algorithms","topic":"Pattern matcher","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP2-Q-22","no":22,"text":"Prove by induction that Dijkstra's algorithm yields correct shortest paths for non-negative weights.","type":"Long Answer","difficulty":"Hard","marks":5,"bloom":"Evaluate","chapter":"Graph Algorithms","topic":"Dijkstra proof","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null}],"blooms":{"Remember":10,"Understand":20,"Apply":35,"Analyze":20,"Evaluate":10,"Create":5}},{"id":"gp3","paperCode":"PAPER-UNI-003","mode":"University","examType":"MCQ Test","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"Quiz — Transactions & Concurrency","course":"CS502","totalMarks":10,"duration":15,"difficulty":"Medium","questions":10,"status":"Draft","generated":"2026-08-03","created":"2026-08-03","modified":"2026-08-03","coverage":100,"sets":1,"downloads":0,"downloadStatus":"Not exported","deleteStatus":"Active","questionList":[{"id":"GP3-Q-01","no":1,"text":"Which normal form removes transitive dependencies from a relation?","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Relational Design","topic":"3NF","options":["3NF","1NF","BCNF","2NF"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-02","no":2,"text":"ACID stands for…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Transactions","topic":"ACID","options":["Atomicity, Consistency, Isolation, Durability","Availability, Consistency, Integrity, Durability","Atomicity, Concurrency, Isolation, Distribution","Association, Consistency, Integrity, Data"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-03","no":3,"text":"Which isolation level prevents dirty reads?","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Understand","chapter":"Transactions","topic":"Isolation levels","options":["READ COMMITTED","READ UNCOMMITTED","NONE","READ REPEATABLE"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-04","no":4,"text":"A primary key must be…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Relational Design","topic":"Primary keys","options":["Unique and NOT NULL","Unique only","NOT NULL only","An integer"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-05","no":5,"text":"Which join returns all rows from the left table, matching or not?","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"SQL","topic":"Joins","options":["LEFT JOIN","INNER JOIN","RIGHT JOIN","CROSS JOIN"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-06","no":6,"text":"A B+ tree of order d stores at most how many keys per internal node?","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Understand","chapter":"Indexing","topic":"B+ trees","options":["2d","d","d/2","4d"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-07","no":7,"text":"Two-phase locking guarantees…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Apply","chapter":"Transactions","topic":"2PL","options":["Conflict serialisability","Deadlock freedom","Strict isolation only","No waiting"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-08","no":8,"text":"The SQL WHERE clause filters…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"SQL","topic":"WHERE clause","options":["Rows","Columns","Groups","Schemas"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-09","no":9,"text":"A transaction reading uncommitted data experiences a…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Transactions","topic":"Dirty read","options":["Dirty read","Phantom read","Lost update","Deadlock"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP3-Q-10","no":10,"text":"Which operator combines the results of two queries while removing duplicates?","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"SQL","topic":"UNION","options":["UNION","UNION ALL","JOIN","MERGE"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null}],"blooms":{"Remember":20,"Understand":30,"Apply":40,"Analyze":10}},{"id":"gp4","paperCode":"PAPER-UNI-004","mode":"University","examType":"Internal Assessment","faculty":"Dr. Meera Krishnan","versions":3,"archived":false,"title":"Class Test — Memory Management","course":"CS503","totalMarks":20,"duration":45,"difficulty":"Easy","questions":15,"status":"In Review","generated":"2026-08-02","created":"2026-08-02","modified":"2026-08-04","coverage":85,"sets":2,"downloads":1,"downloadStatus":"DOCX exported","deleteStatus":"Active","questionList":[{"id":"GP4-Q-01","no":1,"text":"Round Robin scheduling with a fixed time quantum is…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"CPU Scheduling","topic":"Round Robin","options":["Preemptive","Non-preemptive","Priority-only","Batch-only"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-02","no":2,"text":"The convoy effect is classically associated with…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"CPU Scheduling","topic":"Convoy effect","options":["FCFS","SJF","Round Robin","Multilevel queue"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-03","no":3,"text":"Thrashing occurs when…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Understand","chapter":"Memory Management","topic":"Thrashing","options":["Excessive paging with low CPU utilisation","The CPU is idle with no processes","Deadlock is detected","The disk is full"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-04","no":4,"text":"LRU page replacement evicts…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Apply","chapter":"Memory Management","topic":"LRU","options":["The least recently used page","The oldest loaded page","The largest page","A random page"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-05","no":5,"text":"A semaphore initialised to 1 that guards a critical section is a…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"Synchronisation","topic":"Semaphores","options":["Mutex","Counting semaphore","Monitor","Spinlock"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-06","no":6,"text":"The banker's algorithm is used to…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Apply","chapter":"Synchronisation","topic":"Banker algorithm","options":["Prevent deadlock","Detect fragmentation","Recover from thrashing","Schedule I/O"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-07","no":7,"text":"In a UNIX file system, the inode stores…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"File Systems","topic":"Inodes","options":["File metadata","File data only","Page tables","Process state"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-08","no":8,"text":"Virtual memory separates…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Understand","chapter":"Memory Management","topic":"Virtual memory","options":["Logical and physical address spaces","Users and groups","CPU and memory","Kernels and drivers"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-09","no":9,"text":"A context switch involves saving…","type":"MCQ","difficulty":"Easy","marks":1,"bloom":"Remember","chapter":"CPU Scheduling","topic":"Context switch","options":["Registers and the PCB","Only the stack","Only the heap","The page cache"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-10","no":10,"text":"Belady's anomaly — more frames causing more faults — occurs with…","type":"MCQ","difficulty":"Medium","marks":1,"bloom":"Analyze","chapter":"Memory Management","topic":"Belady anomaly","options":["FIFO","LRU","Optimal","Clock"],"answer":"A","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-11","no":11,"text":"Compare preemptive and non-preemptive scheduling with one example of each.","type":"Short Answer","difficulty":"Easy","marks":2,"bloom":"Understand","chapter":"CPU Scheduling","topic":"Preemption","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-12","no":12,"text":"Explain the producer-consumer problem and its semaphore-based solution.","type":"Short Answer","difficulty":"Medium","marks":2,"bloom":"Apply","chapter":"Synchronisation","topic":"Producer-consumer","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-13","no":13,"text":"Describe demand paging and the page-fault service routine.","type":"Short Answer","difficulty":"Medium","marks":2,"bloom":"Understand","chapter":"Memory Management","topic":"Demand paging","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-14","no":14,"text":"What is the difference between a process and a thread?","type":"Short Answer","difficulty":"Easy","marks":2,"bloom":"Understand","chapter":"CPU Scheduling","topic":"Process vs thread","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null},{"id":"GP4-Q-15","no":15,"text":"Explain how copy-on-write improves the performance of fork().","type":"Short Answer","difficulty":"Medium","marks":2,"bloom":"Apply","chapter":"Memory Management","topic":"Copy-on-write","options":[],"answer":"Open answer","isPyq":false,"pyqYear":null,"explanation":null}],"blooms":{"Remember":25,"Understand":35,"Apply":30,"Analyze":10}},{"id":"gp5","paperCode":"PAPER-JEE-001","mode":"Competitive","exam":"JEE","subject":"Physics","topic":"Mechanics","paperType":"Full Mock Test","examType":"Full Mock Test","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"JEE Main Physics — Mechanics Mock Test 01","course":"JEE · Physics","totalMarks":100,"duration":60,"difficulty":"Mixed","questions":25,"status":"Ready","generated":"2026-08-04","created":"2026-08-04","modified":"2026-08-05","coverage":96,"sets":1,"downloads":4,"downloadStatus":"PDF & DOCX exported","deleteStatus":"Active","negativeMarking":"−1 per incorrect answer","pyqPreference":"PYQ Balanced","questionList":[{"id":"CQ-JEE Main-PHY-001","no":1,"text":"A particle moves with velocity v(t) = 6t − 2 m/s. Its displacement in the first 2 seconds is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Kinematics","topic":"Motion in one dimension","options":["4 m","8 m","10 m","12 m"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Integrate v over 0–2 s: 3t² − 2t evaluated 0→2 gives 12 − 4 = 8 m."},{"id":"CQ-JEE Main-PHY-002","no":2,"text":"A projectile is fired at 45° with speed 20 m/s. Its maximum height (g = 10 m/s²) is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Kinematics","topic":"Projectile motion","options":["5 m","10 m","15 m","20 m"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"H = u² sin²θ / 2g = 400 × 0.5 / 20 = 10 m."},{"id":"CQ-JEE Main-PHY-003","no":3,"text":"Two trains 120 m and 80 m long run on parallel tracks at 54 km/h and 36 km/h in the same direction. Time to cross is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Kinematics","topic":"Relative motion","options":["20 s","40 s","60 s","80 s"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Relative speed 5 m/s; total length 200 m → 200/5 = 40 s."},{"id":"CQ-JEE Main-PHY-004","no":4,"text":"A 2 kg block is pulled by a horizontal force 10 N on a frictionless floor. Acceleration is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Laws of Motion","topic":"Newton laws","options":["2 m/s²","5 m/s²","10 m/s²","20 m/s²"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"a = F/m = 10/2 = 5 m/s²."},{"id":"CQ-JEE Main-PHY-005","no":5,"text":"A 5 kg block rests on a surface with μ = 0.4. Minimum force to just move it (g = 10) is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Laws of Motion","topic":"Friction","options":["10 N","20 N","30 N","40 N"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"f = μmg = 0.4 × 5 × 10 = 20 N."},{"id":"CQ-JEE Main-PHY-006","no":6,"text":"In a pulley system with two masses 3 kg and 1 kg over a light pulley, tension in the string is (g = 10):","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Laws of Motion","topic":"Constraint motion","options":["12 N","15 N","20 N","30 N"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"a = (3−1)g/4 = 5; T = 1(10+5) = 15 N."},{"id":"CQ-JEE Main-PHY-007","no":7,"text":"A body of mass 2 kg moving at 4 m/s is brought to rest by a constant force. Work done by the force is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Work, Energy & Power","topic":"Work-energy theorem","options":["8 J","16 J","32 J","64 J"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"W = ½mv² = ½ × 2 × 16 = 16 J."},{"id":"CQ-JEE Main-PHY-008","no":8,"text":"A pump lifts 200 kg of water to a height of 10 m in 20 s. Output power (g = 10) is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Work, Energy & Power","topic":"Power","options":["500 W","1000 W","2000 W","4000 W"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"P = mgh/t = 200×10×10/20 = 1000 W."},{"id":"CQ-JEE Main-PHY-009","no":9,"text":"Moment of inertia of a solid sphere (mass M, radius R) about its diameter is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Rotational Motion","topic":"Moment of inertia","options":["(2/5)MR²","(1/2)MR²","(2/3)MR²","MR²"],"answer":"A","isPyq":true,"pyqYear":"2023","explanation":"Standard result: solid sphere about diameter = (2/5)MR²."},{"id":"CQ-JEE Main-PHY-010","no":10,"text":"A disc rolls without slipping; ratio of rotational KE to total KE is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Rotational Motion","topic":"Rolling motion","options":["1/2","1/3","2/3","1/4"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Krot/Ktot = (½Iω²)/(½mv²+½Iω²) with I = ½mR² → 1/3."},{"id":"CQ-JEE Main-PHY-011","no":11,"text":"If the orbital radius of a planet doubles, its time period becomes:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Gravitation","topic":"Kepler laws","options":["2×","2√2×","4×","8×"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Kepler third law: T ∝ r^(3/2) → 2^(3/2) = 2√2."},{"id":"CQ-JEE Main-PHY-012","no":12,"text":"Escape velocity from a planet of radius R and mass M is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Gravitation","topic":"Escape velocity","options":["√(2GM/R)","√(GM/R)","√(GM/2R)","2√(GM/R)"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Standard: v_e = √(2GM/R)."},{"id":"CQ-JEE Main-PHY-013","no":13,"text":"In an adiabatic process, the change in internal energy of an ideal gas equals:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"First law","options":["Heat added","Work done on gas","Zero","Work done by gas"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Adiabatic: Q = 0 so ΔU = W_on (work done on gas)."},{"id":"CQ-JEE Main-PHY-014","no":14,"text":"A Carnot engine operates between 400 K and 300 K. Its efficiency is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"Carnot engine","options":["15%","25%","75%","100%"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"η = 1 − T2/T1 = 1 − 300/400 = 25%."},{"id":"CQ-JEE Main-PHY-015","no":15,"text":"A wire of resistance 4 Ω is stretched to twice its length. New resistance is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Current Electricity","topic":"Ohm law","options":["4 Ω","8 Ω","12 Ω","16 Ω"],"answer":"D","isPyq":true,"pyqYear":"2023","explanation":"R ∝ L²/A volume const → 4× → 16 Ω."},{"id":"CQ-JEE Main-PHY-016","no":16,"text":"In a Wheatstone bridge at balance, the galvanometer current is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Current Electricity","topic":"Kirchhoff laws","options":["Maximum","Half of supply","Zero","Double of arm current"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Balanced bridge: no potential difference across the galvanometer."},{"id":"CQ-JEE Main-PHY-017","no":17,"text":"Two charges 2 μC and 8 μC repel with force F. If both are doubled, the force becomes:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Electrostatics","topic":"Coulomb law","options":["F","2F","4F","8F"],"answer":"C","isPyq":true,"pyqYear":"2024","explanation":"F ∝ q1q2 → 2×2 = 4F."},{"id":"CQ-JEE Main-PHY-018","no":18,"text":"Potential at distance r from a point charge q is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Electrostatics","topic":"Electric potential","options":["kq/r","kq/r²","kq²/r","kqr"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"V = kq/r (scalar)."},{"id":"CQ-JEE Main-PHY-019","no":19,"text":"A concave mirror of focal length 20 cm forms a real image at 30 cm. Object distance is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Optics","topic":"Ray optics","options":["40 cm","60 cm","80 cm","120 cm"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"1/f = 1/v + 1/u → 1/20 = 1/30 + 1/u → u = 60 cm."},{"id":"CQ-JEE Main-PHY-020","no":20,"text":"In Young double-slit experiment, fringe width β is doubled when:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Optics","topic":"Wave optics","options":["Slit separation doubles","Screen distance halves","Screen distance doubles","Wavelength halves"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"β = λD/d → doubling D doubles β."},{"id":"CQ-JEE Main-PHY-021","no":21,"text":"The stopping potential depends on the incident light:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Modern Physics","topic":"Photoelectric effect","options":["Intensity","Frequency","Polarisation","Phase"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"Kmax = hν − φ → stopping potential ∝ frequency."},{"id":"CQ-JEE Main-PHY-022","no":22,"text":"In a nuclear fission of U-235, the typical number of neutrons released per event is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Modern Physics","topic":"Nuclear physics","options":["1","2–3","10","100"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Fission typically releases 2–3 neutrons."},{"id":"CQ-JEE Main-PHY-023","no":23,"text":"The de Broglie wavelength of a particle with momentum p is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Modern Physics","topic":"Dual nature","options":["h/p","p/h","h·p","h/p²"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"λ = h/p."},{"id":"CQ-JEE Main-PHY-024","no":24,"text":"A parallel plate capacitor with air has capacitance C. Filling with dielectric k = 4 gives:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Electrostatics","topic":"Capacitance","options":["C/4","C/2","4C","C"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"C′ = kC = 4C."},{"id":"CQ-JEE Main-PHY-025","no":25,"text":"A 60 W bulb runs for 2 hours. Energy consumed is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Current Electricity","topic":"Heating effect","options":["120 J","432 kJ","120 kWh","7200 J"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"E = Pt = 60 × 7200 = 432 kJ."}]},{"id":"gp6","paperCode":"PAPER-JEE-002","mode":"Competitive","exam":"JEE","subject":"Mathematics","topic":"Calculus","paperType":"Subject Test","examType":"Subject Test","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"JEE Main Mathematics — Calculus Practice Paper","course":"JEE · Mathematics","totalMarks":100,"duration":60,"difficulty":"Mixed","questions":25,"status":"Ready","generated":"2026-08-04","created":"2026-08-04","modified":"2026-08-05","coverage":95,"sets":1,"downloads":3,"downloadStatus":"PDF exported","deleteStatus":"Active","negativeMarking":"−1 per incorrect answer","pyqPreference":"Include PYQs","questionList":[{"id":"CQ-JEE Main-MAT-001","no":1,"text":"If A = {1,2,3,4} and B = {3,4,5}, then A − B has:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Sets & Relations","topic":"Sets","options":["1 element","2 elements","3 elements","4 elements"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"A − B = {1,2} → 2 elements."},{"id":"CQ-JEE Main-MAT-002","no":2,"text":"The roots of x² − 5x + 6 = 0 are:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Quadratic Equations","topic":"Roots","options":["2, 3","−2, −3","1, 6","−1, 6"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"x² −5x+6 = (x−2)(x−3)."},{"id":"CQ-JEE Main-MAT-003","no":3,"text":"For x² + 4x + 5 = 0, the discriminant is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Quadratic Equations","topic":"Nature of roots","options":["−4","4","16","36"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"D = 16 − 20 = −4 (complex roots)."},{"id":"CQ-JEE Main-MAT-004","no":4,"text":"The 10th term of the AP 3, 7, 11, … is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Sequences & Series","topic":"AP","options":["35","39","43","47"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"a10 = 3 + 9×4 = 39."},{"id":"CQ-JEE Main-MAT-005","no":5,"text":"The sum of the infinite GP 1 + 1/2 + 1/4 + … is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Sequences & Series","topic":"GP","options":["1","2","3","4"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"S∞ = a/(1−r) = 1/(1−½) = 2."},{"id":"CQ-JEE Main-MAT-006","no":6,"text":"Sum to n terms of 1 + 2·2 + 3·4 + 4·8 + … (AGP) grows as:","type":"MCQ","difficulty":"Hard","marks":4,"bloom":"Apply","chapter":"Sequences & Series","topic":"AGP","options":["Linear","Quadratic","Exponential","Logarithmic"],"answer":"C","isPyq":true,"pyqYear":"2023","explanation":"The GP factor 2 dominates → exponential growth."},{"id":"CQ-JEE Main-MAT-007","no":7,"text":"sin²θ + cos²θ equals:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Trigonometry","topic":"Identities","options":["0","1","2","sin 2θ"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Pythagorean identity."},{"id":"CQ-JEE Main-MAT-008","no":8,"text":"sin(A + B) equals:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Trigonometry","topic":"Compound angles","options":["sinA cosB + cosA sinB","sinA cosB − cosA sinB","cosA cosB + sinA sinB","sinA sinB + cosA cosB"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"Standard compound-angle formula."},{"id":"CQ-JEE Main-MAT-009","no":9,"text":"The slope of the line 3x + 4y = 12 is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Coordinate Geometry","topic":"Straight lines","options":["−3/4","3/4","−4/3","4/3"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"y = −3/4 x + 3 → slope −3/4."},{"id":"CQ-JEE Main-MAT-010","no":10,"text":"The centre of the circle x² + y² − 6x + 8y = 0 is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Coordinate Geometry","topic":"Circle","options":["(3, −4)","(−3, 4)","(6, −8)","(−6, 8)"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"Centre = (−g, −f) = (3, −4)."},{"id":"CQ-JEE Main-MAT-011","no":11,"text":"The focus of the parabola y² = 8x is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Coordinate Geometry","topic":"Parabola","options":["(0, 2)","(2, 0)","(0, 4)","(4, 0)"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"y² = 4ax → 4a = 8 → a = 2 → focus (2, 0)."},{"id":"CQ-JEE Main-MAT-012","no":12,"text":"lim(x→0) sin x / x equals:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Limits & Derivatives","topic":"Limits","options":["0","1","∞","−1"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Standard limit = 1."},{"id":"CQ-JEE Main-MAT-013","no":13,"text":"d/dx (x³ − 3x² + 5) at x = 2 is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Limits & Derivatives","topic":"Derivatives","options":["0","6","12","24"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"3x² − 6x at x=2 → 12 − 12 = 0."},{"id":"CQ-JEE Main-MAT-014","no":14,"text":"lim(x→0) (e^x − 1)/x equals:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Limits & Derivatives","topic":"L Hospital","options":["0","1","e","∞"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"L Hospital or standard limit → 1."},{"id":"CQ-JEE Main-MAT-015","no":15,"text":"∫₀¹ x² dx equals:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Integral Calculus","topic":"Definite integrals","options":["1/4","1/3","1/2","1"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"x³/3 evaluated 0→1 = 1/3."},{"id":"CQ-JEE Main-MAT-016","no":16,"text":"Area bounded by y = x² and y = 0 from x = 0 to x = 1 is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Integral Calculus","topic":"Area under curve","options":["1/4","1/3","1/2","2/3"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"∫₀¹ x² dx = 1/3."},{"id":"CQ-JEE Main-MAT-017","no":17,"text":"If a = (1,2,2), its magnitude is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Vectors & 3D","topic":"Vectors","options":["2","3","4","9"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"√(1+4+4) = 3."},{"id":"CQ-JEE Main-MAT-018","no":18,"text":"The angle between vectors (1,0,0) and (0,1,0) is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Vectors & 3D","topic":"Dot product","options":["0°","45°","90°","180°"],"answer":"C","isPyq":true,"pyqYear":"2024","explanation":"Perpendicular → 90°."},{"id":"CQ-JEE Main-MAT-019","no":19,"text":"Direction ratios of the line through (0,0,0) and (1,2,2) are:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Vectors & 3D","topic":"Lines in space","options":["(1,2,2)","(2,1,2)","(1,1,1)","(2,2,1)"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Differences of coordinates = (1,2,2)."},{"id":"CQ-JEE Main-MAT-020","no":20,"text":"Probability of getting a sum of 7 with two dice is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Probability","topic":"Basic probability","options":["1/12","1/6","1/9","1/36"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"6 favourable / 36 = 1/6."},{"id":"CQ-JEE Main-MAT-021","no":21,"text":"If P(A) = 0.6, P(B) = 0.5 and P(A∩B) = 0.3, then P(A|B) is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Probability","topic":"Conditional probability","options":["0.3","0.5","0.6","0.9"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"P(A|B) = 0.3/0.5 = 0.6."},{"id":"CQ-JEE Main-MAT-022","no":22,"text":"The number of ways to arrange the letters of the word \"EXAM\" is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Permutations & Combinations","topic":"Counting","options":["12","24","48","120"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"4! = 24."},{"id":"CQ-JEE Main-MAT-023","no":23,"text":"C(6,2) equals:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Permutations & Combinations","topic":"Combinations","options":["10","12","15","30"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"6×5/2 = 15."},{"id":"CQ-JEE Main-MAT-024","no":24,"text":"The determinant of [[2,3],[1,4]] is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Matrices","topic":"Determinants","options":["5","7","8","11"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"2×4 − 3×1 = 5."},{"id":"CQ-JEE Main-MAT-025","no":25,"text":"If A = [[1,2],[3,4]] and B = [[1,0],[0,1]], then AB equals:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Matrices","topic":"Matrix operations","options":["A","B","2A","Zero matrix"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"B is the identity matrix → AB = A."}]},{"id":"gp7","paperCode":"PAPER-JEE-003","mode":"Competitive","exam":"JEE","subject":"Chemistry","topic":"Physical Chemistry","paperType":"Subject Test","examType":"Subject Test","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"JEE Main Chemistry — Physical Chemistry Mock","course":"JEE · Chemistry","totalMarks":100,"duration":60,"difficulty":"Mixed","questions":25,"status":"Ready","generated":"2026-08-05","created":"2026-08-05","modified":"2026-08-05","coverage":94,"sets":1,"downloads":2,"downloadStatus":"PDF exported","deleteStatus":"Active","negativeMarking":"−1 per incorrect answer","pyqPreference":"PYQ Balanced","questionList":[{"id":"CQ-JEE Main-CHE-001","no":1,"text":"Moles in 44 g of CO₂ (M = 44) are:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Mole Concept","topic":"Stoichiometry","options":["0.5","1","2","4"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"44/44 = 1 mol."},{"id":"CQ-JEE Main-CHE-002","no":2,"text":"Molarity of a solution with 4 g NaOH in 1 L (M = 40) is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Mole Concept","topic":"Molarity","options":["0.1 M","0.2 M","1 M","2 M"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"4/40 = 0.1 mol/L."},{"id":"CQ-JEE Main-CHE-003","no":3,"text":"The maximum number of electrons in a 3d subshell is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Atomic Structure","topic":"Quantum numbers","options":["2","6","10","14"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"d subshell holds 10 electrons."},{"id":"CQ-JEE Main-CHE-004","no":4,"text":"The energy of the nth Bohr orbit of hydrogen is proportional to:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Atomic Structure","topic":"Bohr model","options":["n²","1/n²","n","1/n"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"E ∝ −1/n²."},{"id":"CQ-JEE Main-CHE-005","no":5,"text":"The shape of NH₃ according to VSEPR is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Chemical Bonding","topic":"VSEPR","options":["Trigonal planar","Trigonal pyramidal","Linear","Square planar"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"3 bonds + 1 lone pair → trigonal pyramidal."},{"id":"CQ-JEE Main-CHE-006","no":6,"text":"The hybridisation of carbon in CH₄ is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Chemical Bonding","topic":"Hybridisation","options":["sp","sp²","sp³","dsp²"],"answer":"C","isPyq":true,"pyqYear":"2024","explanation":"4 sigma bonds → sp³."},{"id":"CQ-JEE Main-CHE-007","no":7,"text":"Among the following, the molecule with zero dipole moment is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Chemical Bonding","topic":"Dipole moment","options":["H₂O","NH₃","CO₂","HCl"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Linear symmetric CO₂ → zero dipole."},{"id":"CQ-JEE Main-CHE-008","no":8,"text":"For an exothermic reaction, ΔH is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"Enthalpy","options":["Positive","Negative","Zero","Infinite"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"Exothermic releases heat → ΔH < 0."},{"id":"CQ-JEE Main-CHE-009","no":9,"text":"Entropy of an isolated system at equilibrium:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"Entropy","options":["Increases","Decreases","Is maximum","Is zero"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Equilibrium → maximum entropy."},{"id":"CQ-JEE Main-CHE-010","no":10,"text":"For the reaction H₂ + I₂ ⇌ 2HI, Kc = 49. The equilibrium favours:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Equilibrium","topic":"Kc","options":["Reactants","Products","Neither","Cannot decide"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Kc > 1 → products favoured."},{"id":"CQ-JEE Main-CHE-011","no":11,"text":"The pH of a 0.001 M HCl solution is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Equilibrium","topic":"pH","options":["1","2","3","4"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"pH = −log(10⁻³) = 3."},{"id":"CQ-JEE Main-CHE-012","no":12,"text":"For a cell with E° = 1.1 V and n = 2, E at standard conditions is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Electrochemistry","topic":"Nernst equation","options":["0 V","0.55 V","1.1 V","2.2 V"],"answer":"C","isPyq":true,"pyqYear":"2024","explanation":"Standard conditions → E = E° = 1.1 V."},{"id":"CQ-JEE Main-CHE-013","no":13,"text":"Charge needed to deposit 1 mol of silver (F = 96500 C) is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Electrochemistry","topic":"Faraday law","options":["48250 C","96500 C","193000 C","386000 C"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Ag⁺ + e⁻ → 1 F per mole."},{"id":"CQ-JEE Main-CHE-014","no":14,"text":"The most stable carbocation among the following is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"GOC","options":["CH₃⁺","C₂H₅⁺","(CH₃)₂CH⁺","(CH₃)₃C⁺"],"answer":"D","isPyq":true,"pyqYear":"2024","explanation":"Tertiary carbocation is most stable."},{"id":"CQ-JEE Main-CHE-015","no":15,"text":"Electron-withdrawing group among the following is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"GOC","options":["−CH₃","−OCH₃","−NO₂","−OH"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"−NO₂ is strongly electron-withdrawing."},{"id":"CQ-JEE Main-CHE-016","no":16,"text":"Markovnikov addition of HBr to propene gives:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"Hydrocarbons","options":["1-bromopropane","2-bromopropane","1,2-dibromopropane","Propane"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"Br adds to the more substituted carbon."},{"id":"CQ-JEE Main-CHE-017","no":17,"text":"Primary alcohols oxidise to:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"Alcohols","options":["Ketones","Aldehydes","Carboxylic acids via aldehyde","Ethers"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Primary → aldehyde → carboxylic acid."},{"id":"CQ-JEE Main-CHE-018","no":18,"text":"Aldehydes give silver mirror with:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"Carbonyl compounds","options":["Fehling solution","Tollens reagent","Benedict solution","Lucas reagent"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Tollens (ammoniacal AgNO₃) gives the silver mirror."},{"id":"CQ-JEE Main-CHE-019","no":19,"text":"The coordination number of Fe in [Fe(CN)₆]³⁻ is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Coordination Compounds","topic":"Nomenclature","options":["3","4","6","8"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Six cyanide ligands → CN 6."},{"id":"CQ-JEE Main-CHE-020","no":20,"text":"Primary valence of a metal ion is satisfied by:","type":"MCQ","difficulty":"Hard","marks":4,"bloom":"Apply","chapter":"Coordination Compounds","topic":"Werner theory","options":["Ligands","Counter ions","Water only","Solvent"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Primary valence = ionisation (counter ions)."},{"id":"CQ-JEE Main-CHE-021","no":21,"text":"Ammonia is prepared industrially by:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"p-Block","topic":"Group 15","options":["Contact process","Haber process","Ostwald process","Hall process"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Haber process: N₂ + 3H₂ ⇌ 2NH₃."},{"id":"CQ-JEE Main-CHE-022","no":22,"text":"The strongest oxidising halogen is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"p-Block","topic":"Group 17","options":["F₂","Cl₂","Br₂","I₂"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"F₂ is the strongest oxidising agent."},{"id":"CQ-JEE Main-CHE-023","no":23,"text":"Which d-block ion is colourless in aqueous solution?","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"d-Block","topic":"Properties","options":["Cu²⁺","Zn²⁺","Ni²⁺","Cr³⁺"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Zn²⁺ has a full d¹⁰ shell → colourless."},{"id":"CQ-JEE Main-CHE-024","no":24,"text":"For a first-order reaction, the half-life is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Chemical Kinetics","topic":"Rate laws","options":["Independent of concentration","Doubles with concentration","Halves with concentration","Proportional to k²"],"answer":"A","isPyq":true,"pyqYear":"2023","explanation":"t½ = 0.693/k — concentration independent."},{"id":"CQ-JEE Main-CHE-025","no":25,"text":"Raising temperature increases rate mainly because:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Chemical Kinetics","topic":"Arrhenius equation","options":["Activation energy falls","Fraction of energetic collisions rises","Collision frequency only","Order changes"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Boltzmann tail → more molecules exceed Ea."}]},{"id":"gp8","paperCode":"PAPER-NEET-001","mode":"Competitive","exam":"NEET","subject":"Biology","topic":"Human Physiology","paperType":"Subject Mock","examType":"Full Mock Test","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"NEET Biology — Human Physiology Mock Test","course":"NEET · Biology","totalMarks":100,"duration":60,"difficulty":"Mixed","questions":25,"status":"Ready","generated":"2026-08-05","created":"2026-08-05","modified":"2026-08-06","coverage":97,"sets":1,"downloads":5,"downloadStatus":"PDF & DOCX exported","deleteStatus":"Active","negativeMarking":"−1 per incorrect answer","pyqPreference":"PYQ Heavy","questionList":[{"id":"CQ-NEET UG-BIO-001","no":1,"text":"The two-kingdom classification was given by:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Diversity of Life","topic":"Classification","options":["Linnaeus","Whittaker","Haeckel","Darwin"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Linnaeus proposed two kingdoms (Plantae, Animalia)."},{"id":"CQ-NEET UG-BIO-002","no":2,"text":"Viruses are considered living because they:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Diversity of Life","topic":"Viruses","options":["Grow in size","Reproduce inside host cells","Metabolise outside host","Move actively"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"They replicate only inside host cells."},{"id":"CQ-NEET UG-BIO-003","no":3,"text":"The powerhouse of the cell is the:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Cell Biology","topic":"Cell organelles","options":["Ribosome","Mitochondrion","Golgi body","Lysosome"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Mitochondria generate ATP."},{"id":"CQ-NEET UG-BIO-004","no":4,"text":"DNA replication occurs in which phase?","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Cell Biology","topic":"Cell cycle","options":["G1","S","G2","M"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"S phase = synthesis of DNA."},{"id":"CQ-NEET UG-BIO-005","no":5,"text":"The fluid mosaic model was proposed by:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Cell Biology","topic":"Biomembranes","options":["Watson & Crick","Singer & Nicolson","Robert Hooke","Schleiden & Schwann"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Singer & Nicolson (1972)."},{"id":"CQ-NEET UG-BIO-006","no":6,"text":"The primary CO₂ acceptor in C3 plants is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Plant Physiology","topic":"Photosynthesis","options":["PEP","RuBP","PGA","OAA"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"RuBP (C5) accepts CO₂ in C3 cycle."},{"id":"CQ-NEET UG-BIO-007","no":7,"text":"Photosynthesis occurs in:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Plant Physiology","topic":"Photosynthesis","options":["Chloroplast","Mitochondria","Ribosome","Nucleus"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Chloroplasts house the light reactions + Calvin cycle."},{"id":"CQ-NEET UG-BIO-008","no":8,"text":"The net ATP yield from one glucose molecule in aerobic respiration is about:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Plant Physiology","topic":"Respiration","options":["2","18","38","76"],"answer":"C","isPyq":true,"pyqYear":"2024","explanation":"36–38 ATP (commonly quoted 38 in NCERT)."},{"id":"CQ-NEET UG-BIO-009","no":9,"text":"Water uptake by roots is mainly through:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Plant Physiology","topic":"Transport","options":["Osmosis","Active transport","Diffusion only","Bulk flow only"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Root hair uptake is osmotic."},{"id":"CQ-NEET UG-BIO-010","no":10,"text":"Pepsin digests:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Human Physiology","topic":"Digestion","options":["Carbohydrates","Proteins","Fats","Nucleic acids"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Pepsin hydrolyses proteins in the stomach."},{"id":"CQ-NEET UG-BIO-011","no":11,"text":"The volume of air inspired or expired with each normal breath is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Human Physiology","topic":"Breathing","options":["Tidal volume","Vital capacity","Residual volume","Total lung capacity"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Tidal volume ≈ 500 mL."},{"id":"CQ-NEET UG-BIO-012","no":12,"text":"The heart pumps blood to the lungs through the:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Human Physiology","topic":"Circulation","options":["Aorta","Pulmonary artery","Pulmonary vein","Vena cava"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Pulmonary artery carries deoxygenated blood to lungs."},{"id":"CQ-NEET UG-BIO-013","no":13,"text":"The functional unit of the kidney is the:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Human Physiology","topic":"Excretion","options":["Neuron","Nephron","Alveolus","Glomerulus only"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Nephron = functional unit."},{"id":"CQ-NEET UG-BIO-014","no":14,"text":"The gap between two neurons is the:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Human Physiology","topic":"Neural control","options":["Axon","Synapse","Myelin sheath","Node of Ranvier"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"Synaptic cleft between neurons."},{"id":"CQ-NEET UG-BIO-015","no":15,"text":"Insulin is secreted by:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Human Physiology","topic":"Endocrine","options":["Liver","Pancreas","Adrenal gland","Thyroid"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Pancreatic beta cells secrete insulin."},{"id":"CQ-NEET UG-BIO-016","no":16,"text":"In a monohybrid cross, the phenotypic ratio in F2 is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Genetics","topic":"Mendelian inheritance","options":["1:1","3:1","9:3:3:1","1:2:1"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Dominant:recessive = 3:1."},{"id":"CQ-NEET UG-BIO-017","no":17,"text":"The genetic material of most organisms is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Genetics","topic":"Molecular genetics","options":["RNA","DNA","Protein","Lipid"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"DNA is the genetic material."},{"id":"CQ-NEET UG-BIO-018","no":18,"text":"The central dogma of molecular biology is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Genetics","topic":"Central dogma","options":["DNA → RNA → Protein","RNA → DNA → Protein","Protein → RNA → DNA","DNA → Protein → RNA"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"Transcription then translation."},{"id":"CQ-NEET UG-BIO-019","no":19,"text":"Down syndrome is caused by trisomy of chromosome:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Genetics","topic":"Human genetics","options":["13","18","21","X"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Trisomy 21."},{"id":"CQ-NEET UG-BIO-020","no":20,"text":"The direct evidence for evolution comes from:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Evolution","topic":"Evidence","options":["Fossils","Vestigial organs only","Comparative anatomy only","Embryology only"],"answer":"A","isPyq":true,"pyqYear":"2023","explanation":"Palaeontological (fossil) evidence is direct."},{"id":"CQ-NEET UG-BIO-021","no":21,"text":"Natural selection acts on:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Evolution","topic":"Natural selection","options":["Genotype only","Phenotype","Species as a whole","Community"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Selection operates on phenotypes."},{"id":"CQ-NEET UG-BIO-022","no":22,"text":"Vaccines provide:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Human Welfare","topic":"Immunity","options":["Passive immunity","Active immunity","Innate immunity only","No immunity"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Vaccination = active acquired immunity."},{"id":"CQ-NEET UG-BIO-023","no":23,"text":"Penicillin is obtained from:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Human Welfare","topic":"Microbes","options":["Bacteria","Fungi","Virus","Algae"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Penicillium (fungus)."},{"id":"CQ-NEET UG-BIO-024","no":24,"text":"The pyramid of energy is always:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Ecology","topic":"Ecosystem","options":["Upright","Inverted","Spindle-shaped","Variable"],"answer":"A","isPyq":true,"pyqYear":"2023","explanation":"Energy decreases up trophic levels."},{"id":"CQ-NEET UG-BIO-025","no":25,"text":"The maximum population size an environment can sustain is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Ecology","topic":"Population","options":["Carrying capacity","Biotic potential","Population density","Growth rate"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Carrying capacity (K)."}]},{"id":"gp9","paperCode":"PAPER-NEET-002","mode":"Competitive","exam":"NEET","subject":"Chemistry","topic":"Organic Chemistry","paperType":"Subject Test","examType":"Subject Test","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"NEET Chemistry — Organic Chemistry Practice","course":"NEET · Chemistry","totalMarks":100,"duration":60,"difficulty":"Mixed","questions":25,"status":"Ready","generated":"2026-08-06","created":"2026-08-06","modified":"2026-08-06","coverage":95,"sets":1,"downloads":2,"downloadStatus":"PDF exported","deleteStatus":"Active","negativeMarking":"−1 per incorrect answer","pyqPreference":"Include PYQs","questionList":[{"id":"CQ-NEET UG-CHE-001","no":1,"text":"The number of moles in 3.6 g of water (M = 18) is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Some Basic Concepts","topic":"Mole concept","options":["0.1","0.2","0.5","1.0"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"3.6/18 = 0.2 mol."},{"id":"CQ-NEET UG-CHE-002","no":2,"text":"The empirical formula of glucose C₆H₁₂O₆ is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Some Basic Concepts","topic":"Empirical formula","options":["C₆H₁₂O₆","CH₂O","C₂H₄O₂","C₃H₆O₃"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Divide by 6 → CH₂O."},{"id":"CQ-NEET UG-CHE-003","no":3,"text":"The number of unpaired electrons in Fe³⁺ (Z = 26) is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Structure of Atom","topic":"Electronic configuration","options":["2","3","4","5"],"answer":"D","isPyq":true,"pyqYear":"2025","explanation":"Fe³⁺: [Ar]3d⁵ → 5 unpaired."},{"id":"CQ-NEET UG-CHE-004","no":4,"text":"The order of filling 4s and 3d orbitals is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Structure of Atom","topic":"Aufbau principle","options":["3d before 4s","4s before 3d","Both fill together","4p before 4s"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"4s fills before 3d (Aufbau)."},{"id":"CQ-NEET UG-CHE-005","no":5,"text":"Which pair forms an ionic bond?","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Chemical Bonding","topic":"Ionic bond","options":["H and Cl","Na and Cl","C and H","N and O"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"NaCl is ionic (metal + non-metal)."},{"id":"CQ-NEET UG-CHE-006","no":6,"text":"Which liquid shows hydrogen bonding?","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Chemical Bonding","topic":"Hydrogen bonding","options":["CCl₄","H₂O","CS₂","C₆H₆"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"Water has O–H···O hydrogen bonds."},{"id":"CQ-NEET UG-CHE-007","no":7,"text":"At constant temperature, PV for an ideal gas is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"States of Matter","topic":"Gas laws","options":["Constant","Increasing","Decreasing","Zero"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Boyle law: PV = constant."},{"id":"CQ-NEET UG-CHE-008","no":8,"text":"The ideal gas equation is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"States of Matter","topic":"Ideal gas equation","options":["PV = nRT","PV = nT","P = nRT/V²","PV² = nRT"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"PV = nRT."},{"id":"CQ-NEET UG-CHE-009","no":9,"text":"Hess law is a consequence of:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"Hess law","options":["First law of thermodynamics","Second law","Third law","Avogadro law"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Enthalpy is a state function (first law)."},{"id":"CQ-NEET UG-CHE-010","no":10,"text":"A reaction is spontaneous when ΔG is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"Free energy","options":["Positive","Negative","Zero","Infinite"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"ΔG < 0 → spontaneous."},{"id":"CQ-NEET UG-CHE-011","no":11,"text":"Increasing pressure shifts equilibrium toward:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Equilibrium","topic":"Le Chatelier","options":["Fewer moles of gas","More moles of gas","No shift ever","The side with more molecules"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Le Chatelier: toward fewer gas moles."},{"id":"CQ-NEET UG-CHE-012","no":12,"text":"A buffer is a mixture of:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Equilibrium","topic":"Buffer","options":["Strong acid and strong base","Weak acid and its salt","Two strong acids","Two weak bases only"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Weak acid + conjugate base salt."},{"id":"CQ-NEET UG-CHE-013","no":13,"text":"The oxidation state of Mn in KMnO₄ is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Redox Reactions","topic":"Oxidation number","options":["+5","+6","+7","+8"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"1 + x − 8 = 0 → x = +7."},{"id":"CQ-NEET UG-CHE-014","no":14,"text":"Disproportionation is when:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Redox Reactions","topic":"Disproportionation","options":["One species both oxidises and reduces","Two species exchange electrons","No electron transfer","Only reduction occurs"],"answer":"A","isPyq":true,"pyqYear":"2023","explanation":"Same species → oxidised and reduced."},{"id":"CQ-NEET UG-CHE-015","no":15,"text":"CO₂ is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"p-Block","topic":"Group 14","options":["Linear","Bent","Trigonal planar","Tetrahedral"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"O=C=O is linear."},{"id":"CQ-NEET UG-CHE-016","no":16,"text":"The most abundant element in the Earth crust is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"p-Block","topic":"Group 16","options":["Silicon","Oxygen","Aluminium","Iron"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Oxygen ≈ 46.6% of crust."},{"id":"CQ-NEET UG-CHE-017","no":17,"text":"The common oxidation state of lanthanoids is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"d & f Block","topic":"Lanthanoids","options":["+1","+2","+3","+4"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Most stable lanthanoid state is +3."},{"id":"CQ-NEET UG-CHE-018","no":18,"text":"[Co(NH₃)₅Cl]²⁺ shows which type of isomerism?","type":"MCQ","difficulty":"Hard","marks":4,"bloom":"Apply","chapter":"Coordination Compounds","topic":"Isomerism","options":["Linkage","Ionisation","Coordination","Geometrical"],"answer":"C","isPyq":true,"pyqYear":"2024","explanation":"Cl can be inside or outside the coordination sphere."},{"id":"CQ-NEET UG-CHE-019","no":19,"text":"Which intermediate is most stable?","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"GOC","options":["Primary carbocation","Secondary carbocation","Tertiary carbocation","Methyl cation"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Tertiary > secondary > primary > methyl."},{"id":"CQ-NEET UG-CHE-020","no":20,"text":"Alkanes react with halogens in the presence of UV light via:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"Hydrocarbons","options":["Electrophilic addition","Free-radical substitution","Nucleophilic substitution","Elimination"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Halogenation of alkanes is free-radical."},{"id":"CQ-NEET UG-CHE-021","no":21,"text":"SN1 reactions are favoured by:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"Haloalkanes","options":["Primary substrates","Tertiary substrates","Polar aprotic solvents only","Strong nucleophiles"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Tertiary carbocation stability favours SN1."},{"id":"CQ-NEET UG-CHE-022","no":22,"text":"Aldehydes reduce Fehling solution to give:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"Aldehydes & Ketones","options":["Silver mirror","Red precipitate of Cu₂O","White precipitate","No reaction"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"Fehling → brick-red Cu₂O."},{"id":"CQ-NEET UG-CHE-023","no":23,"text":"Amines are basic due to the lone pair on:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Organic Chemistry","topic":"Amines","options":["Carbon","Nitrogen","Oxygen","Hydrogen"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Lone pair on nitrogen accepts H⁺."},{"id":"CQ-NEET UG-CHE-024","no":24,"text":"Glucose and fructose are:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Biomolecules","topic":"Carbohydrates","options":["Anomers","Functional isomers","Position isomers","Chain isomers"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Aldose vs ketose → functional isomers."},{"id":"CQ-NEET UG-CHE-025","no":25,"text":"The bond linking amino acids in proteins is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Biomolecules","topic":"Proteins","options":["Glycosidic","Peptide","Ester","Hydrogen only"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Peptide bonds between amino acids."}]},{"id":"gp10","paperCode":"PAPER-NEET-003","mode":"Competitive","exam":"NEET","subject":"Physics","topic":"Mechanics / Electrodynamics","paperType":"Subject Mock","examType":"Full Mock Test","faculty":"Dr. Meera Krishnan","versions":1,"archived":false,"title":"NEET Physics — Mechanics & Electrodynamics","course":"NEET · Physics","totalMarks":100,"duration":60,"difficulty":"Mixed","questions":25,"status":"Ready","generated":"2026-08-06","created":"2026-08-06","modified":"2026-08-07","coverage":96,"sets":1,"downloads":3,"downloadStatus":"PDF & DOCX exported","deleteStatus":"Active","negativeMarking":"−1 per incorrect answer","pyqPreference":"PYQ Balanced","questionList":[{"id":"CQ-NEET UG-PHY-001","no":1,"text":"The dimensional formula of force is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Units & Measurement","topic":"Dimensions","options":["[MLT⁻²]","[ML²T⁻²]","[MLT⁻¹]","[M⁻¹L³T⁻²]"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"F = ma → [MLT⁻²]."},{"id":"CQ-NEET UG-PHY-002","no":2,"text":"A body dropped from rest falls 45 m in:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Kinematics","topic":"Motion in one dimension","options":["1 s","2 s","3 s","4 s"],"answer":"C","isPyq":true,"pyqYear":"2024","explanation":"s = ½gt² → 45 = 5t² → t = 3 s."},{"id":"CQ-NEET UG-PHY-003","no":3,"text":"Horizontal range is maximum when the angle of projection is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Kinematics","topic":"Projectile motion","options":["30°","45°","60°","90°"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"R ∝ sin2θ → max at 45°."},{"id":"CQ-NEET UG-PHY-004","no":4,"text":"A net force of 15 N acts on a 3 kg body. Acceleration is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Laws of Motion","topic":"Newton second law","options":["3 m/s²","5 m/s²","15 m/s²","45 m/s²"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"a = 15/3 = 5 m/s²."},{"id":"CQ-NEET UG-PHY-005","no":5,"text":"Static friction is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Laws of Motion","topic":"Friction","options":["Always less than kinetic","Equal to applied force up to a limit","Independent of normal reaction","Zero on rough surfaces"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Static friction matches applied force until the limit."},{"id":"CQ-NEET UG-PHY-006","no":6,"text":"If speed doubles, kinetic energy becomes:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Work, Energy & Power","topic":"Kinetic energy","options":["2×","4×","8×","16×"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"KE ∝ v²."},{"id":"CQ-NEET UG-PHY-007","no":7,"text":"The gravitational PE of a 2 kg mass at 10 m height (g = 10) is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Work, Energy & Power","topic":"Potential energy","options":["100 J","200 J","400 J","20 J"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"mgh = 2×10×10 = 200 J."},{"id":"CQ-NEET UG-PHY-008","no":8,"text":"Torque is the time derivative of:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Rotational Motion","topic":"Torque","options":["Linear momentum","Angular momentum","Moment of inertia","Work"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"τ = dL/dt."},{"id":"CQ-NEET UG-PHY-009","no":9,"text":"Moment of inertia of a ring of mass M and radius R about its central axis is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Rotational Motion","topic":"Moment of inertia","options":["MR²","½MR²","(2/5)MR²","(2/3)MR²"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Ring: I = MR²."},{"id":"CQ-NEET UG-PHY-010","no":10,"text":"The value of g at a height h above the surface (h small) is approximately:","type":"MCQ","difficulty":"Hard","marks":4,"bloom":"Apply","chapter":"Gravitation","topic":"Variation of g","options":["g(1 − 2h/R)","g(1 + 2h/R)","g(1 − h/R)","g(1 + h/R)"],"answer":"A","isPyq":true,"pyqYear":"2023","explanation":"g′ ≈ g(1 − 2h/R) for h ≪ R."},{"id":"CQ-NEET UG-PHY-011","no":11,"text":"Young modulus is the ratio of:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Properties of Matter","topic":"Elasticity","options":["Stress to strain","Strain to stress","Force to area","Length to area"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"Y = stress/strain."},{"id":"CQ-NEET UG-PHY-012","no":12,"text":"Surface tension has units:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Properties of Matter","topic":"Surface tension","options":["N/m","N·m","N/m²","J·m"],"answer":"A","isPyq":true,"pyqYear":"2024","explanation":"Force per unit length → N/m."},{"id":"CQ-NEET UG-PHY-013","no":13,"text":"For an isothermal process of an ideal gas, ΔU is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"Isothermal process","options":["Positive","Negative","Zero","Maximum"],"answer":"C","isPyq":true,"pyqYear":"2025","explanation":"Isothermal: ΔT = 0 → ΔU = 0."},{"id":"CQ-NEET UG-PHY-014","no":14,"text":"The second law of thermodynamics is best expressed by:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Thermodynamics","topic":"Second law","options":["ΔU = Q − W","Entropy of an isolated system never decreases","PV = nRT","E = mc²"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"Second law → entropy statement."},{"id":"CQ-NEET UG-PHY-015","no":15,"text":"RMS speed of gas molecules is proportional to:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"KTG","topic":"Kinetic theory","options":["√T","T","T²","1/T"],"answer":"A","isPyq":true,"pyqYear":"2023","explanation":"v_rms ∝ √T."},{"id":"CQ-NEET UG-PHY-016","no":16,"text":"In SHM, acceleration is maximum at:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Oscillations","topic":"SHM","options":["Mean position","Extreme positions","Everywhere equal","Half amplitude"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"a = −ω²x → max at extremes."},{"id":"CQ-NEET UG-PHY-017","no":17,"text":"The speed of sound in air increases with:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Waves","topic":"Sound","options":["Decreasing temperature","Increasing temperature","Lower humidity","Lower pressure only"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"v ∝ √T."},{"id":"CQ-NEET UG-PHY-018","no":18,"text":"Two resistors 4 Ω and 6 Ω in series give:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Current Electricity","topic":"Series circuits","options":["2.4 Ω","10 Ω","24 Ω","1.5 Ω"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"R = 4 + 6 = 10 Ω."},{"id":"CQ-NEET UG-PHY-019","no":19,"text":"Two resistors 4 Ω and 6 Ω in parallel give:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Current Electricity","topic":"Parallel circuits","options":["10 Ω","2.4 Ω","24 Ω","5 Ω"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"1/R = 1/4 + 1/6 = 5/12 → R = 2.4 Ω."},{"id":"CQ-NEET UG-PHY-020","no":20,"text":"The force on a charge q moving with velocity v in a magnetic field B is:","type":"MCQ","difficulty":"Medium","marks":4,"bloom":"Apply","chapter":"Magnetic Effects","topic":"Lorentz force","options":["q(v × B)","q(v · B)","qvB always","qE"],"answer":"A","isPyq":true,"pyqYear":"2025","explanation":"F = q(v × B)."},{"id":"CQ-NEET UG-PHY-021","no":21,"text":"The induced EMF in a loop depends on:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"EM Induction","topic":"Faraday law","options":["Magnetic flux","Rate of change of flux","Area only","Resistance only"],"answer":"B","isPyq":true,"pyqYear":"2023","explanation":"ε = −dΦ/dt."},{"id":"CQ-NEET UG-PHY-022","no":22,"text":"A convex lens of focal length 20 cm forms an image at 60 cm. Object distance is:","type":"MCQ","difficulty":"Hard","marks":4,"bloom":"Apply","chapter":"Optics","topic":"Lens formula","options":["15 cm","30 cm","40 cm","80 cm"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"1/f = 1/v − 1/u → u = 30 cm (real object)."},{"id":"CQ-NEET UG-PHY-023","no":23,"text":"TIR occurs when light travels from:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Optics","topic":"Total internal reflection","options":["Rarer to denser","Denser to rarer above critical angle","Denser to rarer below critical angle","Parallel to the interface"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"TIR needs denser → rarer above critical angle."},{"id":"CQ-NEET UG-PHY-024","no":24,"text":"Einstein explained the photoelectric effect using:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Modern Physics","topic":"Photoelectric effect","options":["Wave theory","Photon concept","Relativity","Nuclear model"],"answer":"B","isPyq":true,"pyqYear":"2025","explanation":"Light quanta (photons)."},{"id":"CQ-NEET UG-PHY-025","no":25,"text":"After two half-lives, the fraction of a radioactive sample remaining is:","type":"MCQ","difficulty":"Easy","marks":4,"bloom":"Apply","chapter":"Modern Physics","topic":"Radioactivity","options":["1/2","1/4","1/8","1/16"],"answer":"B","isPyq":true,"pyqYear":"2024","explanation":"(1/2)² = 1/4."}]}],"questionIntelligence":{"difficultyDistribution":[{"level":"Easy","count":7,"marks":14},{"level":"Medium","count":10,"marks":24},{"level":"Hard","count":5,"marks":12}],"bloomDistribution":[{"level":"Remember","count":3,"marks":6},{"level":"Understand","count":4,"marks":9},{"level":"Apply","count":7,"marks":15},{"level":"Analyze","count":4,"marks":10},{"level":"Evaluate","count":2,"marks":6},{"level":"Create","count":2,"marks":4}],"chapterCoverage":[{"chapter":"Graph Algorithms","questions":6,"marks":14,"coverage":100},{"chapter":"Dynamic Programming","questions":4,"marks":10,"coverage":90},{"chapter":"Sorting & Searching","questions":3,"marks":6,"coverage":75},{"chapter":"Trees & Heaps","questions":3,"marks":7,"coverage":80},{"chapter":"Complexity Analysis","questions":3,"marks":6,"coverage":70},{"chapter":"String Algorithms","questions":3,"marks":7,"coverage":65}],"topicCoverage":[{"topic":"Dijkstra","q":2,"marks":5},{"topic":"MST","q":2,"marks":4},{"topic":"Knapsack","q":2,"marks":5},{"topic":"AVL","q":1,"marks":2},{"topic":"Big-O","q":2,"marks":4},{"topic":"KMP","q":1,"marks":3}],"marksDistribution":[{"type":"MCQ","count":10,"marks":10},{"type":"Short Answer","count":5,"marks":15},{"type":"Long Answer","count":2,"marks":25}],"questionCount":22},"paperPreview":[{"no":1,"type":"MCQ","bloom":"Remember","difficulty":"Easy","marks":1,"chapter":"Sorting & Searching","text":"Which sorting algorithm has the best worst-case time complexity among the following?","options":["Bubble Sort","Merge Sort","Insertion Sort","Selection Sort"],"answer":"Merge Sort"},{"no":2,"type":"MCQ","bloom":"Understand","difficulty":"Easy","marks":1,"chapter":"Trees & Heaps","text":"In a max-heap of n elements, the minimum element can be found in…","options":["O(1)","O(log n)","O(n)","O(n log n)"],"answer":"O(n)"},{"no":3,"type":"MCQ","bloom":"Apply","difficulty":"Medium","marks":1,"chapter":"Graph Algorithms","text":"Given an undirected weighted graph, which algorithm constructs the Minimum Spanning Tree by always picking the smallest edge that does not form a cycle?","options":["Dijkstra","Prim","Kruskal","Floyd-Warshall"],"answer":"Kruskal"},{"no":4,"type":"MCQ","bloom":"Analyze","difficulty":"Medium","marks":1,"chapter":"Complexity Analysis","text":"The recurrence T(n) = 2T(n/2) + n has a time complexity of…","options":["O(n)","O(n log n)","O(n²)","O(log n)"],"answer":"O(n log n)"},{"no":5,"type":"Short Answer","bloom":"Apply","difficulty":"Medium","marks":3,"chapter":"Graph Algorithms","text":"Trace Dijkstra's algorithm on a given graph of 5 vertices and compute the shortest path from source A to all others.","options":[],"answer":"A–C–B–D–E paths with distances"},{"no":6,"type":"Short Answer","bloom":"Understand","difficulty":"Medium","marks":3,"chapter":"Trees & Heaps","text":"Explain the single and double rotations in AVL trees with a diagram for each case.","options":[],"answer":"LL, RR, LR, RL rotations"},{"no":7,"type":"Short Answer","bloom":"Evaluate","difficulty":"Hard","marks":3,"chapter":"Complexity Analysis","text":"Compare the practical performance of Quick Sort vs Merge Sort for large datasets. When would you choose each?","options":[],"answer":"Cache locality vs stability"},{"no":8,"type":"Long Answer","bloom":"Create","difficulty":"Hard","marks":12,"chapter":"Dynamic Programming","text":"Solve the 0/1 Knapsack problem for 4 items with capacity 8 using DP. Design a variant that handles fractional items and compare.","options":[],"answer":"DP table + fractional variant"},{"no":9,"type":"Long Answer","bloom":"Analyze","difficulty":"Hard","marks":13,"chapter":"Graph Algorithms","text":"Design an algorithm to find the shortest path in a graph with negative weights but no negative cycles. Prove correctness.","options":[],"answer":"Bellman-Ford + proof"},{"no":10,"type":"Programming","bloom":"Apply","difficulty":"Medium","marks":10,"chapter":"Sorting & Searching","text":"Implement merge sort and demonstrate its stability with a custom object array.","options":[],"answer":"Code + test case"}],"markingScheme":[{"type":"MCQ","marks":4,"negative":1},{"type":"Integer","marks":4,"negative":0},{"type":"Numerical","marks":4,"negative":0},{"type":"Assertion Reason","marks":4,"negative":1},{"type":"Case Based","marks":4,"negative":0},{"type":"Diagram Based","marks":4,"negative":0},{"type":"Statement Based","marks":4,"negative":1}],"answerKey":[{"q":1,"type":"MCQ","answer":"Option B"},{"q":2,"type":"MCQ","answer":"Option C"},{"q":3,"type":"MCQ","answer":"Option A"},{"q":4,"type":"MCQ","answer":"Option D"},{"q":5,"type":"Short Answer","answer":"A-C-B-D-E paths with distances"},{"q":6,"type":"Short Answer","answer":"LL, RR, LR, RL rotations"},{"q":7,"type":"Short Answer","answer":"Cache locality vs stability"},{"q":8,"type":"Long Answer","answer":"DP table + fractional variant"},{"q":9,"type":"Long Answer","answer":"Bellman-Ford + proof"},{"q":10,"type":"Programming","answer":"Merge sort code + test"}],"templates":[{"id":"t1","name":"Standard Midsem Blueprint","duration":180,"marks":50,"sections":"MCQ 10 · Short 5 · Long 2"},{"id":"t2","name":"Quiz Quick Template","duration":15,"marks":10,"sections":"MCQ 10"},{"id":"t3","name":"Class Test Template","duration":45,"marks":20,"sections":"MCQ 8 · Short 4 · Long 1"},{"id":"t4","name":"End-Sem Comprehensive","duration":180,"marks":100,"sections":"MCQ 20 · Short 10 · Long 4 · Case 1"}],"versionHistory":{"gp1":[{"version":"v1.0","date":"2026-08-01","note":"Initial draft"},{"version":"v1.1","date":"2026-08-02","note":"Coverage 92% → rebalanced CO2 weight"}],"gp2":[{"version":"v1.0","date":"2026-08-01","note":"Initial draft"},{"version":"v1.1","date":"2026-08-02","note":"Added 2 hard MCQs, coverage 94%"}],"gp3":[{"version":"v1.0","date":"2026-08-03","note":"Initial draft"}],"gp4":[{"version":"v1.0","date":"2026-08-02","note":"Initial draft"},{"version":"v1.1","date":"2026-08-03","note":"Difficulty lowered to Easy"},{"version":"v1.2","date":"2026-08-04","note":"2 sets generated"}]}}
+{
+  "config": {
+    "patterns": [
+      "JEE Main",
+      "JEE Advanced",
+      "NEET",
+      "Board / Custom"
+    ],
+    "examModes": [
+      "University",
+      "Competitive"
+    ],
+    "universityTypes": [
+      "Mid Semester",
+      "End Semester",
+      "Unit Test",
+      "Internal Assessment",
+      "Model Examination"
+    ],
+    "competitiveTypes": [
+      "Full Mock Test",
+      "Subject Test",
+      "Chapter Test",
+      "PYQ Practice Paper",
+      "Mixed Practice Test"
+    ],
+    "competitiveExams": [
+      "JEE",
+      "NEET"
+    ],
+    "competitiveSubjects": {
+      "JEE": [
+        "Physics",
+        "Mathematics",
+        "Chemistry"
+      ],
+      "NEET": [
+        "Physics",
+        "Chemistry",
+        "Biology"
+      ]
+    },
+    "negativeMarking": [
+      "None",
+      "−1 per incorrect answer",
+      "−0.25 per incorrect answer"
+    ],
+    "pyqPreferences": [
+      "No preference",
+      "Prefer PYQ questions",
+      "PYQ only"
+    ],
+    "departments": [
+      "Computer Science",
+      "Electronics & Comm.",
+      "Mechanical",
+      "Mathematics",
+      "Business School"
+    ],
+    "programs": [
+      "B.Tech — CSE",
+      "B.Tech — ECE",
+      "B.Tech — ME",
+      "M.Sc — Data Science",
+      "MBA"
+    ],
+    "semesters": [
+      "Sem 1",
+      "Sem 2",
+      "Sem 3",
+      "Sem 4",
+      "Sem 5",
+      "Sem 6",
+      "Sem 7",
+      "Sem 8"
+    ],
+    "courses": [
+      "CS501 — DSA",
+      "CS502 — DBMS",
+      "CS503 — OS",
+      "CS504 — Networks",
+      "CS505 — ML",
+      "CS506 — ToC"
+    ],
+    "subjects": [
+      "Data Structures & Algorithms",
+      "Database Management Systems",
+      "Operating Systems",
+      "Computer Networks",
+      "Machine Learning",
+      "Theory of Computation"
+    ],
+    "chapters": [
+      "Graph Algorithms",
+      "Dynamic Programming",
+      "Sorting & Searching",
+      "Trees & Heaps",
+      "Complexity Analysis",
+      "String Algorithms"
+    ],
+    "topics": [
+      "Dijkstra & shortest paths",
+      "MST (Kruskal/Prim)",
+      "Topological sort",
+      "0/1 Knapsack",
+      "Big-O analysis",
+      "AVL rotations",
+      "KMP string matching"
+    ],
+    "durations": [
+      60,
+      90,
+      120,
+      150,
+      180
+    ],
+    "difficulties": [
+      "Easy",
+      "Medium",
+      "Hard",
+      "Mixed"
+    ],
+    "blooms": [
+      "Remember",
+      "Understand",
+      "Apply",
+      "Analyze",
+      "Evaluate",
+      "Create"
+    ],
+    "questionTypes": [
+      "MCQ",
+      "Assertion Reason",
+      "Case Based",
+      "Diagram Based",
+      "Integer",
+      "Numerical",
+      "Statement Based",
+      "Short Answer",
+      "Long Answer"
+    ]
+  },
+  "generatedPapers": [
+    {
+      "id": "gp1",
+      "paperCode": "PAPER-UNI-001",
+      "mode": "University",
+      "examType": "Mid Semester",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 2,
+      "archived": false,
+      "title": "Midsem — DSA (Paper A)",
+      "course": "CS501",
+      "totalMarks": 50,
+      "duration": 180,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-01",
+      "created": "2026-08-01",
+      "modified": "2026-08-02",
+      "coverage": 92,
+      "sets": 1,
+      "downloads": 3,
+      "downloadStatus": "PDF & DOCX exported",
+      "deleteStatus": "Active",
+      "questionList": [],
+      "blooms": {
+        "Remember": 15,
+        "Understand": 20,
+        "Apply": 30,
+        "Analyze": 20,
+        "Evaluate": 10,
+        "Create": 5
+      }
+    },
+    {
+      "id": "gp2",
+      "paperCode": "PAPER-UNI-002",
+      "mode": "University",
+      "examType": "Mid Semester",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "Midsem — DSA (Paper B)",
+      "course": "CS501",
+      "totalMarks": 50,
+      "duration": 180,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-01",
+      "created": "2026-08-01",
+      "modified": "2026-08-02",
+      "coverage": 94,
+      "sets": 1,
+      "downloads": 2,
+      "downloadStatus": "PDF exported",
+      "deleteStatus": "Active",
+      "questionList": [],
+      "blooms": {
+        "Remember": 10,
+        "Understand": 20,
+        "Apply": 35,
+        "Analyze": 20,
+        "Evaluate": 10,
+        "Create": 5
+      }
+    },
+    {
+      "id": "gp3",
+      "paperCode": "PAPER-UNI-003",
+      "mode": "University",
+      "examType": "MCQ Test",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "Quiz — Transactions & Concurrency",
+      "course": "CS502",
+      "totalMarks": 10,
+      "duration": 15,
+      "difficulty": "Medium",
+      "questions": 0,
+      "status": "Draft",
+      "generated": "2026-08-03",
+      "created": "2026-08-03",
+      "modified": "2026-08-03",
+      "coverage": 100,
+      "sets": 1,
+      "downloads": 0,
+      "downloadStatus": "Not exported",
+      "deleteStatus": "Active",
+      "questionList": [],
+      "blooms": {
+        "Remember": 20,
+        "Understand": 30,
+        "Apply": 40,
+        "Analyze": 10
+      }
+    },
+    {
+      "id": "gp4",
+      "paperCode": "PAPER-UNI-004",
+      "mode": "University",
+      "examType": "Internal Assessment",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 3,
+      "archived": false,
+      "title": "Class Test — Memory Management",
+      "course": "CS503",
+      "totalMarks": 20,
+      "duration": 45,
+      "difficulty": "Easy",
+      "questions": 0,
+      "status": "In Review",
+      "generated": "2026-08-02",
+      "created": "2026-08-02",
+      "modified": "2026-08-04",
+      "coverage": 85,
+      "sets": 2,
+      "downloads": 1,
+      "downloadStatus": "DOCX exported",
+      "deleteStatus": "Active",
+      "questionList": [],
+      "blooms": {
+        "Remember": 25,
+        "Understand": 35,
+        "Apply": 30,
+        "Analyze": 10
+      }
+    },
+    {
+      "id": "gp5",
+      "paperCode": "PAPER-JEE-001",
+      "mode": "Competitive",
+      "exam": "JEE",
+      "subject": "Physics",
+      "topic": "Mechanics",
+      "paperType": "Full Mock Test",
+      "examType": "Full Mock Test",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "JEE Main Physics — Mechanics Mock Test 01",
+      "course": "JEE · Physics",
+      "totalMarks": 100,
+      "duration": 60,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-04",
+      "created": "2026-08-04",
+      "modified": "2026-08-05",
+      "coverage": 96,
+      "sets": 1,
+      "downloads": 4,
+      "downloadStatus": "PDF & DOCX exported",
+      "deleteStatus": "Active",
+      "negativeMarking": "−1 per incorrect answer",
+      "pyqPreference": "PYQ Balanced",
+      "questionList": []
+    },
+    {
+      "id": "gp6",
+      "paperCode": "PAPER-JEE-002",
+      "mode": "Competitive",
+      "exam": "JEE",
+      "subject": "Mathematics",
+      "topic": "Calculus",
+      "paperType": "Subject Test",
+      "examType": "Subject Test",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "JEE Main Mathematics — Calculus Practice Paper",
+      "course": "JEE · Mathematics",
+      "totalMarks": 100,
+      "duration": 60,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-04",
+      "created": "2026-08-04",
+      "modified": "2026-08-05",
+      "coverage": 95,
+      "sets": 1,
+      "downloads": 3,
+      "downloadStatus": "PDF exported",
+      "deleteStatus": "Active",
+      "negativeMarking": "−1 per incorrect answer",
+      "pyqPreference": "Include PYQs",
+      "questionList": []
+    },
+    {
+      "id": "gp7",
+      "paperCode": "PAPER-JEE-003",
+      "mode": "Competitive",
+      "exam": "JEE",
+      "subject": "Chemistry",
+      "topic": "Physical Chemistry",
+      "paperType": "Subject Test",
+      "examType": "Subject Test",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "JEE Main Chemistry — Physical Chemistry Mock",
+      "course": "JEE · Chemistry",
+      "totalMarks": 100,
+      "duration": 60,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-05",
+      "created": "2026-08-05",
+      "modified": "2026-08-05",
+      "coverage": 94,
+      "sets": 1,
+      "downloads": 2,
+      "downloadStatus": "PDF exported",
+      "deleteStatus": "Active",
+      "negativeMarking": "−1 per incorrect answer",
+      "pyqPreference": "PYQ Balanced",
+      "questionList": []
+    },
+    {
+      "id": "gp8",
+      "paperCode": "PAPER-NEET-001",
+      "mode": "Competitive",
+      "exam": "NEET",
+      "subject": "Biology",
+      "topic": "Human Physiology",
+      "paperType": "Subject Mock",
+      "examType": "Full Mock Test",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "NEET Biology — Human Physiology Mock Test",
+      "course": "NEET · Biology",
+      "totalMarks": 100,
+      "duration": 60,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-05",
+      "created": "2026-08-05",
+      "modified": "2026-08-06",
+      "coverage": 97,
+      "sets": 1,
+      "downloads": 5,
+      "downloadStatus": "PDF & DOCX exported",
+      "deleteStatus": "Active",
+      "negativeMarking": "−1 per incorrect answer",
+      "pyqPreference": "PYQ Heavy",
+      "questionList": []
+    },
+    {
+      "id": "gp9",
+      "paperCode": "PAPER-NEET-002",
+      "mode": "Competitive",
+      "exam": "NEET",
+      "subject": "Chemistry",
+      "topic": "Organic Chemistry",
+      "paperType": "Subject Test",
+      "examType": "Subject Test",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "NEET Chemistry — Organic Chemistry Practice",
+      "course": "NEET · Chemistry",
+      "totalMarks": 100,
+      "duration": 60,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-06",
+      "created": "2026-08-06",
+      "modified": "2026-08-06",
+      "coverage": 95,
+      "sets": 1,
+      "downloads": 2,
+      "downloadStatus": "PDF exported",
+      "deleteStatus": "Active",
+      "negativeMarking": "−1 per incorrect answer",
+      "pyqPreference": "Include PYQs",
+      "questionList": []
+    },
+    {
+      "id": "gp10",
+      "paperCode": "PAPER-NEET-003",
+      "mode": "Competitive",
+      "exam": "NEET",
+      "subject": "Physics",
+      "topic": "Mechanics / Electrodynamics",
+      "paperType": "Subject Mock",
+      "examType": "Full Mock Test",
+      "faculty": "Dr. Meera Krishnan",
+      "versions": 1,
+      "archived": false,
+      "title": "NEET Physics — Mechanics & Electrodynamics",
+      "course": "NEET · Physics",
+      "totalMarks": 100,
+      "duration": 60,
+      "difficulty": "Mixed",
+      "questions": 0,
+      "status": "Ready",
+      "generated": "2026-08-06",
+      "created": "2026-08-06",
+      "modified": "2026-08-07",
+      "coverage": 96,
+      "sets": 1,
+      "downloads": 3,
+      "downloadStatus": "PDF & DOCX exported",
+      "deleteStatus": "Active",
+      "negativeMarking": "−1 per incorrect answer",
+      "pyqPreference": "PYQ Balanced",
+      "questionList": []
+    }
+  ],
+  "questionIntelligence": {
+    "difficultyDistribution": [
+      {
+        "level": "Easy",
+        "count": 7,
+        "marks": 14
+      },
+      {
+        "level": "Medium",
+        "count": 10,
+        "marks": 24
+      },
+      {
+        "level": "Hard",
+        "count": 5,
+        "marks": 12
+      }
+    ],
+    "bloomDistribution": [
+      {
+        "level": "Remember",
+        "count": 3,
+        "marks": 6
+      },
+      {
+        "level": "Understand",
+        "count": 4,
+        "marks": 9
+      },
+      {
+        "level": "Apply",
+        "count": 7,
+        "marks": 15
+      },
+      {
+        "level": "Analyze",
+        "count": 4,
+        "marks": 10
+      },
+      {
+        "level": "Evaluate",
+        "count": 2,
+        "marks": 6
+      },
+      {
+        "level": "Create",
+        "count": 2,
+        "marks": 4
+      }
+    ],
+    "chapterCoverage": [
+      {
+        "chapter": "Graph Algorithms",
+        "questions": 6,
+        "marks": 14,
+        "coverage": 100
+      },
+      {
+        "chapter": "Dynamic Programming",
+        "questions": 4,
+        "marks": 10,
+        "coverage": 90
+      },
+      {
+        "chapter": "Sorting & Searching",
+        "questions": 3,
+        "marks": 6,
+        "coverage": 75
+      },
+      {
+        "chapter": "Trees & Heaps",
+        "questions": 3,
+        "marks": 7,
+        "coverage": 80
+      },
+      {
+        "chapter": "Complexity Analysis",
+        "questions": 3,
+        "marks": 6,
+        "coverage": 70
+      },
+      {
+        "chapter": "String Algorithms",
+        "questions": 3,
+        "marks": 7,
+        "coverage": 65
+      }
+    ],
+    "topicCoverage": [
+      {
+        "topic": "Dijkstra",
+        "q": 2,
+        "marks": 5
+      },
+      {
+        "topic": "MST",
+        "q": 2,
+        "marks": 4
+      },
+      {
+        "topic": "Knapsack",
+        "q": 2,
+        "marks": 5
+      },
+      {
+        "topic": "AVL",
+        "q": 1,
+        "marks": 2
+      },
+      {
+        "topic": "Big-O",
+        "q": 2,
+        "marks": 4
+      },
+      {
+        "topic": "KMP",
+        "q": 1,
+        "marks": 3
+      }
+    ],
+    "marksDistribution": [
+      {
+        "type": "MCQ",
+        "count": 10,
+        "marks": 10
+      },
+      {
+        "type": "Short Answer",
+        "count": 5,
+        "marks": 15
+      },
+      {
+        "type": "Long Answer",
+        "count": 2,
+        "marks": 25
+      }
+    ],
+    "questionCount": 22
+  },
+  "paperPreview": [],
+  "markingScheme": [
+    {
+      "type": "MCQ",
+      "marks": 4,
+      "negative": 1
+    },
+    {
+      "type": "Integer",
+      "marks": 4,
+      "negative": 0
+    },
+    {
+      "type": "Numerical",
+      "marks": 4,
+      "negative": 0
+    },
+    {
+      "type": "Assertion Reason",
+      "marks": 4,
+      "negative": 1
+    },
+    {
+      "type": "Case Based",
+      "marks": 4,
+      "negative": 0
+    },
+    {
+      "type": "Diagram Based",
+      "marks": 4,
+      "negative": 0
+    },
+    {
+      "type": "Statement Based",
+      "marks": 4,
+      "negative": 1
+    }
+  ],
+  "answerKey": [
+    {
+      "q": 1,
+      "type": "MCQ",
+      "answer": "Option B"
+    },
+    {
+      "q": 2,
+      "type": "MCQ",
+      "answer": "Option C"
+    },
+    {
+      "q": 3,
+      "type": "MCQ",
+      "answer": "Option A"
+    },
+    {
+      "q": 4,
+      "type": "MCQ",
+      "answer": "Option D"
+    },
+    {
+      "q": 5,
+      "type": "Short Answer",
+      "answer": "A-C-B-D-E paths with distances"
+    },
+    {
+      "q": 6,
+      "type": "Short Answer",
+      "answer": "LL, RR, LR, RL rotations"
+    },
+    {
+      "q": 7,
+      "type": "Short Answer",
+      "answer": "Cache locality vs stability"
+    },
+    {
+      "q": 8,
+      "type": "Long Answer",
+      "answer": "DP table + fractional variant"
+    },
+    {
+      "q": 9,
+      "type": "Long Answer",
+      "answer": "Bellman-Ford + proof"
+    },
+    {
+      "q": 10,
+      "type": "Programming",
+      "answer": "Merge sort code + test"
+    }
+  ],
+  "templates": [
+    {
+      "id": "t1",
+      "name": "Standard Midsem Blueprint",
+      "duration": 180,
+      "marks": 50,
+      "sections": "MCQ 10 · Short 5 · Long 2"
+    },
+    {
+      "id": "t2",
+      "name": "Quiz Quick Template",
+      "duration": 15,
+      "marks": 10,
+      "sections": "MCQ 10"
+    },
+    {
+      "id": "t3",
+      "name": "Class Test Template",
+      "duration": 45,
+      "marks": 20,
+      "sections": "MCQ 8 · Short 4 · Long 1"
+    },
+    {
+      "id": "t4",
+      "name": "End-Sem Comprehensive",
+      "duration": 180,
+      "marks": 100,
+      "sections": "MCQ 20 · Short 10 · Long 4 · Case 1"
+    }
+  ],
+  "versionHistory": {
+    "gp1": [
+      {
+        "version": "v1.0",
+        "date": "2026-08-01",
+        "note": "Initial draft"
+      },
+      {
+        "version": "v1.1",
+        "date": "2026-08-02",
+        "note": "Coverage 92% → rebalanced CO2 weight"
+      }
+    ],
+    "gp2": [
+      {
+        "version": "v1.0",
+        "date": "2026-08-01",
+        "note": "Initial draft"
+      },
+      {
+        "version": "v1.1",
+        "date": "2026-08-02",
+        "note": "Added 2 hard MCQs, coverage 94%"
+      }
+    ],
+    "gp3": [
+      {
+        "version": "v1.0",
+        "date": "2026-08-03",
+        "note": "Initial draft"
+      }
+    ],
+    "gp4": [
+      {
+        "version": "v1.0",
+        "date": "2026-08-02",
+        "note": "Initial draft"
+      },
+      {
+        "version": "v1.1",
+        "date": "2026-08-03",
+        "note": "Difficulty lowered to Easy"
+      },
+      {
+        "version": "v1.2",
+        "date": "2026-08-04",
+        "note": "2 sets generated"
+      }
+    ]
+  }
+}

@@ -380,7 +380,7 @@ function PYQDashboard({ analytics, patterns, related, repeated, selectedIds, onT
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{p.pattern}</p>
-                  <p className="text-[11px] text-slate-400">e.g. “{p.example}” · seen {p.years}</p>
+                  <p className="text-[11px] text-slate-400">{p.example ? `e.g. “${p.example}” · ` : ''}seen {p.years}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-rose-600 dark:text-rose-400">×{p.frequency}</p>

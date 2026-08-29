@@ -4,8 +4,11 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import and_, func, select
 
 from app.core.deps import DbDep, UserDep, require_roles
+from app.models.assessment import Question
+from app.models.catalog import Subject
 from app.models.exams import ExamAttempt
 from app.models.identity import User
 from app.services import live_catalog
@@ -71,12 +74,75 @@ def faculty_students(db: DbDep, user: FacultyDep):
     return faculty_students_directory(db, user.institution_id)
 
 
+def _live_bank_stats(db, institution_id: str) -> dict:
+    """Question-bank scalars derived from the REAL questions table.
+
+    The only authoritative question source. Empty bank → honest zeros/nulls;
+    real rows → real counts. Never reads SPA payloads.
+    """
+    base = Question.institution_id == institution_id
+    total = db.scalar(select(func.count()).select_from(Question).where(base)) or 0
+    ai_generated = db.scalar(
+        select(func.count()).select_from(Question).where(and_(base, func.lower(Question.source) == "ai"))
+    ) or 0
+    flagged = db.scalar(
+        select(func.count()).select_from(Question).where(and_(base, func.lower(Question.status) == "flagged"))
+    ) or 0
+    subject_map = {
+        s.id: s.code or s.name
+        for s in db.scalars(select(Subject).where(Subject.institution_id == institution_id)).all()
+    }
+    by_subject: dict[str, int] = {}
+    for subject_id, count in db.execute(
+        select(Question.subject_id, func.count()).where(base).group_by(Question.subject_id)
+    ).all():
+        key = subject_map.get(subject_id) or (subject_id or "General")
+        by_subject[key] = int(count)
+    return {"total": int(total), "aiGenerated": int(ai_generated), "flagged": int(flagged), "bySubject": by_subject}
+
+
+def _merge_live_question_bank(db, user, derived: dict) -> None:
+    """Replace fabricated question-bank scalars in the intelligence summary
+    with values derived from the REAL questions table (Phase G). Analytics
+    structures are preserved; an empty bank keeps neutral stats."""
+    stats = _live_bank_stats(db, user.institution_id)
+
+    assessment = derived.get("assessment")
+    if isinstance(assessment, dict):
+        question_stats = assessment.get("questionStats")
+        if isinstance(question_stats, dict):
+            question_stats["total"] = stats["total"]
+            question_stats["bySubject"] = stats["bySubject"]
+            question_stats["aiGenerated"] = stats["aiGenerated"]
+            question_stats["flagged"] = stats["flagged"]
+            if not stats["total"]:
+                question_stats["avgAccuracy"] = None
+                question_stats["qualityAvg"] = None
+
+    assessment_summary = derived.get("assessmentSummary")
+    if isinstance(assessment_summary, dict):
+        assessment_summary["questionBank"] = stats["total"]
+        assessment_summary["aiGenerated"] = stats["aiGenerated"]
+        assessment_summary["flagged"] = stats["flagged"]
+
+    status = f"{stats['total']} questions · {stats['flagged']} flagged"
+    dashboard = derived.get("dashboard")
+    if isinstance(dashboard, dict):
+        dashboard["questionBankStatus"] = status
+        success_center = dashboard.get("successCenter")
+        if isinstance(success_center, dict):
+            health = success_center.get("assessmentHealth")
+            if isinstance(health, dict):
+                health["questionBankStatus"] = status
+
+
 @router.get("/faculty-intelligence/summary")
 def faculty_intel(db: DbDep, user: FacultyDep):
     snap = payload("faculty-intelligence-summary", db) or {}
     live = faculty_students_directory(db, user.institution_id)
     derived = snap.get("derived") or {}
     derived["students"] = live
+    _merge_live_question_bank(db, user, derived)
     snap["derived"] = derived
     return snap
 
