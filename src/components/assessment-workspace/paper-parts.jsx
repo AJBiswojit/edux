@@ -11,8 +11,9 @@ import {
   Send, Trash2, History, RefreshCw, Archive, Users, Database,
 } from 'lucide-react'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, useToast } from '@/components/ui'
-import { usePaperShareBackend } from '@/services/faculty-papers'
+import { usePaperPublishBackend, usePaperShareBackend } from '@/services/faculty-papers'
 import { useFacultyRoster } from '@/services'
+import { paperSendReadiness } from '@/api/adapters/paper-send-readiness'
 import { formatDate } from '@/utils/format'
 
 export const STATUS_STYLES = { Ready: 'success', Draft: 'secondary', 'In Review': 'warning' }
@@ -47,6 +48,7 @@ export function PaperCard({
 }) {
   const toast = useToast()
   const qCount = paper.questions ?? paper.selectedQuestionIds?.length ?? paper.questionList?.length ?? 0
+  const send = paperSendReadiness(paper)
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
       <Card className={`group h-full p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift ${paper.archived ? 'opacity-70' : ''}`}>
@@ -84,8 +86,22 @@ export function PaperCard({
           {onDuplicate && <Button size="sm" variant="outline" onClick={() => onDuplicate(paper)}><Copy className="h-3.5 w-3.5" /> Duplicate</Button>}
           {onRegenerate && <Button size="sm" variant="outline" onClick={() => onRegenerate(paper)}><RefreshCw className="h-3.5 w-3.5" /> Regenerate</Button>}
           {onVersions && <Button size="sm" variant="outline" onClick={() => onVersions(paper)}><History className="h-3.5 w-3.5" /> v{paper.versions ?? 1}</Button>}
-          {onShare && <Button size="sm" variant="outline" className="border-teal-300 text-teal-600 hover:bg-teal-50 dark:border-teal-500/40 dark:text-teal-300 dark:hover:bg-teal-500/10" onClick={() => onShare(paper)}><Send className="h-3.5 w-3.5" /> Share</Button>}
+          {onShare && (
+            <span className="inline-flex" title={send.canSend ? undefined : send.message}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!send.canSend}
+                aria-label={send.canSend ? 'Share' : send.message}
+                className="border-teal-300 text-teal-600 hover:bg-teal-50 dark:border-teal-500/40 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                onClick={() => { if (send.canSend) onShare(paper) }}
+              ><Send className="h-3.5 w-3.5" /> Share</Button>
+            </span>
+          )}
         </div>
+        {onShare && !send.canSend && send.message && (
+          <p className="mt-2 text-[10.5px] font-medium leading-relaxed text-slate-400">{send.message}</p>
+        )}
 
         <div className="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-slate-100 pt-3 dark:border-slate-800 sm:grid-cols-4">
           <Button size="sm" variant="ghost" className="h-8 text-[11px]" onClick={() => toast.success('Exporting…', `${paper.title} exported as PDF.`)}><Download className="h-3.5 w-3.5" /> PDF</Button>
@@ -104,6 +120,7 @@ export function PaperCard({
 /* Paper preview — ID-based, no localStorage, questionList only if backend provides */
 export function PaperPreviewDialog({ open, onOpenChange, paper }) {
   const toast = useToast()
+  const { mutateAsync: publishPaper, isPending: publishing } = usePaperPublishBackend()
   const questionList = Array.isArray(paper?.questionList) ? paper.questionList : []
   const selectedIds = Array.isArray(paper?.selectedQuestionIds) ? paper.selectedQuestionIds : []
   const hasQuestions = questionList.length > 0
@@ -192,7 +209,17 @@ export function PaperPreviewDialog({ open, onOpenChange, paper }) {
           <Button variant="outline" onClick={() => toast.success('Exporting…', 'Paper exported as DOCX.')}><FileText className="h-4 w-4" /> DOCX</Button>
           <Button variant="outline" onClick={() => toast.success('Printing…', 'Paper sent to print.')}><Printer className="h-4 w-4" /> Print</Button>
           <Button variant="outline" onClick={() => toast.success('Shuffled', 'Question order randomised.')}><Shuffle className="h-4 w-4" /> Shuffle</Button>
-          <Button onClick={() => toast.success('Published 🎉', `${paper?.title} publish via backend.`)}><Send className="h-4 w-4" /> Publish via backend</Button>
+          <Button
+            disabled={publishing || !paper?.id}
+            onClick={async () => {
+              try {
+                await publishPaper(paper.id)
+                toast.success('Published', `${paper?.title} is now available to students.`)
+              } catch (e) {
+                toast.error('Could not publish', e?.response?.data?.detail ?? e?.message ?? 'Backend publish failed.')
+              }
+            }}
+          ><Send className="h-4 w-4" /> {publishing ? 'Publishing…' : 'Publish via backend'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -301,7 +328,7 @@ export function SharePaperDialog({ paper, open, onOpenChange }) {
         </div>
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleShare} disabled={sharing} className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:brightness-110">{sharing ? 'Sharing via backend…' : <><Send className="h-4 w-4" /> Share via backend</>}</Button>
+          <Button onClick={handleShare} disabled={sharing || !paperSendReadiness(paper).canSend} className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:brightness-110">{sharing ? 'Sharing via backend…' : <><Send className="h-4 w-4" /> Share via backend</>}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

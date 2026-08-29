@@ -54,14 +54,15 @@ function OTPVerify() {
     setLoading(true)
     try {
       if (purpose === 'register') {
-        /* Registration OTP (Phase 28) — marks the draft verified, then signs
-           the student in through the EXISTING AuthContext (no second auth). */
-        await verifyRegister({ otp, email: registerEmail })
-        await createStudentSession(registerEmail)
+        const data = await verifyRegister({ otp, email: registerEmail, purpose: 'register' })
+        if (!data?.accessToken) {
+          throw new Error('Registration did not return an access token')
+        }
+        await login({ session: data })
         toast.success('Account activated 🎉', 'Your student workspace is ready.')
         navigate('/student', { replace: true })
       } else {
-        await verify({ otp })
+        await verify({ otp, email: location.state?.email, purpose })
         toast.success('Code verified ✓', purpose === 'reset' ? 'Now choose a new password.' : 'Your email is verified.')
         navigate(purpose === 'reset' ? '/auth/reset-password' : '/auth/login', { state: { verified: true } })
       }
@@ -72,29 +73,18 @@ function OTPVerify() {
     }
   }
 
-  /** Pull the verified registration draft from the in-browser registry and
-      start a session via AuthContext.login — the draft is NOT a second user
-      object; it becomes the session user the same way demo logins do. */
-  async function createStudentSession(email) {
-    let registry = []
-    try { registry = JSON.parse(window.localStorage.getItem('EduX_registered_students') || '[]') } catch { registry = [] }
-    const draft = registry.find((r) => r.email?.toLowerCase() === email)
-    if (!draft) throw new Error('Registration profile not found — please register again.')
-    await login({
-      email: draft.email,
-      password: draft.password,
-      role: 'student',
-      registerDraft: draft,
-    })
-  }
-
   const onResend = async () => {
+    const email = registerEmail ?? location.state?.email
+    if (!email) {
+      toast.error('Could not resend', 'Email is required to resend an OTP.')
+      return
+    }
     try {
-      await resend()
+      await resend({ email, purpose })
       setResendIn(30)
       toast.info('Code re-sent', 'Check your inbox for the new code.')
-    } catch {
-      toast.error('Could not resend', 'Please try again.')
+    } catch (err) {
+      toast.error('Could not resend', err.message ?? 'Please try again.')
     }
   }
 

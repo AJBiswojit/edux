@@ -42,7 +42,7 @@ class ExamAttempt(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
     intervention_id: Mapped[Optional[str]] = mapped_column(String(36), index=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     exam_snapshot: Mapped[str] = mapped_column(Text)
     timing: Mapped[str] = mapped_column(Text)
     scoring: Mapped[str] = mapped_column(Text)

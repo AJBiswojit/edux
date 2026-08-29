@@ -111,7 +111,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   // Question bank — backend only, no mock fallback
   const questionFilters = useMemo(() => ({
     domain,
-    examFamily: domain === 'Competitive' ? (examFamily === 'NEET' ? 'NEET UG' : 'JEE Main') : undefined,
+    examFamily: domain === 'Competitive' ? examFamily : undefined,
     subject: subject !== 'All subjects' ? subject : undefined,
     chapter: chapter !== 'All chapters' ? chapter : undefined,
     topic: topic !== 'All topics' ? topic : undefined,

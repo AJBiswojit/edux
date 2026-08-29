@@ -13,6 +13,7 @@ import {
   Archive, Copy, Database, Eye, Filter, PencilLine, Sparkles, Tag, Trash2, Wand2,
 } from 'lucide-react'
 import { CompetitiveQuestionBrowser } from './competitive-question-browser'
+import { toCompetitiveBrowserQuestion } from '@/api/adapters/questions'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 import { cn } from '@/utils/cn'
 
@@ -60,12 +61,15 @@ function QuestionIntelligenceContent({ data, intelData }) {
   const [generateOpen, setGenerateOpen] = useState(false)
   const toast = useToast()
 
-  const questions = items ?? data?.questions ?? []
+  const allQuestions = data?.questions ?? []
+  const universityQuestions = allQuestions.filter((q) => q.domain === 'University' || (!q.domain && !q.examFamily))
+  const competitiveQuestions = allQuestions.filter((q) => q.domain === 'Competitive')
+  const questions = items ?? universityQuestions
   const tagOptions = intelData?.datasets?.questionTags ?? ['High-Yield', 'Conceptual', 'Numerical', 'Frequently Missed', 'Important']
 
-  const subjects = useMemo(() => [...new Set((data?.questions ?? []).map((q) => q.subject))], [data])
-  const types = useMemo(() => [...new Set((data?.questions ?? []).map((q) => q.type))], [data])
-  const tags = useMemo(() => [...new Set((data?.questions ?? []).flatMap((q) => q.tags ?? []))], [data])
+  const subjects = useMemo(() => [...new Set(universityQuestions.map((q) => q.subject).filter(Boolean))], [universityQuestions])
+  const types = useMemo(() => [...new Set(universityQuestions.map((q) => q.type).filter(Boolean))], [universityQuestions])
+  const tags = useMemo(() => [...new Set(universityQuestions.flatMap((q) => q.tags ?? []))], [universityQuestions])
 
   const filtered = useMemo(() => {
     let rows = questions
@@ -147,9 +151,26 @@ function QuestionIntelligenceContent({ data, intelData }) {
     </button>
   )
 
-  const compIntel = intelData?.derived?.competitiveQuestionIntelligence ?? { total: 0, examSummaries: [], pyqRecords: [], universityPyq: [] }
+  const competitiveRecords = competitiveQuestions.map(toCompetitiveBrowserQuestion).filter(Boolean)
+  const jeeCount = competitiveQuestions.filter((q) => q.examFamily === 'JEE').length
+  const neetCount = competitiveQuestions.filter((q) => q.examFamily === 'NEET').length
+  const examSummaries = ['JEE', 'NEET'].map((familyName) => {
+    const pool = competitiveQuestions.filter((q) => q.examFamily === familyName)
+    const bySubject = Object.entries(pool.reduce((acc, q) => {
+      const key = q.subject || '—'
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {})).map(([subjectName, count]) => ({ subject: subjectName, count }))
+    const byDifficulty = Object.entries(pool.reduce((acc, q) => {
+      const key = q.difficulty || '—'
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {})).map(([difficultyName, count]) => ({ difficulty: difficultyName, count }))
+    return { exam: familyName === 'JEE' ? 'JEE Main' : 'NEET UG', count: pool.length, bySubject, byDifficulty }
+  }).filter((es) => es.count > 0)
+  const pyqCount = competitiveRecords.filter((q) => q.isPyq).length
 
-  /* Competitive mode — actual JEE/NEET questions (Phase 29) */
+  /* Competitive mode — JEE/NEET rows from GET /faculty/question-bank, not intel fixtures */
   if (context === 'Competitive') {
     return (
       <div className="space-y-5">
@@ -166,12 +187,12 @@ function QuestionIntelligenceContent({ data, intelData }) {
             ))}
           </div>
           <Badge variant="gradient" className="px-3 py-1">
-            <Sparkles className="h-3 w-3" /> {compIntel.total} competitive questions · JEE {compIntel.byExam?.['JEE Main'] ?? 0} · NEET {compIntel.byExam?.['NEET UG'] ?? 0}
+            <Sparkles className="h-3 w-3" /> {competitiveQuestions.length} competitive questions · JEE {jeeCount} · NEET {neetCount}
           </Badge>
         </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {(compIntel.examSummaries ?? []).map((es) => (
+          {examSummaries.map((es) => (
             <div key={es.exam} className="rounded-3xl border border-slate-200/70 bg-white p-4 shadow-card dark:border-slate-800 dark:bg-slate-900">
               <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">{es.exam}</p>
               <p className="mt-1 font-display text-2xl font-bold text-slate-900 dark:text-white">{es.count}<span className="text-sm text-slate-400"> questions</span></p>
@@ -185,16 +206,16 @@ function QuestionIntelligenceContent({ data, intelData }) {
           ))}
           <div className="rounded-3xl border border-slate-200/70 bg-white p-4 shadow-card dark:border-slate-800 dark:bg-slate-900">
             <p className="text-[11px] font-bold uppercase tracking-widest text-teal-600 dark:text-teal-300">PYQ coverage</p>
-            <p className="mt-1 font-display text-2xl font-bold text-slate-900 dark:text-white">{compIntel.pyqRecords?.length ?? 0}<span className="text-sm text-slate-400"> PYQ records</span></p>
-            <p className="mt-1 text-[11px] text-slate-400">Every competitive question carries exam · year · session metadata.</p>
+            <p className="mt-1 font-display text-2xl font-bold text-slate-900 dark:text-white">{pyqCount}<span className="text-sm text-slate-400"> PYQ records</span></p>
+            <p className="mt-1 text-[11px] text-slate-400">Counted from question-bank fields only — year/session are omitted when the API does not send them.</p>
           </div>
         </div>
 
         <CompetitiveQuestionBrowser
-          questions={compIntel.pyqRecords ?? []}
+          questions={competitiveRecords}
           title="Competitive question browser"
-          subtitle="JEE · NEET — Physics, Mathematics, Chemistry, Biology — actual questions with answers & explanations"
-          badge={<Badge variant="gradient" className="px-3 py-1"><Sparkles className="h-3 w-3" /> Demo corpus</Badge>}
+          subtitle="JEE · NEET from GET /faculty/question-bank — answer keys are omitted by this endpoint"
+          badge={<Badge variant="gradient" className="px-3 py-1"><Sparkles className="h-3 w-3" /> Question bank</Badge>}
           defaultExam={family === 'All' ? null : family === 'JEE' ? 'JEE Main' : 'NEET UG'}
           defaultSubject={subject !== 'All' ? subject : null}
           defaultChapter={query ? null : null}
@@ -219,7 +240,7 @@ function QuestionIntelligenceContent({ data, intelData }) {
             </button>
           ))}
         </div>
-        <Badge variant="secondary" className="px-3 py-1">{data.summary.total} university questions · {subjects.length} courses</Badge>
+        <Badge variant="secondary" className="px-3 py-1">{universityQuestions.length} university questions · {subjects.length} courses</Badge>
       </div>
 
       {/* KPI strip */}

@@ -1,38 +1,24 @@
 /**
- * EduX Phase 9 — Faculty Question Bank · Backend-ready service.
+ * Faculty Question Bank — live GET /faculty/question-bank.
  *
- * Exposes backend-oriented question fetching with domain isolation.
- * Uses centralized axios client (api) directly, bypassing mock router.
- * No fallback to seeded/mock datasets. Backend unavailable → caller
- * receives error and must render "Question bank unavailable" empty state.
+ * Filters and pagination are query params honoured by FastAPI (SQL).
+ * University / JEE / NEET isolation uses payload domain/examFamily
+ * (exam_mode / exam_family) — never subject name. No client-side
+ * re-filter or slice of a full dump.
  *
- * Filters: domain (University/Competitive), examFamily (JEE/NEET),
- * subject, chapter, topic, difficulty, questionType, search, page, limit
+ * No mock/seed fallback. Backend unavailable → error for the UI empty state.
  */
 
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/axios'
+import { canonicalExamFamily, normalizeQuestion } from '@/api/adapters/questions'
 
-/**
- * Canonical filter shape for backend question query.
- * @param {Object} filters
- * @param {string} filters.domain - University | Competitive
- * @param {string} [filters.examFamily] - JEE | NEET | null for University
- * @param {string} [filters.subject]
- * @param {string} [filters.chapter]
- * @param {string} [filters.topic]
- * @param {string} [filters.difficulty] - Easy | Medium | Hard | Mixed
- * @param {string} [filters.questionType] - MCQ | Short Answer | etc
- * @param {string} [filters.search]
- * @param {number} [filters.page]
- * @param {number} [filters.limit]
- */
 export async function fetchQuestions(filters = {}) {
   const params = {}
 
-  // Domain isolation — explicit, never inferred from subject
   if (filters.domain) params.domain = filters.domain
-  if (filters.examFamily) params.examFamily = filters.examFamily
+  const examFamily = canonicalExamFamily(filters.examFamily)
+  if (examFamily) params.examFamily = examFamily
   if (filters.subject && filters.subject !== 'All subjects' && filters.subject !== 'All') params.subject = filters.subject
   if (filters.chapter && filters.chapter !== 'All chapters' && filters.chapter !== 'All') params.chapter = filters.chapter
   if (filters.topic && filters.topic !== 'All topics' && filters.topic !== 'All') params.topic = filters.topic
@@ -42,22 +28,25 @@ export async function fetchQuestions(filters = {}) {
   if (filters.page) params.page = filters.page
   if (filters.limit) params.limit = filters.limit
 
-  // Backend-ready: GET /faculty/question-bank with query params
-  // Real backend expected at VITE_API_BASE_URL/faculty/question-bank
   const { data } = await api.get('/faculty/question-bank', { params })
-  return data
+  const questions = (data?.questions ?? data?.items ?? []).map(normalizeQuestion).filter(Boolean)
+  const total = data?.total ?? data?.summary?.total ?? questions.length
+  return {
+    ...data,
+    questions,
+    total,
+    page: data?.page ?? filters.page ?? 1,
+    limit: data?.limit ?? filters.limit ?? questions.length,
+    summary: { ...(data?.summary ?? {}), total },
+    clientPaginated: false,
+  }
 }
 
-/**
- * Backend-ready hook for question bank.
- * No mock fallback — on error, UI must show unavailable empty state.
- */
 export function useFacultyQuestions(filters = {}, options = {}) {
   const enabled = options.enabled !== false
-  // Serialize filters into query key for caching; stable order
   const keyFilters = {
-    domain: filters.domain ?? 'University',
-    examFamily: filters.examFamily ?? null,
+    domain: filters.domain ?? null,
+    examFamily: canonicalExamFamily(filters.examFamily) ?? filters.examFamily ?? null,
     subject: filters.subject ?? null,
     chapter: filters.chapter ?? null,
     topic: filters.topic ?? null,
@@ -65,22 +54,20 @@ export function useFacultyQuestions(filters = {}, options = {}) {
     questionType: filters.questionType ?? null,
     search: filters.search ?? null,
     page: filters.page ?? 1,
-    limit: filters.limit ?? 50,
+    limit: filters.limit ?? null,
   }
 
   return useQuery({
     queryKey: ['faculty', 'questions', keyFilters],
     queryFn: () => fetchQuestions(filters),
     enabled,
-    retry: false, // No retry — backend unavailable is expected in Arena
+    retry: false,
     staleTime: 1000 * 60 * 5,
   })
 }
 
-// Legacy alias for conceptual getQuestions(filters) mentioned in task
 export const getQuestions = fetchQuestions
 
-// For components that need only university or competitive pools
 export function useUniversityQuestions(filters = {}, options = {}) {
   return useFacultyQuestions({ ...filters, domain: 'University', examFamily: undefined }, options)
 }

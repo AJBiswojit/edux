@@ -41,11 +41,14 @@ def _set_search_path(dbapi_connection, _connection_record) -> None:
 
 def ensure_schema() -> None:
     """Create the configured schema and add missing identity columns. Never touches other schemas."""
+    if engine.dialect.name != "postgresql" or not _schema:
+        return
     with engine.begin() as conn:
         conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{_schema}"'))
         _align_users_table(conn)
         _align_ops_tables(conn)
         _align_colliding_assessment_tables(conn)
+        _align_exam_attempts(conn)
 
 
 def _table_exists(conn, table_name: str) -> bool:
@@ -270,6 +273,13 @@ def _align_colliding_assessment_tables(conn) -> None:
     for table_name, dest in to_rename:
         conn.execute(text(f'ALTER TABLE "{_schema}"."{_ident(table_name)}" RENAME TO "{_ident(dest)}"'))
         _rename_constraints_and_indexes(conn, dest, table_name)
+
+
+def _align_exam_attempts(conn) -> None:
+    """In-progress sittings need nullable submitted_at. Additive only — never drops data."""
+    if not _table_exists(conn, "exam_attempts"):
+        return
+    conn.execute(text(f'ALTER TABLE "{_schema}"."exam_attempts" ALTER COLUMN submitted_at DROP NOT NULL'))
 
 
 def current_db() -> Session | None:

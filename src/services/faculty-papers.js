@@ -1,35 +1,23 @@
 /**
- * EduX Phase 9 — Faculty Paper Generator & Library · Backend-ready service.
+ * Faculty Paper Generator & Library — live FastAPI routes.
  *
- * All paper operations go through centralized axios client (api) directly,
- * bypassing mock router. No fallback to seeded datasets. No localStorage
- * as source of truth for papers or shares.
+ * Persistence is SQL `papers` / `paper_questions`. Create sends
+ * selectedQuestionIds; publish is POST .../papers/{id}/publish.
  *
- * Endpoints (real backend):
- *  GET    /faculty/paper-generator           -> config + library
- *  POST   /faculty/paper-generator/papers    -> create paper (selectedQuestionIds only)
- *  DELETE /faculty/paper-generator/papers/:id
- *  POST   /faculty/paper-generator/papers/:id/duplicate
- *  POST   /faculty/paper-generator/papers/:id/regenerate
- *  PATCH  /faculty/paper-generator/papers/:id/archive
- *  POST   /faculty/paper-generator/papers/:id/share
- *  GET    /faculty/paper-generator/papers/:id  (optional detail)
- *
- * Domain isolation preserved via domain+examFamily, not subject inference.
+ * `{ ok: false }` HTTP 200 is rejected by the axios interceptor.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/axios'
-
-// --- API functions (backend-ready, no mock) ---
+import { canonicalExamFamily } from '@/api/adapters/questions'
+import { normalizePaper, normalizePaperGeneratorPayload } from '@/api/adapters/papers'
 
 export async function fetchPaperGenerator() {
   const { data } = await api.get('/faculty/paper-generator')
-  return data
+  return normalizePaperGeneratorPayload(data)
 }
 
 export async function fetchPapers() {
-  // Library can be fetched via same endpoint; backend may also expose dedicated list
   const data = await fetchPaperGenerator()
   return {
     generatedPapers: data?.generatedPapers ?? [],
@@ -38,33 +26,22 @@ export async function fetchPapers() {
   }
 }
 
+/** Live route is not implemented (404). Callers must handle the error — no fake paper. */
 export async function fetchPaperById(id) {
   const { data } = await api.get(`/faculty/paper-generator/papers/${id}`)
-  return data
+  return normalizePaper(data?.paper ?? data)
 }
 
-/**
- * Create paper — backend contract (Phase 9 updated):
- * {
- *   title,
- *   domain: University|Competitive,
- *   examFamily: JEE|NEET|null,
- *   subject, chapter, topic,
- *   totalMarks, duration, difficulty,
- *   selectedQuestionIds: string[],   // ID-based only, no full objects
- *   course, paperType, examType, program,
- *   negativeMarking, examPattern, bloomPreset, etc (optional blueprint)
- * }
- * No questionList with full objects — builder stores IDs only.
- */
 export async function createPaper(payload) {
-  // Enforce ID-based builder contract
+  const examFamily = payload.domain === 'Competitive' || payload.mode === 'Competitive'
+    ? canonicalExamFamily(payload.examFamily ?? payload.exam)
+    : null
   const body = {
     title: payload.title,
     domain: payload.domain ?? payload.mode ?? 'University',
-    examFamily: payload.examFamily ?? payload.exam ?? null,
-    mode: payload.domain ?? payload.mode ?? 'University', // backward compat for backend that still expects mode
-    exam: payload.examFamily ?? payload.exam ?? null,
+    examFamily,
+    mode: payload.domain ?? payload.mode ?? 'University',
+    exam: examFamily,
     examType: payload.examType ?? payload.paperType ?? 'Mid Semester',
     paperType: payload.paperType ?? payload.examType ?? 'Mid Semester',
     course: payload.course ?? null,
@@ -77,7 +54,6 @@ export async function createPaper(payload) {
     difficulty: payload.difficulty ?? 'Mixed',
     questions: payload.selectedQuestionIds?.length ?? payload.questions ?? 0,
     selectedQuestionIds: payload.selectedQuestionIds ?? [],
-    // Blueprint extras (optional, backend may store)
     bloomPreset: payload.bloomPreset ?? null,
     weightagePreset: payload.weightagePreset ?? null,
     coPreset: payload.coPreset ?? null,
@@ -91,7 +67,7 @@ export async function createPaper(payload) {
   }
 
   const { data } = await api.post('/faculty/paper-generator/papers', body)
-  return data
+  return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
 }
 
 export async function deletePaper(id) {
@@ -101,17 +77,17 @@ export async function deletePaper(id) {
 
 export async function duplicatePaper(id) {
   const { data } = await api.post(`/faculty/paper-generator/papers/${id}/duplicate`)
-  return data
+  return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
 }
 
 export async function regeneratePaper(id) {
   const { data } = await api.post(`/faculty/paper-generator/papers/${id}/regenerate`)
-  return data
+  return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
 }
 
 export async function archivePaper(id, archived) {
   const { data } = await api.patch(`/faculty/paper-generator/papers/${id}/archive`, { archived })
-  return data
+  return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
 }
 
 export async function sharePaper(id, payload) {
@@ -119,7 +95,10 @@ export async function sharePaper(id, payload) {
   return data
 }
 
-// --- React Query hooks (backend-ready, no fallback) ---
+export async function publishPaper(id) {
+  const { data } = await api.post(`/faculty/paper-generator/papers/${id}/publish`)
+  return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
+}
 
 export function usePaperGeneratorBackend() {
   return useQuery({
@@ -202,5 +181,17 @@ export function usePaperArchiveBackend() {
 export function usePaperShareBackend() {
   return useMutation({
     mutationFn: ({ id, payload }) => sharePaper(id, payload),
+  })
+}
+
+export function usePaperPublishBackend() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: publishPaper,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator'] })
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-library'] })
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator', 'backend'] })
+    },
   })
 }

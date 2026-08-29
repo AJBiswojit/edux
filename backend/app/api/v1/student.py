@@ -13,6 +13,7 @@ from app.services.seed import student_master_profile
 from app.services.spa_exams import analysis_from_attempt, attempt_to_dict, practice_questions
 from app.services.spa_issues import build_similar_issues, intervention_from_group
 from app.services import live_catalog
+from app.services.examination import get_published_exam, list_published_exams, start_exam, submit_exam_attempt
 from app.services.spa_payloads import payload
 from app.services.spa_store import coll_key, kv_get, kv_set
 from app.services.people_directory import faculty_students_directory
@@ -148,7 +149,7 @@ def intelligence_attempts(
 
 @router.get("/student/exam-agent/exams")
 def exam_agent_exams(db: DbDep, user: UserDep):
-    return live_catalog.exam_agent_bundle(db, user.institution_id)
+    return list_published_exams(db, user, include_questions=True)
 
 
 @router.get("/student/exam-agent/attempts")
@@ -167,52 +168,8 @@ def get_attempt(attempt_id: str, db: DbDep, user: UserDep):
 
 @router.post("/student/exam-agent/attempts")
 def submit_attempt(body: ExamAttemptCreate, db: DbDep, user: UserDep):
-    profile = _require_student(db, user)
-    started = body.startedAt or datetime.now(timezone.utc).isoformat()
-    submitted = body.submittedAt or body.completedAt or datetime.now(timezone.utc).isoformat()
-    snapshot = body.examSnapshot or body.exam or {}
-    exam_name = body.examName or body.examTitle or snapshot.get("title") or body.examId or "Exam"
-    attempt = ExamAttempt(
-        institution_id=user.institution_id,
-        student_id=user.id,
-        roll_no=profile.roll_no,
-        batch_id=profile.batch_id,
-        exam_id=body.examId or snapshot.get("id") or "exam",
-        exam_name=exam_name,
-        exam_mode=body.examMode.lower() if body.examMode else "university",
-        exam_family=(body.examFamily or "").lower() or None,
-        source="exam_agent",
-        attempt_kind=body.attemptKind,
-        is_demo=body.isDemo,
-        intervention_id=body.interventionId,
-        started_at=datetime.fromisoformat(started.replace("Z", "+00:00")),
-        submitted_at=datetime.fromisoformat(submitted.replace("Z", "+00:00")),
-        exam_snapshot=json.dumps(snapshot),
-        timing=json.dumps(body.timing or {"elapsedSeconds": body.elapsedSeconds}),
-        scoring=json.dumps(body.scoring),
-        interactions=json.dumps(body.interactions),
-        summary=json.dumps(body.summary) if body.summary else None,
-    )
-    db.add(attempt)
-    db.flush()
-    for i, qa in enumerate(body.questionAttempts, start=1):
-        db.add(
-            ExamQuestionAttempt(
-                attempt_id=attempt.id,
-                question_id=qa.get("questionId"),
-                question_number=qa.get("questionNumber") or i,
-                question_snapshot=json.dumps(qa.get("question") or {}),
-                academic_context=json.dumps(qa.get("academicContext") or {}),
-                response=json.dumps(qa.get("response") or {}),
-                timing=json.dumps(qa.get("timing") or {}),
-                behaviour=json.dumps(qa.get("behaviour") or {}),
-                evaluation=json.dumps(qa.get("evaluation") or {}),
-            )
-        )
-    db.commit()
-    rebuild_student_dna(db, user.id)
-    saved = db.get(ExamAttempt, attempt.id)
-    return {"ok": True, "id": attempt.id, "attempt": attempt_to_dict(saved, db)}
+    payload = body.model_dump() if hasattr(body, "model_dump") else dict(body)
+    return submit_exam_attempt(db, user, payload)
 
 
 @router.get("/student/dashboard")
@@ -261,8 +218,30 @@ def mock_tests(user: UserDep):
 
 
 @router.get("/student/exams")
-def exams(user: UserDep):
-    return {"items": payload("student-portal")["exams"]}
+def exams(db: DbDep, user: UserDep):
+    return list_published_exams(db, user, include_questions=False)
+
+
+@router.get("/student/exams/{exam_id}")
+def exam_detail(exam_id: str, db: DbDep, user: UserDep):
+    return get_published_exam(db, user, exam_id, include_questions=False)
+
+
+@router.post("/student/exams/{exam_id}/start")
+def exam_start(exam_id: str, db: DbDep, user: UserDep, body: dict | None = None):
+    body = body or {}
+    return start_exam(
+        db,
+        user,
+        exam_id,
+        attempt_kind=str(body.get("attemptKind") or "practice"),
+        is_demo=bool(body.get("isDemo")),
+    )
+
+
+@router.post("/student/exams/{exam_id}/submit")
+def exam_submit(exam_id: str, body: dict, db: DbDep, user: UserDep):
+    return submit_exam_attempt(db, user, body or {}, exam_id=exam_id, attempt_id=(body or {}).get("attemptId"))
 
 
 @router.get("/student/settings")

@@ -8,6 +8,8 @@ import api from './axios'
  * prototype router, no mock handler, no seeded response, and no fake
  * success in production.
  *
+ * `{ ok: false }` HTTP 200 responses are rejected by the axios interceptor.
+ *
  * Architecture:
  *   Component → Hook → Service → request() → axios → HTTP Backend
  */

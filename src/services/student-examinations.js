@@ -15,12 +15,27 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/axios'
+import { canonicalDomain, canonicalExamFamily } from '@/api/adapters/questions'
+
+function normalizeStudentExam(raw) {
+  if (!raw || typeof raw !== 'object') return raw
+  return {
+    ...raw,
+    domain: canonicalDomain(raw.domain ?? raw.category) ?? raw.category ?? null,
+    examFamily: canonicalExamFamily(raw.examFamily ?? raw.exam ?? raw.type),
+  }
+}
+
+function adaptStudentExams(data) {
+  const items = (data?.items ?? data?.exams ?? (Array.isArray(data) ? data : [])).map(normalizeStudentExam)
+  return { ...(data && !Array.isArray(data) ? data : {}), items, exams: items }
+}
 
 // --- API functions ---
 
 export async function fetchStudentExams(params = {}) {
   const { data } = await api.get('/student/exams', { params })
-  return data
+  return adaptStudentExams(data)
 }
 
 export async function fetchStudentExamById(id) {
