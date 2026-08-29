@@ -30,7 +30,7 @@ function AssessmentAnalyticsTab({ data }) {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard index={0} label="Coverage vs target" value={`${round(cov.units?.length ? cov.units.reduce((s, u) => s + (u.targetPct ?? 0), 0) / cov.units.length : 0)}%`} sub="avg unit target attainment" icon="Target" gradient="from-indigo-500 to-blue-500" />
         <StatCard index={1} label="Units below target" value={String(cov.belowTarget?.length ?? 0)} sub="need more questions" icon="AlertTriangle" gradient="from-rose-500 to-red-500" />
-        <StatCard index={2} label="Avg question accuracy" value={`${qs.avgAccuracy ?? '—'}%`} sub="cohort performance" icon="Gauge" gradient="from-emerald-500 to-teal-500" />
+        <StatCard index={2} label="Avg question accuracy" value={qs.avgAccuracy != null ? `${qs.avgAccuracy}%` : '—'} sub="cohort performance" icon="Gauge" gradient="from-emerald-500 to-teal-500" />
         <StatCard index={3} label="PYQ corpus" value={`${pyq.university?.pyqCorpus?.totalPapers ?? '—'} papers`} sub={`${pyq.university?.pyqCorpus?.totalQuestions ?? '—'} questions`} icon="BookOpenCheck" gradient="from-amber-500 to-orange-500" />
       </div>
 

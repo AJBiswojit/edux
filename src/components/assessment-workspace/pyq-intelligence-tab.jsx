@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { BrainCircuit, Building2, GraduationCap, Sparkles, Target } from 'lucide-react'
 import { usePYQAnalysis } from '@/services/extra'
+import { bankPyqBrowserRecords } from '@/api/adapters/questions'
 import { ChartCard } from '@/components/shared/chart-card'
 import { AreaTrend, BarCompare, DonutChart } from '@/components/charts'
 import { Badge, Button, Card, Select, SelectItem } from '@/components/ui'
@@ -237,8 +238,17 @@ function CompetitivePyqPanel({ data }) {
   )
 }
 
-/* ---------- PYQ Intelligence tab (University + Competitive) ---------- */
-function PyqIntelligenceTab({ data }) {
+/* ---------- PYQ Intelligence tab (University + Competitive) ----------
+ * PYQ question RECORDS rendered by the two browsers come ONLY from the live
+ * question-bank API (`questions` prop — GET /faculty/question-bank rows).
+ * Seeded record lists embedded in the intelligence summary payload
+ * (derived.competitiveQuestionIntelligence) are never rendered; an empty
+ * bank therefore shows the browsers' existing empty state. Trend analytics
+ * (difficulty / topic frequency / weightage) remain the intelligence
+ * layer's job and are unaffected. */
+function PyqIntelligenceTab({ data, questions = [] }) {
+  const universityPyqRecords = bankPyqBrowserRecords(questions, { domain: 'University' })
+  const competitivePyqRecords = bankPyqBrowserRecords(questions, { domain: 'Competitive' })
   const [mode, setMode] = useState('University')
   /* Phase 27.2: corpus badge derives from the datasets (was a static string). */
   const { data: pyqData } = usePYQAnalysis()
@@ -280,11 +290,12 @@ function PyqIntelligenceTab({ data }) {
           {/* Actual university PYQ questions (Phase 29) — linked to the Question Bank */}
           <div className="mt-8">
             <CompetitiveQuestionBrowser
-              questions={data.derived?.competitiveQuestionIntelligence?.universityPyq ?? []}
+              questions={universityPyqRecords}
+              exams={['University']}
               title="University PYQ question browser"
-              subtitle="Actual PYQ questions from the university corpus — every record has a stable Question Bank identity"
+              subtitle="PYQ questions matched from the live question bank — every record has a stable Question Bank identity"
               showExamFilter={false}
-              badge={<Badge variant="gradient" className="px-3 py-1"><BrainCircuit className="h-3 w-3" /> {data.derived?.competitiveQuestionIntelligence?.universityPyqCount ?? 0} PYQs</Badge>}
+              badge={<Badge variant="gradient" className="px-3 py-1"><BrainCircuit className="h-3 w-3" /> {universityPyqRecords.length} PYQs</Badge>}
             />
           </div>
         </>
@@ -294,11 +305,11 @@ function PyqIntelligenceTab({ data }) {
           {/* Actual competitive PYQ records (Phase 29) */}
           <div className="mt-8">
             <CompetitiveQuestionBrowser
-              questions={data.derived?.competitiveQuestionIntelligence?.pyqRecords ?? []}
+              questions={competitivePyqRecords}
               title="Competitive PYQ question browser"
-              subtitle="JEE Main & NEET UG PYQ records with full metadata — exam · year · session · chapter · topic"
+              subtitle="JEE Main & NEET UG PYQ records matched from the live question bank — exam · year · session · chapter · topic"
               exams={['JEE Main', 'NEET UG']}
-              badge={<Badge variant="gradient" className="px-3 py-1"><BrainCircuit className="h-3 w-3" /> {data.derived?.competitiveQuestionIntelligence?.pyqRecords?.length ?? 0} PYQs</Badge>}
+              badge={<Badge variant="gradient" className="px-3 py-1"><BrainCircuit className="h-3 w-3" /> {competitivePyqRecords.length} PYQs</Badge>}
             />
           </div>
         </>

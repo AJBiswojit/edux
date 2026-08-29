@@ -11,9 +11,11 @@
  * contains no isolated mock values.
  */
 
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import { useFacultyIntelligence } from '@/services/faculty-intelligence'
+import { useFacultyQuestions } from '@/services/faculty-questions'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui'
@@ -25,11 +27,37 @@ import {
 
 function Dashboard() {
   const { data, isLoading, isError, refetch } = useFacultyIntelligence()
+  /* Question-bank counts come from the LIVE bank API — the summary
+     payload's questionBankStatus string may embed seeded bank totals. */
+  const { data: qbData, isError: qbError } = useFacultyQuestions()
+
+  const live = useMemo(() => {
+    if (!data) return data
+    const derived = { ...(data.derived ?? {}) }
+    const dashboard = { ...(derived.dashboard ?? {}) }
+    let questionBankStatus
+    if (qbError) {
+      questionBankStatus = 'Question bank status unavailable'
+    } else {
+      const questions = qbData?.questions ?? []
+      const flagged = questions.filter((q) => q.status === 'Flagged').length
+      questionBankStatus = `${qbData?.summary?.total ?? questions.length} questions · ${flagged} flagged`
+    }
+    dashboard.questionBankStatus = questionBankStatus
+    /* successCenter.assessmentHealth embeds the same status string */
+    const successCenter = { ...(dashboard.successCenter ?? {}) }
+    if (successCenter.assessmentHealth) {
+      successCenter.assessmentHealth = { ...successCenter.assessmentHealth, questionBankStatus }
+    }
+    dashboard.successCenter = successCenter
+    derived.dashboard = dashboard
+    return { ...data, derived }
+  }, [data, qbData, qbError])
 
   if (isLoading) return <DashboardSkeleton cards={4} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
-  const db = data.derived.dashboard ?? {}
+  const db = live.derived.dashboard ?? {}
   const alerts = db.interventions?.length ?? 0
 
   return (
@@ -54,7 +82,7 @@ function Dashboard() {
       />
 
       {/* 1. Faculty Success Center */}
-      <SuccessCenter data={data} />
+      <SuccessCenter data={live} />
 
       {/* 2. AI Faculty Brief + 3. Today's Schedule */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">

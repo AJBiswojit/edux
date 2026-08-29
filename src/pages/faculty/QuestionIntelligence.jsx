@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -8,6 +8,8 @@ import {
 import { usePYQAnalysis, usePYQFilters } from '@/services/extra'
 import { useFacultyQuestions } from '@/services/faculty-questions'
 import { useFacultyIntelligence } from '@/services/faculty-intelligence'
+import { isPyqQuestion } from '@/api/adapters/questions'
+import { withLiveQuestionStats } from '@/intelligence/faculty'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent, useToast } from '@/components/ui'
@@ -59,15 +61,30 @@ function QuestionIntelligence() {
     if (t) setTab(TAB_ALIASES[t] ?? t)
   }, [searchParams])
 
+  /* Question records + question-derived stats come ONLY from the live
+     question-bank API. The intelligence summary payload's questionStats
+     block is replaced with stats re-derived from the real bank (an empty
+     bank → neutral '—' stats, never seeded values). */
+  const qbQuestions = qbData?.questions ?? []
+  const intelLive = useMemo(
+    () => withLiveQuestionStats(intelData, { summary: qbData?.summary ?? {}, questions: qbQuestions }),
+    [intelData, qbData, qbQuestions],
+  )
+
   if (pyqLoading || qbLoading || intelLoading) return <DashboardSkeleton cards={3} />
   if (pyqError || qbError || intelError) return <ErrorState onRetry={() => { refetchPyq(); refetchQb(); refetchIntel() }} />
 
   const qi = pyqData.questionIntelligence
-  const qbQuestions = qbData?.questions ?? []
-  const pyqMatched = qbQuestions.filter((q) => (q.pyqFrequency ?? 0) > 0).length
+  const pyqMatched = qbQuestions.filter(isPyqQuestion).length
+  /* "AI suggested questions" — PYQ-matched records straight from the live
+     question bank (highest repetition first). No seeded prediction stems. */
+  const bankSuggestions = [...qbQuestions]
+    .filter(isPyqQuestion)
+    .sort((a, b) => (Number(b.pyqFrequency) || 0) - (Number(a.pyqFrequency) || 0))
+    .slice(0, 4)
   const subjects = (filtersData?.subjects ?? []).map((s) => `${s.code} — ${s.name}`)
   const yearLabel = `${pyqData.overview.yearsCovered[0]}–${pyqData.overview.yearsCovered[pyqData.overview.yearsCovered.length - 1]}`
-  const assessmentHealth = intelData?.derived?.assessment?.assessmentHealth
+  const assessmentHealth = intelLive?.derived?.assessment?.assessmentHealth
 
   return (
     <div>
@@ -83,7 +100,7 @@ function QuestionIntelligence() {
                 <BrainCircuit className="h-3 w-3" /> Health {assessmentHealth.score}/100 · {assessmentHealth.grade}
               </Badge>
             )}
-            <Badge variant="gradient" className="px-3 py-1">{pyqData.overview.totalQuestions} PYQs · {qbData.summary.total} bank</Badge>
+            <Badge variant="gradient" className="px-3 py-1">{qbData.summary.total} bank · {pyqMatched} PYQ-matched</Badge>
             <Link to="/faculty/question-intelligence/micro-assessment">
               <Button size="sm"><Sparkles className="h-3.5 w-3.5" /> AI Micro-Assessment Studio</Button>
             </Link>
@@ -168,17 +185,24 @@ function QuestionIntelligence() {
                 <p className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
                   <Star className="h-4 w-4 text-amber-500" /> AI suggested questions
                 </p>
-                <p className="mt-0.5 text-xs text-slate-400">High-confidence predictions from the 15-year pattern model</p>
+                <p className="mt-0.5 text-xs text-slate-400">Highest-repetition PYQ matches from your live question bank</p>
                 <div className="mt-4 space-y-3">
-                  {qi.aiPredictedQuestions.map((q, i) => (
-                    <div key={i} className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
+                  {bankSuggestions.map((q) => (
+                    <div key={q.id} className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-[13.5px] font-semibold leading-snug text-slate-800 dark:text-slate-100">{q.question}</p>
-                        <Badge variant="gradient">{q.confidence}%</Badge>
+                        <p className="text-[13.5px] font-semibold leading-snug text-slate-800 dark:text-slate-100">{q.text}</p>
+                        <Badge variant="gradient">{(q.pyqFrequency ?? 0) > 0 ? `PYQ ×${q.pyqFrequency}` : `PYQ ${q.pyqYear ?? ''}`}</Badge>
                       </div>
-                      <p className="mt-1.5 text-[11.5px] text-slate-500 dark:text-slate-400">{q.reason}</p>
+                      <p className="mt-1.5 text-[11.5px] text-slate-500 dark:text-slate-400">
+                        {(q.appearedIn ?? []).length > 0 ? `Appeared in ${q.appearedIn.join(', ')}` : (q.pyqTopics ?? []).join(' · ') || q.topic || q.chapter || '—'}
+                      </p>
                     </div>
                   ))}
+                  {bankSuggestions.length === 0 && (
+                    <p className="rounded-2xl border border-dashed border-indigo-200 p-4 text-center text-xs text-slate-400 dark:border-indigo-500/30">
+                      No PYQ-matched questions in the bank yet — suggestions appear once the question bank has content.
+                    </p>
+                  )}
                 </div>
                 <Button variant="outline" size="sm" className="mt-4 w-full" onClick={() => toast.success('Important questions ✨', 'Ranked list of predicted questions generated for the next exam.')}>
                   Generate important questions
@@ -191,13 +215,13 @@ function QuestionIntelligence() {
                 </p>
                 <p className="mt-0.5 text-xs text-slate-400">Emerging, gap-risk and never-asked topics across {subjects.length} subjects</p>
                 <div className="mt-4 space-y-2">
-                  {qi.emergingTopics.map((t) => (
+                  {(qi.emergingTopics ?? []).map((t) => (
                     <div key={t} className="flex items-center justify-between rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
                       <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{t}</p>
                       <Badge variant="success" size="sm">Emerging</Badge>
                     </div>
                   ))}
-                  {qi.neverAsked.slice(0, 3).map((t) => (
+                  {(qi.neverAsked ?? []).slice(0, 3).map((t) => (
                     <div key={t} className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-3.5 dark:border-slate-700">
                       <p className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">{t}</p>
                       <Badge variant="warning" size="sm">Gap risk</Badge>
@@ -210,7 +234,9 @@ function QuestionIntelligence() {
             <div className="flex items-start gap-3 rounded-3xl bg-gradient-to-r from-indigo-600/10 to-teal-500/10 p-5 ring-1 ring-indigo-500/15">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
               <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
-                <span className="font-bold text-indigo-600 dark:text-indigo-300">MediXO Mentor:</span> {pyqData.questionIntelligence.importantConcepts[0]} and {pyqData.questionIntelligence.frequentTopics[1]} dominate the last 3 exam cycles. Fold them into the next {subjects[0] ?? 'course'} paper with a difficulty split of 30/50/20.
+                <span className="font-bold text-indigo-600 dark:text-indigo-300">MediXO Mentor:</span> {qi.importantConcepts?.[0] && qi.frequentTopics?.[1]
+                  ? <>{qi.importantConcepts[0]} and {qi.frequentTopics[1]} dominate the last 3 exam cycles. Fold them into the next {subjects[0] ?? 'course'} paper with a difficulty split of 30/50/20.</>
+                  : <>Once PYQ analytics index a corpus, the dominant concepts and topics for the next {subjects[0] ?? 'course'} paper will appear here.</>}
               </p>
             </div>
           </div>
@@ -218,12 +244,12 @@ function QuestionIntelligence() {
 
         {/* ---------------- Question Intelligence ---------------- */}
         <TabsContent value="question-intelligence">
-          <QuestionIntelligenceContent data={qbData} intelData={intelData} />
+          <QuestionIntelligenceContent data={qbData} intelData={intelLive} />
         </TabsContent>
 
         {/* ---------------- PYQ Intelligence ---------------- */}
         <TabsContent value="pyq">
-          <PyqIntelligenceTab data={intelData} />
+          <PyqIntelligenceTab data={intelLive} questions={qbQuestions} />
         </TabsContent>
 
         {/* ---------------- AI Question Studio ---------------- */}
@@ -233,7 +259,7 @@ function QuestionIntelligence() {
 
         {/* ---------------- AI Question Paper Generator ---------------- */}
         <TabsContent value="paper-generator">
-          <PaperGeneratorTab data={intelData} editPaper={editingPaper} onClearEdit={() => setEditingPaper(null)} />
+          <PaperGeneratorTab data={intelLive} editPaper={editingPaper} onClearEdit={() => setEditingPaper(null)} />
         </TabsContent>
 
         {/* ---------------- Paper Library ---------------- */}
@@ -243,7 +269,7 @@ function QuestionIntelligence() {
 
         {/* ---------------- Assessment Analytics ---------------- */}
         <TabsContent value="analytics">
-          <AssessmentAnalyticsTab data={intelData} />
+          <AssessmentAnalyticsTab data={intelLive} />
         </TabsContent>
       </Tabs>
     </div>

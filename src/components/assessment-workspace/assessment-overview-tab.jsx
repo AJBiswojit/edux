@@ -23,6 +23,11 @@ function AssessmentOverviewTab({ data }) {
   const health = a.assessmentHealth ?? {}
   const library = a.paperLibrary ?? {}
   const upcoming = a.upcomingAssessments ?? []
+  /* Corpus copy is dynamic — no hardcoded paper/year counts. */
+  const pyqCorpus = data.derived.pyqIntelligence?.university?.pyqCorpus ?? {}
+  const pyqActionDesc = pyqCorpus.totalPapers
+    ? `${pyqCorpus.totalPapers} papers · university + competitive`
+    : 'University + competitive PYQ corpus'
 
   return (
     <div>
@@ -176,7 +181,7 @@ function AssessmentOverviewTab({ data }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { label: 'Generate a paper', desc: `${library.total ?? 0} papers in the library · no duplicate names allowed`, to: '/faculty/question-intelligence?tab=paper-generator', icon: Wand2, grad: 'from-indigo-500 to-blue-500' },
-            { label: 'Analyze PYQs', desc: '15 years · 46 papers · university + competitive', to: '/faculty/question-intelligence?tab=pyq', icon: BrainCircuit, grad: 'from-emerald-500 to-teal-500' },
+            { label: 'Analyze PYQs', desc: pyqActionDesc, to: '/faculty/question-intelligence?tab=pyq', icon: BrainCircuit, grad: 'from-emerald-500 to-teal-500' },
             { label: 'Browse the library', desc: `${library.readyCount ?? 0} papers ready to publish`, to: '/faculty/question-intelligence?tab=library', icon: Layers, grad: 'from-amber-500 to-orange-500' },
             { label: 'Assessment analytics', desc: 'Coverage, gaps, trends & AI insights', to: '/faculty/question-intelligence?tab=analytics', icon: Target, grad: 'from-rose-500 to-red-500' },
           ].map((act, i) => (

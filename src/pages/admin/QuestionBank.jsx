@@ -49,7 +49,7 @@ function QuestionBank() {
           { label: 'AI-generated', value: s.aiGenerated.toLocaleString(), color: '#14b8a6' },
           { label: 'Approved', value: s.approved.toLocaleString(), color: '#10b981' },
           { label: 'Flagged', value: String(s.flagged), color: '#ef4444' },
-          { label: 'MCQ share', value: `${Math.round((s.byType.MCQ / s.total) * 100)}%`, color: '#f59e0b' },
+          { label: 'MCQ share', value: s.total > 0 && s.byType?.MCQ ? `${Math.round((s.byType.MCQ / s.total) * 100)}%` : '—', color: '#f59e0b' },
         ].map((k, i) => (
           <motion.div key={k.label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
             <p className="font-display text-2xl font-bold" style={{ color: k.color }}>{k.value}</p>

@@ -204,7 +204,7 @@ export function CompetitiveQuestionBrowser({
               <div className="flex h-full flex-col rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lift dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="gradient" size="sm">{q.exam === 'JEE Main' ? 'JEE' : 'NEET'}</Badge>
+                    <Badge variant="gradient" size="sm">{q.exam === 'JEE Main' ? 'JEE' : q.exam === 'NEET UG' ? 'NEET' : (q.exam ?? 'University')}</Badge>
                     <Badge variant="secondary" size="sm">{q.subject}</Badge>
                     {q.isPyq && <Badge variant="warning" size="sm">PYQ {q.year}</Badge>}
                     <Badge variant={DIFF_STYLE[q.difficulty] ?? 'secondary'} size="sm">{q.difficulty}</Badge>
