@@ -446,6 +446,36 @@ export function computePyqIntelligence({ pyqTrends, pyqAnalysis, questionCoverag
 
 export default computeAssessmentIntelligence
 
+/* ---------- Live question-bank stats injection ----------
+ * `derived.assessment.questionStats` served in the faculty-intelligence
+ * summary payload may have been derived from seed data on the backend. The
+ * ONLY runtime question source is GET /faculty/question-bank, so the UI
+ * layer re-derives the questionStats block from the live bank payload with
+ * the SAME pure engine (computeQuestionStats). An empty bank yields honest
+ * neutral stats (0 totals, null averages → the UI's existing '—' state);
+ * real bank rows yield real distributions. No other derived block changes. */
+export function withLiveQuestionStats(intel, questionBank) {
+  if (!intel || typeof intel !== 'object') return intel
+  const derived = intel.derived ?? {}
+  const assessment = derived.assessment ?? {}
+  const stats = computeQuestionStats({ questionBank: questionBank ?? {} })
+  /* Averages are only meaningful when the live bank actually measures
+     accuracy; with an empty bank (or no measured rows) they collapse to
+     the UI's neutral '—' state instead of a fabricated number. */
+  const questions = stats.questions ?? []
+  const measured = questions.some((q) => Number.isFinite(Number(q?.accuracy)))
+  const liveStats = measured
+    ? stats
+    : { ...stats, avgAccuracy: null, qualityAvg: null }
+  return {
+    ...intel,
+    derived: {
+      ...derived,
+      assessment: { ...assessment, questionStats: liveStats },
+    },
+  }
+}
+
 /* ---------- Competitive Question Intelligence (Phase 29) ----------
  * Derived view over the competitive question dataset: per-exam / per-subject
  * / per-chapter / per-difficulty statistics, PYQ records (the dataset itself

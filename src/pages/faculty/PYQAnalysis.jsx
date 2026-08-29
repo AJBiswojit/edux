@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useQuestionBank } from '@/services'
 import { usePYQAnalysis, usePYQFilters, usePYQPatterns, usePYQAnalytics } from '@/services/extra'
+import { isPyqQuestion } from '@/api/adapters/questions'
 import { PageHeader } from '@/components/shared/page-header'
 import { ChartCard } from '@/components/shared/chart-card'
 import { BarCompare, DonutChart } from '@/components/charts'
@@ -26,7 +27,7 @@ const DatabaseIcon = BookOpen
 /* ------------------------------------------------------------------ */
 /* 5-step intelligent filter workflow — nothing loads until Analyze.   */
 /* ------------------------------------------------------------------ */
-function PYQFilterCard({ filters, values, onChange, onAnalyze, analyzing, hasAnalyzed }) {
+function PYQFilterCard({ filters, values, onChange, onAnalyze, analyzing, hasAnalyzed, overview }) {
   const step = (n, title, hint) => (
     <p className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-[10px] font-bold text-white">{n}</span>
@@ -136,7 +137,9 @@ function PYQFilterCard({ filters, values, onChange, onAnalyze, analyzing, hasAna
             </Button>
           )}
           <p className="text-[11px] font-medium text-slate-400">
-            46 papers · 486 questions · 2011–2025 in the corpus
+            {overview?.totalPapers
+              ? `${overview.totalPapers} papers · ${overview.totalQuestions ?? 0} questions · ${overview.yearsCovered?.[0]}–${overview.yearsCovered?.at(-1)} in the corpus`
+              : 'Counts appear once the PYQ corpus is indexed'}
           </p>
         </div>
       </div>
@@ -242,10 +245,13 @@ function RelatedQuestionBankPanel({ questions, selectedIds, onToggle, onAddAll }
 /* ------------------------------------------------------------------ */
 /* Full PYQ analysis dashboard — appears only after Analyze.           */
 /* ------------------------------------------------------------------ */
-function PYQDashboard({ analytics, patterns, related, selectedIds, onToggle, onAddAll, filters, labels, onGenerate }) {
+function PYQDashboard({ analytics, patterns, related, repeated, selectedIds, onToggle, onAddAll, filters, labels, onGenerate }) {
   const toast = useToast()
   const ov = analytics.overview
   const qi = analytics.questionIntelligence
+  /* Question-record panels are fed ONLY by the live question bank —
+     seeded stems from the PYQ analytics payload are never rendered. */
+  const repeatedRecords = repeated ?? []
   const da = analytics.difficultyAnalytics
   const yearWise = analytics.trendAnalytics.yearWise.filter((y) => y.year >= filters.year.from && y.year <= filters.year.to)
   const totalQuestions = yearWise.reduce((a, y) => a + y.questions, 0)
@@ -281,24 +287,27 @@ function PYQDashboard({ analytics, patterns, related, selectedIds, onToggle, onA
         </Button>
       </div>
 
-      {/* Most repeated questions */}
+      {/* Most repeated questions — live bank records ranked by PYQ repetition */}
       <ChartCard
         title="Most repeated questions"
         subtitle={`Asked across multiple years${filters.chapter ? ` — ${filters.chapter}` : ''} · high-priority revision targets`}
-        actions={<Badge variant="gradient"><Star className="h-3 w-3" /> {qi.mostRepeated.length} hot questions</Badge>}
+        actions={<Badge variant="gradient"><Star className="h-3 w-3" /> {repeatedRecords.length} hot questions</Badge>}
       >
         <div className="space-y-3">
-          {qi.mostRepeated.slice(0, 6).map((q, i) => (
-            <motion.div key={i} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
+          {repeatedRecords.slice(0, 6).map((q) => (
+            <motion.div key={q.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-500 text-xs font-bold text-white shadow-md">
-                {q.times}×
+                {(q.pyqFrequency ?? 0) > 0 ? `${q.pyqFrequency}×` : 'PYQ'}
               </span>
-              <p className="min-w-0 flex-1 text-[13.5px] font-semibold text-slate-700 dark:text-slate-200">{q.question}</p>
+              <p className="min-w-0 flex-1 text-[13.5px] font-semibold text-slate-700 dark:text-slate-200">{q.text}</p>
               <div className="flex flex-wrap gap-1">
-                {q.years.slice(-5).map((y) => <Badge key={y} variant="outline" size="sm">{y}</Badge>)}
+                {(q.appearedIn ?? (q.pyqYear ? [q.pyqYear] : [])).slice(-5).map((y) => <Badge key={y} variant="outline" size="sm">{y}</Badge>)}
               </div>
             </motion.div>
           ))}
+          {repeatedRecords.length === 0 && (
+            <p className="py-8 text-center text-sm text-slate-400">No repeated questions in the bank for this slice yet — PYQ-matched bank questions appear here.</p>
+          )}
         </div>
       </ChartCard>
 
@@ -398,7 +407,9 @@ function PYQDashboard({ analytics, patterns, related, selectedIds, onToggle, onA
           <div className="flex items-start gap-3 rounded-3xl bg-gradient-to-r from-indigo-600/10 to-teal-500/10 p-5 ring-1 ring-indigo-500/15">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
             <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
-              <span className="font-bold text-indigo-600 dark:text-indigo-300">AI take:</span> {qi.aiPredictedQuestions[0]?.reason} — the model rates this the most likely new question for {labels.subject}.
+              <span className="font-bold text-indigo-600 dark:text-indigo-300">AI take:</span> {repeatedRecords[0]
+                ? <>{repeatedRecords[0].text} is your highest-repetition record — treat it as the most likely question pattern for {labels.subject}.</>
+                : <>Predictions for {labels.subject} appear once the question bank has PYQ-matched content.</>}
             </p>
           </div>
         </div>
@@ -406,28 +417,33 @@ function PYQDashboard({ analytics, patterns, related, selectedIds, onToggle, onA
 
       {/* AI suggested + predicted */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartCard title="AI suggested questions" subtitle="High-confidence predictions from the pattern model" actions={<Badge variant="gradient"><Sparkles className="h-3 w-3" /> AI ranked</Badge>}>
+        <ChartCard title="AI suggested questions" subtitle="Highest-repetition PYQ matches from your live question bank" actions={<Badge variant="gradient"><Sparkles className="h-3 w-3" /> PYQ ranked</Badge>}>
           <div className="space-y-3">
-            {qi.aiPredictedQuestions.map((p, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
+            {repeatedRecords.slice(0, 4).map((q) => (
+              <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-[13.5px] font-semibold leading-snug text-slate-800 dark:text-slate-100">{p.question}</p>
-                  <Badge variant="gradient">{p.confidence}%</Badge>
+                  <p className="text-[13.5px] font-semibold leading-snug text-slate-800 dark:text-slate-100">{q.text}</p>
+                  <Badge variant="gradient">{(q.pyqFrequency ?? 0) > 0 ? `PYQ ×${q.pyqFrequency}` : 'PYQ'}</Badge>
                 </div>
-                <p className="mt-1.5 text-[11.5px] text-slate-500 dark:text-slate-400">{p.reason}</p>
+                <p className="mt-1.5 text-[11.5px] text-slate-500 dark:text-slate-400">
+                  {(q.appearedIn ?? []).length > 0 ? `Appeared in ${q.appearedIn.join(', ')}` : (q.pyqTopics ?? []).join(' · ') || q.topic || q.chapter || '—'}
+                </p>
               </motion.div>
             ))}
+            {repeatedRecords.length === 0 && (
+              <p className="py-8 text-center text-sm text-slate-400">No PYQ-matched bank questions yet — suggestions appear once the question bank has content.</p>
+            )}
           </div>
         </ChartCard>
         <ChartCard title="AI predicted topics" subtitle="What to expect next exam" actions={<Badge variant="gradient"><Star className="h-3 w-3" /> Predicted</Badge>}>
           <div className="space-y-3">
-            {qi.emergingTopics.map((t, i) => (
+            {(qi.emergingTopics ?? []).map((t, i) => (
               <div key={t} className="flex items-center justify-between rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
                 <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{t}</p>
                 <Badge variant="success" size="sm">Emerging</Badge>
               </div>
             ))}
-            {qi.neverAsked.slice(0, 2).map((t) => (
+            {(qi.neverAsked ?? []).slice(0, 2).map((t) => (
               <div key={t} className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-3.5 dark:border-slate-700">
                 <p className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">{t}</p>
                 <Badge variant="warning" size="sm">Gap risk</Badge>
@@ -531,6 +547,11 @@ export function PYQAnalysisContent({ toolbar = false }) {
 
   const { data: analytics } = usePYQAnalytics(analyzed ? values.subject : null)
 
+  /* ---- PYQ-matched bank questions (record source for the dashboard) ---- */
+  const bankRepeated = useMemo(() => (qbData?.questions ?? [])
+    .filter(isPyqQuestion)
+    .sort((a, b) => (Number(b.pyqFrequency) || 0) - (Number(a.pyqFrequency) || 0)), [qbData])
+
   /* ---- related question bank questions for the selected slice ---- */
   const related = useMemo(() => {
     const bank = qbData?.questions ?? []
@@ -627,6 +648,7 @@ export function PYQAnalysisContent({ toolbar = false }) {
         onAnalyze={handleAnalyze}
         analyzing={analyzing}
         hasAnalyzed={analyzed}
+        overview={data?.overview}
       />
 
       {/* Dashboard only after Analyze */}
@@ -636,6 +658,7 @@ export function PYQAnalysisContent({ toolbar = false }) {
             analytics={analytics}
             patterns={patternsData?.items ?? []}
             related={related}
+            repeated={bankRepeated}
             selectedIds={selectedQbIds}
             onToggle={toggleQb}
             onAddAll={selectAllQb}
@@ -711,7 +734,7 @@ function PYQAnalysis() {
       <PageHeader
         eyebrow="Question Intelligence · PYQ Analysis"
         title="Previous year question analysis"
-        description="AI-powered analysis of 15 years of question papers — filter by program, subject, chapter, topic and year, then analyse."
+        description="AI-powered analysis of your previous year question papers — filter by program, subject, chapter, topic and year, then analyse."
         breadcrumbs={[{ label: 'Faculty' }, { label: 'Question Intelligence', to: '/faculty/question-intelligence' }, { label: 'PYQ Analysis' }]}
       />
       <PYQAnalysisContent toolbar />

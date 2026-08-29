@@ -188,6 +188,45 @@ export function adaptQuestionBank(payload, filters = {}) {
   }
 }
 
+/* ---------- Runtime PYQ derivation from the REAL question bank ----------
+ * The only production runtime question source is GET /faculty/question-bank.
+ * Any surface that renders PYQ question records (University PYQ browser,
+ * competitive PYQ browser, "repeated / suggested question" panels) derives
+ * those records here — never from a bundled dataset or from the question
+ * records embedded in other payloads (intelligence summary / PYQ analytics).
+ * A question counts as PYQ when the BACKEND marks it so (isPyq / pyqYear /
+ * pyqFrequency); an empty bank therefore yields an empty record list. */
+export function isPyqQuestion(question) {
+  if (!question) return false
+  if (question.isPyq === true || question.isPyq === 'true') return true
+  if ((Number(question.pyqFrequency) || 0) > 0) return true
+  return question.pyqYear != null && question.pyqYear !== ''
+}
+
+/** University-domain records of a question-bank payload (never subject-name inference). */
+export function isUniversityDomainQuestion(question) {
+  if (!question) return false
+  return question.domain === 'University' || (!question.domain && !question.examFamily)
+}
+
+/**
+ * PYQ question records derived from a live question-bank array, shaped for
+ * CompetitiveQuestionBrowser. `domain` filters by payload identity
+ * ('University' | 'Competitive'); omit it for all PYQ records.
+ */
+export function bankPyqBrowserRecords(questions = [], { domain } = {}) {
+  const rows = Array.isArray(questions) ? questions : []
+  return rows
+    .filter((q) => isPyqQuestion(q))
+    .filter((q) => {
+      if (!domain) return true
+      if (domain === 'University') return isUniversityDomainQuestion(q)
+      return q.domain === domain
+    })
+    .map(toCompetitiveBrowserQuestion)
+    .filter(Boolean)
+}
+
 /** Shape expected by CompetitiveQuestionBrowser (exam / question / options). */
 export function toCompetitiveBrowserQuestion(question) {
   if (!question) return null
@@ -199,7 +238,11 @@ export function toCompetitiveBrowserQuestion(question) {
   return {
     ...question,
     id: question.id,
-    exam: question.exam ?? (question.examFamily === 'NEET' ? 'NEET UG' : question.examFamily === 'JEE' ? 'JEE Main' : null),
+    exam: question.exam
+      ?? (question.examFamily === 'NEET' ? 'NEET UG'
+        : question.examFamily === 'JEE' ? 'JEE Main'
+          : question.domain === 'University' ? 'University'
+            : null),
     year: question.year ?? question.pyqYear ?? null,
     session: question.session ?? null,
     subject: question.subject,
@@ -227,4 +270,7 @@ export default {
   canonicalDomain,
   canonicalExamFamily,
   toCompetitiveBrowserQuestion,
+  isPyqQuestion,
+  isUniversityDomainQuestion,
+  bankPyqBrowserRecords,
 }

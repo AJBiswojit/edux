@@ -29,7 +29,7 @@ export {
   computeAssessmentIntelligence, computeQuestionStats, computeCoverageAnalytics,
   computeAssessmentHealth, computePaperLibrary, computeUpcomingAssessments,
   computeAssessmentTimeline, computeAssessmentRecommendations, computePyqIntelligence,
-  computeCompetitiveQuestionIntelligence,
+  computeCompetitiveQuestionIntelligence, withLiveQuestionStats,
 } from './assessment.js'
 export { computeReportIntelligence, buildReportPreview } from './reports.js'
 export { computeStudentIntelligence } from './students.js'

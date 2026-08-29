@@ -243,13 +243,14 @@ function QuestionIntelligenceContent({ data, intelData }) {
         <Badge variant="secondary" className="px-3 py-1">{universityQuestions.length} university questions · {subjects.length} courses</Badge>
       </div>
 
-      {/* KPI strip */}
+      {/* KPI strip — all values from the live question-bank response (an
+          empty bank shows honest zeros / neutral '—', never seeded stats) */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
         {[
-          { label: 'Total questions', value: String(data.summary.total), color: '#6366f1' },
-          { label: 'AI-generated', value: String(data.summary.aiGenerated), color: '#14b8a6' },
-          { label: 'Used this term', value: String(data.summary.usedThisTerm), color: '#10b981' },
-          { label: 'Flagged', value: String(data.summary.flagged), color: '#ef4444' },
+          { label: 'Total questions', value: String(data.summary?.total ?? stats.total ?? 0), color: '#6366f1' },
+          { label: 'AI-generated', value: String(stats.aiGenerated ?? data.summary?.aiGenerated ?? 0), color: '#14b8a6' },
+          { label: 'Used this term', value: String(stats.usedThisTerm ?? 0), color: '#10b981' },
+          { label: 'Flagged', value: String(stats.flagged ?? 0), color: '#ef4444' },
           { label: 'Avg accuracy', value: stats.avgAccuracy != null ? `${stats.avgAccuracy}%` : '—', color: '#f59e0b' },
           { label: 'Avg quality', value: stats.qualityAvg != null ? `${stats.qualityAvg}/100` : '—', color: '#8b5cf6' },
         ].map((s, i) => (
