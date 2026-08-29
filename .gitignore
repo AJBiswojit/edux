@@ -5,6 +5,7 @@
 backend/.venv
 backend/test/_exam_core.sqlite
 backend/test/__pycache__/
+backend/scripts/__pycache__/
 
 # dependencies
 node_modules

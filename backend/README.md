@@ -34,6 +34,10 @@ VITE_MOCK_FALLBACK=true
 
 Auth (login, register, OTP, refresh) is live. Unimplemented product routes return 501/404 so the SPA can fall back to mock data until those APIs are ported.
 
+## Local development accounts
+
+`python -m scripts.create_dev_accounts` (run from `backend/`) creates three real local dev accounts — `student@edux.dev`, `faculty@edux.dev`, `admin@edux.dev` — as regular rows in your local database, authenticated by the normal login flow. Idempotent and non-destructive. See [`docs/LOCAL-DEVELOPMENT-ACCOUNTS.md`](../docs/LOCAL-DEVELOPMENT-ACCOUNTS.md).
+
 Demo password for **every seeded account**: `aurora123` (stored as PBKDF2 hash in `users.password_hash`, never plaintext).
 
 On boot the API upserts the SPA mock directory into SQLite:
