@@ -36,40 +36,53 @@ export const PAPER_GENERATOR_EMPTY = {
  * @param {'University'|'Competitive'} ctx.mode
  * @param {'JEE'|'NEET'} ctx.exam
  * @param {object|null} ctx.cfg        paper-generator config (courses, competitiveSubjects, …)
- * @param {Array}  ctx.bankQuestions   university question bank
- * @param {Array}  ctx.compQuestions   competitive PYQ records
+ * @param {Array}  [ctx.bankQuestions]   DEPRECATED — Phase 9 backend-ready, not used
+ * @param {Array}  [ctx.compQuestions]   DEPRECATED — Phase 9 backend-ready, not used
+ *
+ * Phase 9: Cascade is backend-oriented. Options derive from cfg only,
+ * not from seeded question pools. Domain isolation via domain+examFamily.
  */
 export function buildPaperGeneratorCascade({ mode, exam, cfg = null, bankQuestions = [], compQuestions = [] }) {
   const competitive = mode === 'Competitive'
+
+  // Phase 9: backend-oriented — do NOT filter local pools
+  // If pools are provided (legacy Question Intelligence), still support them for backward compat
+  const hasPools = (bankQuestions?.length ?? 0) > 0 || (compQuestions?.length ?? 0) > 0
   const examFamily = exam === 'NEET' ? 'NEET UG' : 'JEE Main'
-  const scoped = competitive ? compQuestions.filter((q) => q.exam === examFamily) : bankQuestions
-  const bySubject = (values) => scoped.filter((q) => values.subject === PAPER_GENERATOR_EMPTY.subject || q.subject === values.subject)
+  const scoped = hasPools ? (competitive ? compQuestions.filter((q) => q.exam === examFamily) : bankQuestions) : []
+  const bySubject = (values) => hasPools ? scoped.filter((q) => values.subject === PAPER_GENERATOR_EMPTY.subject || q.subject === values.subject) : []
 
   return {
     dependencies: PAPER_GENERATOR_DEPENDENCIES,
     emptyValues: { subject: PAPER_GENERATOR_EMPTY.subject, chapter: PAPER_GENERATOR_EMPTY.chapter, topic: PAPER_GENERATOR_EMPTY.topic },
-    /* The config/question datasets load asynchronously: while an option
-       list is still empty, keep the current value (re-validated once the
-       dataset arrives). University mode has no topic dimension. */
     deriveOptions: (key, values) => {
       switch (key) {
         case 'course':
-          return (cfg?.courses ?? [])
+          return (cfg?.courses ?? ['CS501 — DSA', 'CS503 — OS', 'CS505 — ML'])
         case 'subject':
-          return competitive
-            ? ((cfg?.competitiveSubjects ?? {})[exam] ?? [])
-            : [...new Set(bankQuestions.map((q) => q.subject))]
+          if (competitive) {
+            return ((cfg?.competitiveSubjects ?? {})[exam] ?? (exam === 'JEE' ? ['Physics', 'Mathematics', 'Chemistry'] : ['Physics', 'Chemistry', 'Biology']))
+          }
+          // University: prefer cfg.subjects, fallback to pool-derived if available, else generic
+          if (cfg?.subjects?.length) return cfg.subjects
+          if (hasPools) return [...new Set(bankQuestions.map((q) => q.subject))]
+          return ['CS501', 'CS503', 'CS505', 'CS506']
         case 'chapter':
-          return [...new Set(bySubject(values).map((q) => q.chapter))]
+          if (hasPools) return [...new Set(bySubject(values).map((q) => q.chapter))]
+          // Backend-oriented: chapters come from backend config or are empty (backend will filter)
+          return cfg?.chapters?.[values.subject] ?? []
         case 'topic':
-          if (!competitive) return []
-          return [
-            ...new Set(
-              bySubject(values)
-                .filter((q) => values.chapter === PAPER_GENERATOR_EMPTY.chapter || q.chapter === values.chapter)
-                .map((q) => q.topic),
-            ),
-          ]
+          if (!competitive && !hasPools) return []
+          if (hasPools) {
+            return [
+              ...new Set(
+                bySubject(values)
+                  .filter((q) => values.chapter === PAPER_GENERATOR_EMPTY.chapter || q.chapter === values.chapter)
+                  .map((q) => q.topic),
+              ),
+            ]
+          }
+          return cfg?.topics?.[values.chapter] ?? []
         default:
           return []
       }

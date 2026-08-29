@@ -11,8 +11,8 @@ function MockTests() {
     <div>
       <PageHeader
         eyebrow="Academics · Mock Tests"
-        title="Mock tests"
-        description="Simulate the real thing — timed, scored and analysed by AI to sharpen your weak areas."
+        title="Mock tests · Backend-Ready"
+        description="Timed, scored and analysed — fetched from backend via GET /student/mock-tests, no seeded fallback."
         breadcrumbs={[{ label: 'Student' }, { label: 'Mock Tests' }]}
       />
       <MockTestsContent />
