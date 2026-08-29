@@ -1,12 +1,14 @@
 import axios from 'axios'
 import { APP_CONFIG } from '@/config'
+import { apiErrorFromPayload, isBackendFailurePayload, normalizeAxiosError } from './errors'
 
 /**
  * MediXO EduX axios instance — the single HTTP client for the platform.
  *
  * - Request interceptor attaches the bearer token from storage.
- * - Response interceptor transparently refreshes expired access tokens
- *   (prototype refresh flow) and replays the original request once.
+ * - HTTP 200 `{ ok: false }` is treated as failure (faculty mutations).
+ * - FastAPI `{ detail }` is copied onto `error.message`.
+ * - Response interceptor refreshes expired access tokens and replays once.
  */
 export const api = axios.create({
   baseURL: APP_CONFIG.API_BASE_URL,
@@ -22,7 +24,7 @@ api.interceptors.request.use(
     }
     return config
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(normalizeAxiosError(error))
 )
 
 let isRefreshing = false
@@ -34,7 +36,16 @@ function flushQueue(error, token = null) {
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isBackendFailurePayload(response.data)) {
+      return Promise.reject(apiErrorFromPayload(response.data, {
+        status: response.status,
+        config: response.config,
+        response,
+      }))
+    }
+    return response
+  },
   async (error) => {
     const original = error.config
     if (error.response?.status === 401 && original && !original._retry) {
@@ -52,8 +63,13 @@ api.interceptors.response.use(
       try {
         const refreshToken = window.localStorage.getItem(APP_CONFIG.REFRESH_TOKEN_KEY)
         const { data } = await axios.post(`${APP_CONFIG.API_BASE_URL}/auth/refresh`, { refreshToken })
+        if (!data?.accessToken) {
+          throw new Error('Refresh did not return an access token')
+        }
         window.localStorage.setItem(APP_CONFIG.TOKEN_KEY, data.accessToken)
-        window.localStorage.setItem(APP_CONFIG.REFRESH_TOKEN_KEY, data.refreshToken)
+        if (data.refreshToken) {
+          window.localStorage.setItem(APP_CONFIG.REFRESH_TOKEN_KEY, data.refreshToken)
+        }
         flushQueue(null, data.accessToken)
         original.headers.Authorization = `Bearer ${data.accessToken}`
         return api(original)
@@ -62,12 +78,12 @@ api.interceptors.response.use(
         window.localStorage.removeItem(APP_CONFIG.TOKEN_KEY)
         window.localStorage.removeItem(APP_CONFIG.REFRESH_TOKEN_KEY)
         window.location.href = '/auth/login'
-        return Promise.reject(refreshError)
+        return Promise.reject(normalizeAxiosError(refreshError))
       } finally {
         isRefreshing = false
       }
     }
-    return Promise.reject(error)
+    return Promise.reject(normalizeAxiosError(error))
   }
 )
 

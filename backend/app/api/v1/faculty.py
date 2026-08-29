@@ -13,6 +13,17 @@ from app.services.people_directory import faculty_students_directory
 from app.services.spa_exams import analysis_from_attempt, attempt_to_dict, practice_questions
 from app.services.spa_issues import build_similar_issues, can_transition, intervention_from_group
 from app.services.spa_payloads import payload
+from app.services.examination import (
+    archive_sql_paper,
+    create_sql_paper,
+    delete_sql_paper,
+    duplicate_sql_paper,
+    get_faculty_paper,
+    list_faculty_papers,
+    list_question_bank,
+    publish_sql_paper,
+    regenerate_sql_paper,
+)
 from app.services.spa_store import coll_key, kv_get, kv_set
 
 router = APIRouter(tags=["faculty"])
@@ -81,8 +92,34 @@ def faculty_assignments(db: DbDep, user: FacultyDep):
 
 
 @router.get("/faculty/question-bank")
-def question_bank(db: DbDep, user: FacultyDep):
-    return live_catalog.faculty_question_bank(db, user.institution_id)
+def question_bank(
+    db: DbDep,
+    user: FacultyDep,
+    domain: str | None = None,
+    examFamily: str | None = None,
+    subject: str | None = None,
+    chapter: str | None = None,
+    topic: str | None = None,
+    difficulty: str | None = None,
+    questionType: str | None = None,
+    search: str | None = None,
+    page: int = 1,
+    limit: int = 50,
+):
+    return list_question_bank(
+        db,
+        user,
+        domain=domain,
+        exam_family=examFamily,
+        subject=subject,
+        chapter=chapter,
+        topic=topic,
+        difficulty=difficulty,
+        question_type=questionType,
+        search=search,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get("/faculty/research")
@@ -198,118 +235,54 @@ def archive_report(report_id: str, body: dict, db: DbDep, user: FacultyDep):
 @router.get("/faculty/paper-generator")
 def paper_generator(db: DbDep, user: FacultyDep):
     data = _papers(db, user)
-    return {**data, "generatedPapers": list(data.get("generatedPapers") or [])}
+    return {**data, "generatedPapers": list_faculty_papers(db, user)}
+
+
+@router.get("/faculty/paper-generator/papers")
+def list_papers(db: DbDep, user: FacultyDep):
+    papers = list_faculty_papers(db, user)
+    return {"generatedPapers": papers, "items": papers}
+
+
+@router.get("/faculty/paper-generator/papers/{paper_id}")
+def paper_detail(paper_id: str, db: DbDep, user: FacultyDep):
+    paper = get_faculty_paper(db, user, paper_id)
+    return {"paper": paper, **paper}
 
 
 @router.post("/faculty/paper-generator/papers")
 def create_paper(body: dict, db: DbDep, user: FacultyDep):
-    title = str(body.get("title") or "").strip()
-    if not title:
-        return {"ok": False, "error": "Paper name is required."}
-    data = _papers(db, user)
-    papers = data.setdefault("generatedPapers", [])
-    if any(str(p.get("title") or "").lower() == title.lower() for p in papers):
-        return {"ok": False, "error": "Duplicate paper name", "message": f'A paper named "{title}" already exists — choose a different name.'}
-    paper = {
-        "id": f"gp_new_{uuid4().hex[:8]}",
-        "paperCode": body.get("paperCode") or f"PAPER-{uuid4().hex[:6].upper()}",
-        "title": title,
-        "course": body.get("course") or "CS501",
-        "mode": body.get("mode") or "University",
-        "examType": body.get("examType") or "Mid Semester",
-        "paperType": body.get("paperType") or body.get("examType"),
-        "exam": body.get("exam"),
-        "subject": body.get("subject"),
-        "chapter": body.get("chapter"),
-        "topic": body.get("topic"),
-        "program": body.get("program"),
-        "faculty": user.full_name,
-        "totalMarks": body.get("totalMarks") or 50,
-        "duration": body.get("duration") or 120,
-        "difficulty": body.get("difficulty") or "Mixed",
-        "questions": body.get("questions") or 22,
-        "status": "Draft",
-        "generated": _today(),
-        "created": _today(),
-        "modified": _today(),
-        "coverage": body.get("coverage") or 90,
-        "sets": body.get("sets") or 1,
-        "downloads": 0,
-        "downloadStatus": "Not exported",
-        "deleteStatus": "Active",
-        "archived": False,
-        "versions": 1,
-        "blooms": body.get("blooms") or {"Remember": 15, "Understand": 20, "Apply": 35, "Analyze": 20, "Evaluate": 5, "Create": 5},
-        "questionList": body.get("questionList") or [],
-        "config": body.get("config"),
-        "actualDifficulty": body.get("actualDifficulty"),
-        "negativeMarking": body.get("negativeMarking"),
-        "interventionId": body.get("interventionId"),
-        "retest": bool(body.get("interventionId")),
-    }
-    papers.insert(0, paper)
-    data.setdefault("versionHistory", {})[paper["id"]] = [{"version": "v1.0", "date": _today(), "note": "Initial draft"}]
-    _save_papers(db, user, data)
-    return {"ok": True, "paper": paper}
+    return create_sql_paper(db, user, body or {})
 
 
 @router.delete("/faculty/paper-generator/papers/{paper_id}")
 def delete_paper(paper_id: str, db: DbDep, user: FacultyDep):
-    data = _papers(db, user)
-    data["generatedPapers"] = [p for p in data.get("generatedPapers") or [] if p.get("id") != paper_id]
-    _save_papers(db, user, data)
-    return {"ok": True, "deleted": paper_id}
+    return delete_sql_paper(db, user, paper_id)
 
 
 @router.post("/faculty/paper-generator/papers/{paper_id}/duplicate")
 def duplicate_paper(paper_id: str, db: DbDep, user: FacultyDep):
-    data = _papers(db, user)
-    src = next((p for p in data.get("generatedPapers") or [] if p.get("id") == paper_id), None)
-    if not src:
-        return {"ok": False, "error": "Paper not found"}
-    dup = copy.deepcopy(src)
-    dup["id"] = f"gp_dup_{uuid4().hex[:8]}"
-    dup["title"] = f"{src.get('title')} (copy)"
-    dup["created"] = _today()
-    dup["modified"] = _today()
-    dup["status"] = "Draft"
-    data["generatedPapers"].insert(0, dup)
-    _save_papers(db, user, data)
-    return {"ok": True, "paper": dup}
+    return duplicate_sql_paper(db, user, paper_id)
 
 
 @router.post("/faculty/paper-generator/papers/{paper_id}/regenerate")
 def regenerate_paper(paper_id: str, db: DbDep, user: FacultyDep):
-    data = _papers(db, user)
-    paper = next((p for p in data.get("generatedPapers") or [] if p.get("id") == paper_id), None)
-    if not paper:
-        return {"ok": False, "error": "Paper not found"}
-    history = data.setdefault("versionHistory", {}).setdefault(paper_id, [{"version": "v1.0", "date": paper.get("created"), "note": "Initial draft"}])
-    paper["modified"] = _today()
-    paper["versions"] = len(history) + 1
-    paper["coverage"] = min(100, (paper.get("coverage") or 90) + 2)
-    history.append({"version": f"v1.{len(history)}", "date": _today(), "note": f"Regenerated — coverage {paper['coverage']}%"})
-    _save_papers(db, user, data)
-    return {"ok": True, "paper": paper}
+    return regenerate_sql_paper(db, user, paper_id)
 
 
 @router.patch("/faculty/paper-generator/papers/{paper_id}/archive")
 def archive_paper(paper_id: str, body: dict, db: DbDep, user: FacultyDep):
-    data = _papers(db, user)
-    paper = next((p for p in data.get("generatedPapers") or [] if p.get("id") == paper_id), None)
-    if not paper:
-        return {"ok": False, "error": "Paper not found"}
-    paper["archived"] = body.get("archived") if "archived" in body else (not paper.get("archived"))
-    _save_papers(db, user, data)
-    return {"ok": True, "paper": paper}
+    return archive_sql_paper(db, user, paper_id, body.get("archived") if isinstance(body, dict) else None)
+
+
+@router.post("/faculty/paper-generator/papers/{paper_id}/publish")
+def publish_paper(paper_id: str, db: DbDep, user: FacultyDep):
+    return publish_sql_paper(db, user, paper_id)
 
 
 @router.post("/faculty/paper-generator/papers/{paper_id}/share")
 def share_paper(paper_id: str, body: dict, db: DbDep, user: FacultyDep):
-    data = _papers(db, user)
-    paper = next((p for p in data.get("generatedPapers") or [] if p.get("id") == paper_id), None)
-    if not paper:
-        raise HTTPException(404, "Paper not found.")
+    paper = get_faculty_paper(db, user, paper_id)
     share = {
         "id": f"share_{uuid4().hex[:8]}",
         "paperId": paper_id,

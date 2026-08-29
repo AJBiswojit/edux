@@ -6,7 +6,7 @@ import {
   Sparkles, Star, Timer, Wand2,
 } from 'lucide-react'
 import { usePYQAnalysis, usePYQFilters } from '@/services/extra'
-import { useQuestionBank } from '@/services'
+import { useFacultyQuestions } from '@/services/faculty-questions'
 import { useFacultyIntelligence } from '@/services/faculty-intelligence'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -46,7 +46,7 @@ const TAB_META = [
  */
 function QuestionIntelligence() {
   const { data: pyqData, isLoading: pyqLoading, isError: pyqError, refetch: refetchPyq } = usePYQAnalysis()
-  const { data: qbData, isLoading: qbLoading, isError: qbError, refetch: refetchQb } = useQuestionBank()
+  const { data: qbData, isLoading: qbLoading, isError: qbError, refetch: refetchQb } = useFacultyQuestions()
   const { data: intelData, isLoading: intelLoading, isError: intelError, refetch: refetchIntel } = useFacultyIntelligence()
   const { data: filtersData } = usePYQFilters()
   const [searchParams] = useSearchParams()

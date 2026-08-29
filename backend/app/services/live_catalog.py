@@ -530,22 +530,15 @@ def exam_agent_bundle(db: Session, institution_id: str | None = None) -> dict:
                 except json.JSONDecodeError:
                     options = []
             stem = snap.get("stem") or (question.stem if question else "")
-            correct = snap.get("correct")
-            if correct is None and question:
-                try:
-                    correct = int(question.correct_answer)
-                except (TypeError, ValueError):
-                    correct = question.correct_answer if question else 0
             questions.append(
                 {
-                    "id": (question.id.split("-")[-1] if question and "-" in question.id else f"Q{link.sort_order:02d}"),
+                    "id": (question.id if question else f"Q{link.sort_order:02d}"),
                     "subject": snap.get("subject") or (question.concept if question else paper.title),
                     "chapter": snap.get("chapter") or "",
                     "topic": snap.get("topic") or (question.concept if question else ""),
                     "difficulty": (snap.get("difficulty") or (question.difficulty if question else "medium") or "medium").title(),
                     "question": stem,
                     "options": options or [],
-                    "correctAnswer": correct,
                     "type": "MCQ",
                     "marks": question.marks if question else 1,
                     "negativeMarks": question.negative_marks if question else 0,

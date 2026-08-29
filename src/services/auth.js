@@ -18,12 +18,20 @@ export async function login({ email, password, role }) {
   const payload = { email, password }
   if (role) payload.role = role
   const { data } = await api.post('/auth/login', payload)
-  const user = data?.user ?? data
+  if (!data?.accessToken) {
+    throw new Error('Login did not return an access token')
+  }
+  const user = data.user ?? {}
   return {
     ...user,
-    accessToken: data?.accessToken,
-    refreshToken: data?.refreshToken,
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
   }
+}
+
+export async function logout() {
+  const { data } = await api.post('/auth/logout')
+  return data
 }
 
 export function useLogin() {
@@ -44,8 +52,12 @@ export function useVerifyOtp() {
 
 export function useResendOtp() {
   return useMutation({
-    mutationFn: () => request({ method: 'post', url: '/auth/resend-otp' }).then((r) => r.data),
+    mutationFn: (payload) => request({ method: 'post', url: '/auth/resend-otp', data: payload }).then((r) => r.data),
   })
+}
+
+export function useLogout() {
+  return useMutation({ mutationFn: logout })
 }
 
 export function useResetPassword() {

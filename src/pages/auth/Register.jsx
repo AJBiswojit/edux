@@ -31,9 +31,9 @@ function Register() {
   const { data: optionsData, isLoading: optionsLoading, isError: optionsError, refetch } = useRegistrationOptions()
   const { mutateAsync: register } = useRegister()
 
-  const { register: reg, handleSubmit, watch, trigger, formState: { errors } } = useForm({
+  const { register: reg, handleSubmit, watch, trigger, setValue, formState: { errors } } = useForm({
     defaultValues: {
-      fullName: '', email: '', phone: '', dob: '', password: '', confirmPassword: '',
+      fullName: '', email: '', phone: '', dob: '', gender: '', password: '', confirmPassword: '',
     },
   })
   const values = watch()
@@ -169,7 +169,12 @@ function Register() {
                 <Input type="date" {...reg('dob', { validate: (v) => (v ? true : 'Date of birth is required') })} />
               </Field>
               <Field label="Gender" required error={errors.gender?.message}>
-                <Select value={gender} onValueChange={setGender} placeholder="Select gender…">
+                <input type="hidden" {...reg('gender', { validate: (v) => (v ? true : 'Gender is required') })} />
+                <Select
+                  value={gender}
+                  onValueChange={(v) => { setGender(v); setValue('gender', v, { shouldValidate: true }) }}
+                  placeholder="Select gender…"
+                >
                   {GENDERS.map(selectItem)}
                 </Select>
               </Field>

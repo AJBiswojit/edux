@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getQuery as get } from './query'
 import request from '@/api/client'
+import { fetchQuestions } from './faculty-questions'
 
 /* ================= STUDENT ================= */
 
@@ -25,7 +26,12 @@ export function useUpdateStudentSettings() {
 
 export const useFacultyAttendance = () => useQuery(get('/faculty/attendance', ['faculty', 'attendance']))
 export const useFacultyAssignments = () => useQuery(get('/faculty/assignments', ['faculty', 'assignments']))
-export const useQuestionBank = () => useQuery(get('/faculty/question-bank', ['faculty', 'question-bank']))
+export const useQuestionBank = () => useQuery({
+  queryKey: ['faculty', 'question-bank'],
+  queryFn: () => fetchQuestions({}),
+  retry: false,
+  staleTime: 1000 * 60 * 5,
+})
 export const useFacultyResearch = () => useQuery(get('/faculty/research', ['faculty', 'research']))
 export const useFacultyLecturePlanner = () => useQuery(get('/faculty/lecture-planner', ['faculty', 'lecture-planner']))
 export const useFacultyExamBuilder = () => useQuery(get('/faculty/exam-builder', ['faculty', 'exam-builder']))
