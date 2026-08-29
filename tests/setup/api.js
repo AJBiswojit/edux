@@ -1,22 +1,18 @@
 /**
- * Shared API test setup — consolidates the duplicated boot logic that
- * previously lived in 5 separate test files.
+ * Shared API test setup — Phase 11 (Complete Physical Mock-Shim Removal).
  *
- * Provides:
- * - localStorage shim (Map-backed) installed on globalThis
- * - API router registration + latency zeroing
- * - request helpers (get/post/request) and failing helper
+ * Phase 11 removed the in-browser prototype API router, its mock route
+ * handlers, the prototype stores and the fake persistence entirely. There is
+ * NO fake backend, no mock router and no seeded response available to tests.
  *
- * Usage:
- *   import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
+ * Production runtime is a strict backend consumer:
+ *   Component → Hook (service) → request() (@/api/client) → axios → HTTP backend.
  *
- *   const { clear } = installTestStorage()
- *   let server, get, post, fail, request
- *   beforeAll(async () => {
- *     server = await initApi()
- *     ;({ get, post, fail, request } = makeHelpers(server))
- *   })
- *   beforeEach(() => clear())
+ * Tests therefore exercise the REAL intelligence engines and the service
+ * layer directly with isolated fixtures / factories / request mocks instead of
+ * a complete fake backend. This module now only provides a localStorage shim
+ * for tests that need a deterministic storage object, plus a tiny request
+ * harness that can be used to stub the axios boundary at the service level.
  */
 
 export function installTestStorage() {
@@ -43,49 +39,38 @@ export function installTestStorage() {
   }
 }
 
-export async function initApi() {
-  // Registering route modules mirrors main.jsx exactly
-  await import('../../src/api/index.js')
-  const server = await import('../../src/api/core/router.js')
-  server.setResponseLatency([0, 0])
-  return server
-}
-
-export function makeHelpers(server) {
-  const get = (url, params = {}) =>
-    server.dispatchRequest({ method: 'get', url, params }).then((r) => r.data)
-  const post = (url, data, params = {}) =>
-    server.dispatchRequest({ method: 'post', url, data, params }).then((r) => r.data)
-  const put = (url, data, params = {}) =>
-    server.dispatchRequest({ method: 'put', url, data, params }).then((r) => r.data)
-  const patch = (url, data, params = {}) =>
-    server.dispatchRequest({ method: 'patch', url, data, params }).then((r) => r.data)
-  const del = (url, params = {}) =>
-    server.dispatchRequest({ method: 'delete', url, params }).then((r) => r.data)
-  const request = (opts) => server.dispatchRequest(opts)
-
-  const fail = async (fn) => {
-    try {
-      await fn()
-    } catch (e) {
-      return e
-    }
-    throw new Error('expected the request to fail')
-  }
-
-  // Alias for readability in older tests that used `failing`
-  const failing = fail
-
-  return { get, post, put, patch, del, request, fail, failing }
-}
-
 /**
- * Convenience that installs storage + inits API + returns helpers.
- * For tests that need a one-liner in beforeAll.
+ * A minimal, request-level mock for the axios boundary.
+ *
+ * Tests that used to hit the prototype router now stub the request layer with
+ * an isolated fixture map keyed by `${method} ${url}`. This is NOT a fake
+ * backend — it is a per-test request mock that returns only the contract
+ * fixture that test needs. It works with the real `request()` client signature
+ * `request({ method, url, params, data })` and returns `{ data, status }`.
+ *
+ * Usage:
+ *   const request = makeRequestMock({
+ *     'get /faculty/students': () => ({ students: [], batches: [] }),
+ *     'post /faculty/interventions/a/status': ({ data }) => ({ status: data.status }),
+ *   })
  */
-export async function setupApiTest() {
-  const storage = installTestStorage()
-  const server = await initApi()
-  const helpers = makeHelpers(server)
-  return { ...storage, server, ...helpers }
+export function makeRequestMock(routes = {}) {
+  const call = (config = {}) => {
+    const method = (config.method ?? 'get').toLowerCase()
+    const url = (config.url ?? '').split('?')[0]
+    const key = `${method} ${url}`
+    const handler = routes[key]
+    if (typeof handler !== 'function') {
+      const error = new Error(`[request-mock] No handler for ${method.toUpperCase()} ${url}`)
+      error.response = { status: 404, data: { message: error.message } }
+      return Promise.reject(error)
+    }
+    return Promise.resolve({ data: handler(config), status: 200, headers: {}, config })
+  }
+  call.get = (url, params) => call({ method: 'get', url, params })
+  call.post = (url, data) => call({ method: 'post', url, data })
+  call.put = (url, data) => call({ method: 'put', url, data })
+  call.patch = (url, data) => call({ method: 'patch', url, data })
+  call.delete = (url) => call({ method: 'delete', url })
+  return call
 }

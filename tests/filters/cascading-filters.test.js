@@ -6,7 +6,7 @@
  * values are validated against the datasets.
  */
 import { describe, expect, it } from 'vitest'
-import { microAssessmentSources } from '../../src/datasets/faculty/micro-assessments.js'
+import { microAssessmentSources } from '../fixtures/micro-assessments.js'
 import { pyqFilters } from '../../src/datasets/faculty/pyq-analysis.js'
 import { examAnalysisOptions, universityExamOptions } from '../../src/datasets/exams/exam-analysis.js'
 import { sanitizeSourceFilters } from '../../src/components/micro-assessment-studio/source-library-filters.js'

@@ -1,13 +1,15 @@
 /**
  * MediXO EduX — global application configuration.
- * Flip `USE_MOCK_API` to false (or set VITE_USE_MOCK=false) to hit a real backend.
+ *
+ * Phase 11 — the runtime is a STRICT BACKEND-CONSUMING frontend. The
+ * in-browser prototype adapter / mock router has been REMOVED from
+ * production. There is no `USE_MOCK_API` flag and no runtime branching
+ * that could switch the app into mock mode.
  */
 export const APP_CONFIG = {
   name: 'MediXO EduX',
   tagline: 'Empowering Smarter Learning Through AI',
   version: '1.0.0',
-  // When true, every service call is served by the in-browser prototype API adapter.
-  USE_MOCK_API: import.meta.env.VITE_USE_MOCK !== 'false',
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://api.medixoedux.edu/v1',
   TOKEN_KEY: 'EduX_access_token',
   REFRESH_TOKEN_KEY: 'EduX_refresh_token',

@@ -59,8 +59,7 @@ function ForgotPassword() {
       )}
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-xs leading-relaxed text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
-        <p className="font-bold text-slate-600 dark:text-slate-300">Demo tip</p>
-        <p className="mt-1">In the demo, the code is always <code className="rounded bg-white px-1.5 py-0.5 font-mono font-semibold text-indigo-600 dark:bg-slate-800 dark:text-indigo-300">482193</code>. It is also shown in the success toast.</p>
+        <p>A secure one-time code is sent to your registered email. It expires shortly and is tied to this request.</p>
       </div>
     </motion.div>
   )

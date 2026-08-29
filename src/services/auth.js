@@ -1,7 +1,34 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import request from '@/api/client'
+import api from '@/api/axios'
 
 /* ================= AUTH ================= */
+
+/**
+ * Phase 10 — backend-bound login. No DEMO_USERS, no fake credentials, no
+ * automatic fake login. Credentials are validated by the backend
+ * (POST /auth/login). When the backend is unavailable the promise rejects with
+ * a network error and the login page renders the appropriate error state.
+ *
+ * Contract (docs/backend-integration/06-AUTHENTICATION-AUTHORIZATION-RBAC.md):
+ *   POST /auth/login { email, password, role? }
+ *     -> { user: { id, role, firstName, email, ... }, accessToken, refreshToken }
+ */
+export async function login({ email, password, role }) {
+  const payload = { email, password }
+  if (role) payload.role = role
+  const { data } = await api.post('/auth/login', payload)
+  const user = data?.user ?? data
+  return {
+    ...user,
+    accessToken: data?.accessToken,
+    refreshToken: data?.refreshToken,
+  }
+}
+
+export function useLogin() {
+  return useMutation({ mutationFn: login })
+}
 
 export function useForgotPassword() {
   return useMutation({

@@ -78,7 +78,7 @@ function Register() {
     if (!stepTwoValid()) return
     setSubmitting(true)
     try {
-      const res = await register({
+      await register({
         fullName: data.fullName.trim(),
         email: data.email.trim().toLowerCase(),
         phone: data.phone.trim(),
@@ -93,8 +93,8 @@ function Register() {
         } : null,
         createdAt: new Date().toISOString(),
       })
-      toast.success('Account created 🎉', 'Verify the OTP we “sent” to your email to activate it.')
-      navigate('/auth/verify-otp', { state: { purpose: 'register', email: data.email.trim().toLowerCase(), demoOtp: res.demoOtp, fromRegister: true } })
+      toast.success('Account created 🎉', 'A verification code has been sent to your email to activate it.')
+      navigate('/auth/verify-otp', { state: { purpose: 'register', email: data.email.trim().toLowerCase(), fromRegister: true } })
     } catch (err) {
       toast.error('Registration failed', err.message)
     } finally {

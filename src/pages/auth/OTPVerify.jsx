@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, MailCheck, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-react'
 import { Button, useToast } from '@/components/ui'
 import { useResendOtp, useVerifyOtp, useRegisterVerifyOtp } from '@/services/auth'
 import { useAuth } from '@/contexts/auth-context'
@@ -13,7 +13,6 @@ function OTPVerify() {
   const toast = useToast()
   const purpose = location.state?.purpose ?? 'reset'
   const registerEmail = location.state?.email ?? null
-  const demoOtp = location.state?.demoOtp ?? '482193'
   const [digits, setDigits] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [verified, setVerified] = useState(false)
@@ -93,7 +92,7 @@ function OTPVerify() {
     try {
       await resend()
       setResendIn(30)
-      toast.info('Code re-sent', `Check your inbox (demo code: ${demoOtp}).`)
+      toast.info('Code re-sent', 'Check your inbox for the new code.')
     } catch {
       toast.error('Could not resend', 'Please try again.')
     }
@@ -159,16 +158,10 @@ function OTPVerify() {
           <button onClick={onResend} className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400">Resend code</button>
         )}
       </p>
-      {purpose === 'register' && (
-        <div className="mt-4 flex items-start gap-2 rounded-2xl border border-indigo-200/70 bg-indigo-50/60 px-4 py-3 text-[11.5px] leading-relaxed text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-300">
-          <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
-          <span><span className="font-bold">Prototype mode:</span> no email is actually sent. Enter the demo code <code className="rounded bg-white px-1.5 py-0.5 font-mono font-bold dark:bg-slate-900">{demoOtp}</code> to activate your account.</span>
-        </div>
-      )}
       {purpose !== 'register' && (
-        <div className="mt-4 rounded-2xl border border-dashed border-indigo-300/60 bg-indigo-50/50 p-3.5 text-center text-xs text-indigo-600/80 dark:border-indigo-500/30 dark:bg-indigo-500/5 dark:text-indigo-400/80">
-          Demo code: <code className="rounded bg-white px-1.5 py-0.5 font-mono font-bold dark:bg-slate-900">482193</code>
-        </div>
+        <p className="mt-4 text-center text-xs text-slate-400">
+          Verification code is sent to your email — enter the 6-digit code above to continue.
+        </p>
       )}
     </motion.div>
   )

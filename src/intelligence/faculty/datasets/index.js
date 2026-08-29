@@ -34,10 +34,11 @@ import {
   assistantPrompts, contentStudioTypes, evaluationWorkflows, studioResources,
   studioRecentUploads, facultyPortfolio, aiStudioHistory, savedLessonPlans,
 } from './ai-studio.js'
-import {
-  facultyBatches, facultyStudents,
-} from './students-directory.js'
-import { microAssessmentSources, MICRO_ASSESSMENT_SOURCE_TYPES, MICRO_ASSESSMENT_DOMAINS, MICRO_ASSESSMENT_EXAM_FAMILIES } from '@/datasets/faculty/micro-assessments.js'
+/* Student directory + micro-assessment sources are backend-owned entity /
+   curated content data and are no longer bundled as production seed data.
+   The students-directory dataset is test-only (tests/fixtures). */
+const facultyBatches = []
+const facultyStudents = []
 
 export const facultyDatasets = {
   /* core */
@@ -115,16 +116,16 @@ export const facultyDatasets = {
   aiStudioHistory,
   savedLessonPlans,
 
-  /* student directory (Phase 3) */
+  /* student directory (Phase 3) — backend-owned, populated by the API */
   facultyBatches,
   facultyStudents,
 
-  /* formative assessment studio */
+  /* formative assessment studio — backend-owned, populated by the API */
   microAssessments: {
-    sources: microAssessmentSources,
-    sourceTypes: MICRO_ASSESSMENT_SOURCE_TYPES,
-    domains: MICRO_ASSESSMENT_DOMAINS,
-    examFamilies: MICRO_ASSESSMENT_EXAM_FAMILIES,
+    sources: [],
+    sourceTypes: [],
+    domains: [],
+    examFamilies: [],
   },
 }
 
@@ -144,9 +145,6 @@ export {
   reportTemplates, exportHistory, reportSchedule,
   assistantPrompts, contentStudioTypes, evaluationWorkflows, studioResources,
   studioRecentUploads, facultyPortfolio, aiStudioHistory, savedLessonPlans,
-  facultyBatches, facultyStudents,
-  microAssessmentSources, MICRO_ASSESSMENT_SOURCE_TYPES,
-  MICRO_ASSESSMENT_DOMAINS, MICRO_ASSESSMENT_EXAM_FAMILIES,
 }
 
 export default facultyDatasets

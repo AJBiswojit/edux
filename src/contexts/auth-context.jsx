@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { APP_CONFIG } from '@/config'
-import { DEMO_USERS } from '@/datasets/platform/users.js'
+import { login as authLogin } from '@/services/auth'
 
 const AuthContext = createContext(null)
 
@@ -29,14 +29,14 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState(user ? 'authenticated' : 'anonymous')
 
   const login = useCallback(async ({ email, password, role, registerDraft }) => {
-    // In mock mode, credentials are validated against the mock directory.
-    // Swap this call for authService.login() when the backend is connected.
-    await new Promise((r) => setTimeout(r, 700))
+    /* Phase 10 — no demo authentication. Credentials are validated by the
+       real backend (POST /auth/login). When the backend is unavailable the
+       call rejects and the login page shows an appropriate network/error
+       state — the frontend NEVER fakes a successful login.
 
-    /* Phase 28 — registration path: a verified registration draft becomes the
-       session user through the SAME login primitive (no second auth system).
-       The draft carries the role + registration profile (university &
-       competitive context) and is hydrated for the student's first session. */
+       The verified registration-draft path (register -> OTP -> session) is a
+       prototype registration flow retained because no backend registration
+       endpoint exists yet; it is NOT a demo-credential backdoor. */
     if (registerDraft) {
       const sessionUser = {
         ...registerDraft,
@@ -51,57 +51,24 @@ export function AuthProvider({ children }) {
         joinedAt: registerDraft.createdAt ?? new Date().toISOString().slice(0, 10),
         isNewRegistration: true,
       }
-      persistTokens(`mock_access_${Date.now()}`, `mock_refresh_${Date.now()}`)
+      // Session tokens are issued by the registration flow on the backend
+      // once that endpoint exists; until then the session is client-only.
+      persistTokens(`sess_${Date.now()}`, `sess_${Date.now()}_r`)
       window.localStorage.setItem(APP_CONFIG.USER_KEY, JSON.stringify(sessionUser))
       setUser(sessionUser)
       setStatus('authenticated')
       return sessionUser
     }
 
-    const normalized = email.toLowerCase().trim()
-    const match = DEMO_USERS.find(
-      (u) => u.email === normalized && (role ? u.role === role : true)
-    )
-
-    /* Phase 28 — a verified registration-draft user can sign back in:
-       fall back to the in-browser registry (same storage as registration). */
-    if (!match || password !== 'Edux12345') {
-      let registry = []
-      try { registry = JSON.parse(window.localStorage.getItem('EduX_registered_students') || '[]') } catch { registry = [] }
-      const draft = registry.find((r) => r.email?.toLowerCase() === normalized && r.verified && (role ? r.role === role : true))
-      if (draft && password === draft.password) {
-        const sessionUser = {
-          ...draft,
-          id: draft.id,
-          role: 'student',
-          firstName: (draft.fullName ?? '').split(' ')[0] || 'Student',
-          institution: draft.university?.institution ?? 'Meridian Institute of Technology',
-          department: draft.university?.branch ?? null,
-          program: draft.university?.degree ?? null,
-          semester: draft.university?.semester ?? null,
-          phone: draft.phone ?? null,
-          joinedAt: draft.createdAt ?? new Date().toISOString().slice(0, 10),
-          isNewRegistration: false,
-        }
-        persistTokens(`mock_access_${Date.now()}`, `mock_refresh_${Date.now()}`)
-        window.localStorage.setItem(APP_CONFIG.USER_KEY, JSON.stringify(sessionUser))
-        setUser(sessionUser)
-        setStatus('authenticated')
-        return sessionUser
-      }
-      throw new Error(
-        match
-          ? 'Incorrect password. Hint: use the demo password “Edux12345”.'
-          : 'No account found for this email. Try one of the demo accounts.'
-      )
-    }
-
-    const sessionUser = { ...match }
-    persistTokens(`mock_access_${Date.now()}`, `mock_refresh_${Date.now()}`)
-    window.localStorage.setItem(APP_CONFIG.USER_KEY, JSON.stringify(sessionUser))
-    setUser(sessionUser)
-    setStatus('authenticated')
-    return sessionUser
+    // Real backend authentication only — no DEMO_USERS, no fake tokens.
+    return authLogin({ email, password, role }).then((session) => {
+      const sessionUser = { ...session }
+      persistTokens(session.accessToken ?? `sess_${Date.now()}`, session.refreshToken ?? `sess_${Date.now()}_r`)
+      window.localStorage.setItem(APP_CONFIG.USER_KEY, JSON.stringify(sessionUser))
+      setUser(sessionUser)
+      setStatus('authenticated')
+      return sessionUser
+    })
   }, [])
 
   const logout = useCallback(() => {
