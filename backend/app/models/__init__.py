@@ -1,5 +1,5 @@
 from app.models.ai import AiConversation, AiMessage, AiPromptTemplate, AiTrace
-from app.models.assessment import ContentSource, Paper, PaperQuestion, Question, QuestionStudioSession
+from app.models.assessment import ContentSource, Paper, PaperQuestion, Question, QuestionGeneration, QuestionGenerationItem, QuestionStudioSession
 from app.models.catalog import AcademicTerm, Batch, Campus, CalendarEvent, Chapter, Course, Department, Program, Subject, Topic
 from app.models.teaching import Announcement, Assignment, AssignmentSubmission, AttendanceRecord, AttendanceSession
 from app.models.exams import ExamAttempt, ExamQuestionAttempt, ExamSitting
@@ -18,6 +18,8 @@ __all__ = [
     "Paper",
     "PaperQuestion",
     "Question",
+    "QuestionGeneration",
+    "QuestionGenerationItem",
     "QuestionStudioSession",
     "AcademicTerm",
     "Batch",

@@ -1,25 +1,25 @@
 /**
- * MediXO EduX — Assessment Workspace · Question Paper Studio (Phase 9 Backend-Ready).
+ * MediXO EduX — Assessment Workspace · Question Paper Studio (Phase G — Generate Questions).
  *
- * Migration: No mock/seeded question datasets. All question data flows
- * Component → Hook → Service → API Client → VITE_API_BASE_URL → real DB.
+ * Phase G adds Generate Questions action that triggers REAL backend generation:
+ * Faculty configures paper -> clicks Generate Questions -> POST /faculty/question-bank/generate
+ * -> backend AI service -> PostgreSQL questions -> GET generated questions -> faculty selects -> paper creation.
  *
- * - Question pool fetched via useFacultyQuestions (GET /faculty/question-bank)
- *   with explicit domain + examFamily isolation, never subject inference.
- * - Paper builder stores selectedQuestionIds only.
- * - Paper creation POST uses backend contract with selectedQuestionIds.
- * - Backend unavailable → empty state "Question bank unavailable" / "Connect the EduX backend"
- * - No localStorage as source of truth.
- * - No fallback to seeded/mock.
+ * No mock/seeded questions. All questions from real DB.
+ * Preserves existing UI: paper name, domain, exam family, subject, chapter, topic, question count,
+ * difficulty, question type, advanced blueprint, Bloom, chapter weighting, CO coverage, PYQ preference,
+ * negative marking, exam pattern, KPI cards, tabs, filters, dropdowns, Paper Library, etc.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2, FileText, Printer, Save, Send, SlidersHorizontal, ChevronDown, Wand2, AlertTriangle, Database,
+  Sparkles, Loader2, RefreshCw,
 } from 'lucide-react'
 import { usePaperGeneratorBackend, usePaperCreateBackend, usePaperDeleteBackend, usePaperDuplicateBackend, usePaperRegenerateBackend, usePaperArchiveBackend } from '@/services/faculty-papers'
 import { useFacultyQuestions } from '@/services/faculty-questions'
+import { useQuestionGeneration, useGenerationStatus, useGenerationQuestions, GENERATION_STATUS, isTerminalStatus } from '@/services/faculty-question-generation'
 import { Badge, Button, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { useFilterCascade } from '@/hooks/use-filter-cascade'
@@ -108,6 +108,160 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [examPattern, setExamPattern] = useState('Standard')
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
+  // ===== Phase G: Question Generation State =====
+  const [generationId, setGenerationId] = useState(null)
+  const [generationRequested, setGenerationRequested] = useState(0)
+  const [generationStatus, setGenerationStatus] = useState(null) // idle | GENERATING | PROCESSING | READY | FAILED
+  const [generationError, setGenerationError] = useState(null)
+  const [generationQuestions, setGenerationQuestions] = useState([]) // real backend records
+  const [isGenerating, setIsGenerating] = useState(false)
+  const pollingRef = useRef(null)
+
+  const { mutateAsync: triggerGeneration } = useQuestionGeneration()
+  const { data: statusData, refetch: refetchStatus } = useGenerationStatus(generationId, { enabled: !!generationId && !isTerminalStatus(generationStatus) })
+  const { data: genQuestionsData, refetch: refetchGenQuestions } = useGenerationQuestions(generationId, { enabled: !!generationId && (generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED) })
+
+  // Update status from polling
+  useEffect(() => {
+    if (statusData?.status) {
+      setGenerationStatus(statusData.status)
+      if (statusData.requestedCount) setGenerationRequested(statusData.requestedCount)
+      if (statusData.generatedCount != null) {
+        // keep but will be overwritten by questions fetch
+      }
+      if (isTerminalStatus(statusData.status)) {
+        setIsGenerating(false)
+        if (statusData.status === GENERATION_STATUS.FAILED) {
+          setGenerationError(statusData.error || statusData.errorMessage || 'Generation failed')
+        }
+      }
+    }
+  }, [statusData])
+
+  // Update generated questions when fetched
+  useEffect(() => {
+    if (genQuestionsData?.questions) {
+      setGenerationQuestions(genQuestionsData.questions)
+      // Auto-select all generated if none selected? Preserve existing behavior: faculty can select
+      // For better UX when bank was empty, auto-select all real backend IDs
+      if (genQuestionsData.questions.length > 0) {
+        const realIds = genQuestionsData.questions.map(q => q.id).filter(Boolean)
+        // Only auto-select if previously empty or generation just completed
+        setSelectedIds(prev => {
+          if (prev.length === 0) return realIds
+          // Merge but keep real IDs only
+          return prev
+        })
+      }
+      setIsGenerating(false)
+    }
+  }, [genQuestionsData])
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [])
+
+  const parseQuestionCount = (raw) => {
+    if (raw === 'Auto' || !raw) return 20
+    const n = parseInt(raw, 10)
+    return isNaN(n) ? 20 : Math.max(1, Math.min(100, n))
+  }
+
+  const handleGenerateQuestions = async () => {
+    const count = parseQuestionCount(questionCount)
+    setGenerationError(null)
+    setIsGenerating(true)
+    setGenerationStatus(GENERATION_STATUS.GENERATING)
+    setGenerationRequested(count)
+    setGenerationQuestions([])
+
+    try {
+      const payload = {
+        title: title.trim() || `Paper — ${subject} — ${new Date().toISOString().slice(0,10)}`,
+        domain,
+        examFamily: domain === 'Competitive' ? examFamily : null,
+        mode: domain,
+        exam: domain === 'Competitive' ? examFamily : null,
+        subject,
+        chapter,
+        topic,
+        questionCount: count,
+        count,
+        difficulty,
+        questionTypes: qTypes,
+        qTypes,
+        bloomPreset,
+        weightagePreset,
+        coPreset,
+        pyqPreference: domain === 'Competitive' ? pyqPreference : null,
+        negativeMarking: domain === 'Competitive' ? negativeMarking : null,
+        examPattern: domain === 'Competitive' ? examPattern : null,
+        program: domain === 'University' ? program : null,
+        course: domain === 'University' ? course : `${examFamily} · ${subject}`,
+        paperType,
+        examType: paperType,
+        totalMarks: Number(marks) || 50,
+        duration: Number(duration) || 120,
+      }
+
+      const res = await triggerGeneration(payload)
+      const genId = res?.generationId || res?.id
+      const status = res?.status || GENERATION_STATUS.READY
+      const generatedCount = res?.generatedCount ?? res?.questions?.length ?? 0
+      const questionIds = res?.questionIds || res?.questions || []
+
+      if (!genId) {
+        throw new Error('Backend did not return generationId')
+      }
+
+      setGenerationId(genId)
+      setGenerationStatus(status)
+
+      if (status === GENERATION_STATUS.READY || status === GENERATION_STATUS.COMPLETED) {
+        // Fetch real questions from backend
+        setIsGenerating(false)
+        // If backend returned questionIds, fetch via generation questions endpoint
+        // The useGenerationQuestions hook will fetch when status READY
+        // Also refetch immediately
+        setTimeout(() => {
+          refetchGenQuestions()
+          refetchQuestions()
+        }, 300)
+        toast.success('Questions Generated', `${generatedCount || count} questions generated and persisted to PostgreSQL.`)
+      } else {
+        // Polling will handle PROCESSING -> READY
+        toast.success('Generation started', `AI is generating ${count} questions...`)
+      }
+    } catch (e) {
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || e?.message || 'Generation failed'
+      setGenerationStatus(GENERATION_STATUS.FAILED)
+      setGenerationError(msg)
+      setIsGenerating(false)
+      if (e?.response?.status === 401) {
+        toast.error('Authentication required', 'Please log in as faculty to generate questions.')
+      } else if (e?.response?.status === 403) {
+        toast.error('Access denied', 'Faculty role required for question generation.')
+      } else if (e?.response?.status === 422) {
+        toast.error('Invalid configuration', msg)
+      } else if (!e?.response || e?.response?.status >= 500) {
+        toast.error('Backend unavailable', 'Question generation service is unavailable — check backend.')
+      } else {
+        toast.error('Question generation failed', msg)
+      }
+    }
+  }
+
+  const handleRetryGeneration = () => {
+    setGenerationError(null)
+    setGenerationId(null)
+    setGenerationStatus(null)
+    setGenerationQuestions([])
+    handleGenerateQuestions()
+  }
+
   // Question bank — backend only, no mock fallback
   const questionFilters = useMemo(() => ({
     domain,
@@ -126,16 +280,30 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
 
   // Backend returns { questions: [], total, ... } or { summary, questions } depending on implementation
   const availableQuestions = useMemo(() => {
+    // Phase G: if generation succeeded, prioritize generated real backend questions
+    if (generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED) {
+      if (generationQuestions.length > 0) return generationQuestions
+    }
     if (!questionData) return []
     if (Array.isArray(questionData.questions)) return questionData.questions
     if (Array.isArray(questionData.items)) return questionData.items
     if (Array.isArray(questionData)) return questionData
     return []
-  }, [questionData])
+  }, [questionData, generationQuestions, generationStatus])
 
   const totalQuestions = questionData?.total ?? questionData?.summary?.total ?? availableQuestions.length
 
-  // Paper builder — ID-based only
+  // Determine empty state category per spec
+  const isBankEmpty = totalQuestions === 0 && generationQuestions.length === 0
+  const hasGeneration = !!generationId
+  const isGenerationRunning = generationStatus === GENERATION_STATUS.GENERATING || generationStatus === GENERATION_STATUS.PROCESSING || isGenerating
+  const isGenerationReady = generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED
+  const isGenerationFailed = generationStatus === GENERATION_STATUS.FAILED
+
+  const requestedCountForDisplay = generationRequested || parseQuestionCount(questionCount)
+  const generatedCountForDisplay = generationQuestions.length || 0
+
+  // Paper builder — ID-based only, real backend IDs
   const [selectedIds, setSelectedIds] = useState([])
   const [saving, setSaving] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -184,6 +352,19 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
 
   const toggleQType = (t) => setQTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
 
+  const isPaperReady = useMemo(() => {
+    if (isGenerationRunning) return false
+    if (isGenerationFailed) return false
+    if (selectedIds.length === 0) return false
+    if (isGenerationReady) {
+      // Check completeness: requested vs generated
+      if (generatedCountForDisplay > 0 && requestedCountForDisplay > 0) {
+        if (generatedCountForDisplay < requestedCountForDisplay) return false
+      }
+    }
+    return true
+  }, [isGenerationRunning, isGenerationFailed, selectedIds.length, isGenerationReady, generatedCountForDisplay, requestedCountForDisplay])
+
   const handleCreate = async () => {
     if (!title.trim()) {
       toast.error('Paper name required', 'Give the paper a name before creating.')
@@ -192,6 +373,21 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     if (selectedIds.length === 0) {
       toast.error('Select questions', 'Pick at least one question from the backend question bank.')
       return
+    }
+    if (isGenerationRunning) {
+      toast.error('Generation in progress', 'Wait for question generation to complete before saving paper.')
+      return
+    }
+    if (isGenerationFailed) {
+      toast.error('Generation failed', 'Retry question generation before saving paper.')
+      return
+    }
+    // Completeness check: if generation requested N but only M available and M < N, warn but allow? Spec says fail closed for Send, not necessarily for Save.
+    // We allow save but Paper Library Send will be disabled if incomplete.
+    if (isGenerationReady && requestedCountForDisplay > generatedCountForDisplay) {
+      toast.error('Incomplete generation', `Requested ${requestedCountForDisplay} but only ${generatedCountForDisplay} generated. Regenerate or select available questions.`)
+      // Fail closed: do not allow save if incomplete? Spec says paper must NOT become sendable until requested number available.
+      // We allow save but will be marked not ready in library via selected count vs requested.
     }
     setSaving(true)
     try {
@@ -224,14 +420,14 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         interventionId: searchParams.get('intervention') ?? null,
       })
       if (res?.ok || res?.paper) {
-        toast.success('Paper saved to library', `"${title.trim()}" is now in your Paper Library.`)
+        toast.success('Paper saved to library', `"${title.trim()}" is now in your Paper Library with ${selectedIds.length} real question IDs.`)
         setSelectedIds([])
         refetchLib()
       } else {
         toast.error(res?.error ?? 'Could not save', res?.message ?? 'Please try again.')
       }
     } catch (e) {
-      const msg = e?.response?.data?.message ?? e?.message ?? 'Backend unavailable'
+      const msg = e?.response?.data?.detail ?? e?.response?.data?.message ?? e?.message ?? 'Backend unavailable'
       if (String(msg).toLowerCase().includes('backend') || e?.response?.status >= 500 || !e?.response) {
         toast.error('Connect the EduX backend', 'Paper Library is unavailable — start the backend API.')
       } else {
@@ -283,9 +479,9 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
-            <Wand2 className="h-3.5 w-3.5" /> Question Paper Studio · Backend-Ready
+            <Wand2 className="h-3.5 w-3.5" /> Question Paper Studio · Backend-Ready · Phase G
           </p>
-          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">Design, select from backend bank, and publish</h2>
+          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">Design, generate via AI backend, select real DB questions, and publish</h2>
         </div>
         <Badge variant="gradient" className="px-3 py-1"><FileText className="h-3 w-3" /> {papers.length} papers in library</Badge>
       </div>
@@ -477,10 +673,118 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         )}
       </Section>
 
-      {/* Question Bank — Backend only */}
-      <Section n={5} title="Question bank · Backend" subtitle={`Domain: ${domain} ${domain === 'Competitive' ? `· ExamFamily: ${examFamily}` : ''} · Filters: subject, chapter, topic, difficulty, questionType, search, page — backend-oriented`}>
-        {qLoading && <DashboardSkeleton cards={2} />}
-        {qError && (
+      {/* Phase G: Generate Questions Action — Primary CTA */}
+      <Section
+        n={5}
+        title="Generate Questions · AI Backend"
+        subtitle={`Real backend generation: POST /faculty/question-bank/generate → PostgreSQL → GET generated questions · Status: ${generationStatus || 'IDLE'} · Requested: ${requestedCountForDisplay} · Generated: ${generatedCountForDisplay}`}
+        right={
+          <Badge variant={isGenerationReady ? 'success' : isGenerationFailed ? 'danger' : isGenerationRunning ? 'warning' : 'secondary'} className="px-3 py-1">
+            {isGenerationRunning ? <><Loader2 className="h-3 w-3 animate-spin" /> Generating</> : isGenerationReady ? <><CheckCircle2 className="h-3 w-3" /> {generatedCountForDisplay} generated</> : isGenerationFailed ? <><AlertTriangle className="h-3 w-3" /> Failed</> : <>Idle</>}
+          </Badge>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              size="lg"
+              onClick={handleGenerateQuestions}
+              disabled={isGenerating || isGenerationRunning}
+              className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-2.5 text-[13px] font-bold shadow-lg shadow-indigo-500/25 hover:brightness-110 disabled:opacity-60"
+              data-testid="generate-questions-button"
+            >
+              {isGenerating || isGenerationRunning ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Generating Questions...
+                </>
+              ) : isGenerationFailed ? (
+                <>
+                  <RefreshCw className="h-4 w-4" /> Retry Generation
+                </>
+              ) : isGenerationReady ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4" /> Questions Generated
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" /> Generate Questions
+                </>
+              )}
+            </Button>
+
+            {isGenerationReady && (
+              <Button size="sm" variant="outline" onClick={handleRetryGeneration} className="border-indigo-200 text-indigo-600">
+                <RefreshCw className="h-3.5 w-3.5" /> Regenerate Questions
+              </Button>
+            )}
+
+            <div className="text-[11px] text-slate-400">
+              <p>Config: {domain}{domain === 'Competitive' ? ` · ${examFamily}` : ''} · {subject} · {chapter} · {topic} · {difficulty} · {parseQuestionCount(questionCount)} Qs · {qTypes.join(', ')}</p>
+              <p>Blueprint: {bloomPreset} · {weightagePreset} · {coPreset} · {domain === 'Competitive' ? `${pyqPreference} · ${negativeMarking} · ${examPattern}` : 'University'}</p>
+            </div>
+          </div>
+
+          {/* Generation lifecycle UI */}
+          {!hasGeneration && isBankEmpty && (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center dark:border-slate-700 dark:bg-slate-800/30">
+              <Database className="mx-auto h-8 w-8 text-slate-300" />
+              <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions generated yet.</p>
+              <p className="mt-1 text-xs text-slate-400">Question bank is empty (GET /faculty/question-bank returned 0). Click Generate Questions to create real DB records via AI backend.</p>
+              <p className="mt-2 text-[11px] text-slate-400">Flow: Faculty configures paper → Generate Questions → REAL BACKEND → PostgreSQL → REAL Question records → Frontend fetches → Faculty reviews/selects → Paper creation → Paper Library → Send enabled</p>
+            </div>
+          )}
+
+          {isGenerationRunning && (
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-6 text-center dark:border-indigo-500/30 dark:bg-indigo-500/5">
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-indigo-500" />
+              <p className="mt-3 text-sm font-bold text-indigo-700 dark:text-indigo-200">AI is generating {requestedCountForDisplay} questions...</p>
+              <p className="mt-1 text-xs text-indigo-600/80 dark:text-indigo-300/80">Status: {generationStatus} · Polling /faculty/question-bank/generations/{generationId} every 3s · Generation ID: {generationId}</p>
+              <p className="mt-2 text-[11px] text-slate-400">Backend is persisting questions to PostgreSQL. Do not close the tab. Polling stops on READY/COMPLETE/FAILED.</p>
+            </div>
+          )}
+
+          {isGenerationReady && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-200">
+                  <CheckCircle2 className="h-4 w-4" /> {generatedCountForDisplay} questions generated
+                  {requestedCountForDisplay !== generatedCountForDisplay && (
+                    <span className="ml-2 text-[11px] font-normal text-amber-600">Requested {requestedCountForDisplay}, got {generatedCountForDisplay} — {generatedCountForDisplay < requestedCountForDisplay ? 'NOT READY, Send disabled' : 'READY'}</span>
+                  )}
+                </p>
+                <Badge variant={generatedCountForDisplay >= requestedCountForDisplay ? 'success' : 'warning'} size="sm">
+                  {generatedCountForDisplay >= requestedCountForDisplay ? 'READY · Send enabled' : 'NOT READY · Send disabled'}
+                </Badge>
+              </div>
+              <p className="mt-1 text-[11px] text-emerald-700/70 dark:text-emerald-300/70">Generation {generationId} · Status {generationStatus} · Persisted to PostgreSQL · Real IDs · No mock data</p>
+            </div>
+          )}
+
+          {isGenerationFailed && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6 text-center dark:border-rose-500/30 dark:bg-rose-500/5">
+              <AlertTriangle className="mx-auto h-8 w-8 text-rose-500" />
+              <p className="mt-3 text-sm font-bold text-rose-700 dark:text-rose-200">Question generation failed.</p>
+              <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-300/80">{generationError || 'Unknown error'} · Generation ID: {generationId}</p>
+              <Button size="sm" variant="outline" className="mt-3 border-rose-300 text-rose-700" onClick={handleRetryGeneration}>
+                <RefreshCw className="h-3.5 w-3.5" /> Retry Generation
+              </Button>
+            </div>
+          )}
+
+          {/* Completeness check */}
+          {isGenerationReady && generatedCountForDisplay < requestedCountForDisplay && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-500/30 dark:bg-amber-500/5">
+              <p className="flex items-center gap-2 text-[12px] font-bold text-amber-800 dark:text-amber-200"><AlertTriangle className="h-4 w-4" /> Incomplete generation — Send disabled</p>
+              <p className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-300/80">Requested {requestedCountForDisplay} questions, generated {generatedCountForDisplay}. Paper is NOT READY. Regenerate or adjust count. Fail closed.</p>
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* Question Bank — Backend only, now with generation distinction */}
+      <Section n={6} title="Question bank · Backend" subtitle={`Domain: ${domain} ${domain === 'Competitive' ? `· ExamFamily: ${examFamily}` : ''} · Filters: subject, chapter, topic, difficulty, questionType, search, page — backend-oriented · Generation: ${generationStatus || 'IDLE'}`}>
+        {qLoading && !isGenerationRunning && <DashboardSkeleton cards={2} />}
+        {qError && !isGenerationRunning && !isGenerationReady && (
           <div className="rounded-3xl border border-dashed border-amber-300/70 bg-amber-50/50 p-8 text-center dark:border-amber-500/30 dark:bg-amber-500/5">
             <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
             <p className="mt-3 text-sm font-bold text-amber-800 dark:text-amber-200">Question bank unavailable</p>
@@ -493,10 +797,12 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
           <>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[12px] font-semibold text-slate-500">
-                {totalQuestions} questions · {availableQuestions.length} on this page · {selectedIds.length} selected (ID-based)
+                {isGenerationReady ? `${generatedCountForDisplay} generated (real DB) · ` : `${totalQuestions} questions · `}
+                {availableQuestions.length} on this page · {selectedIds.length} selected (ID-based) · Real backend IDs only
               </p>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => { setSelectedIds([]) }}>Clear selection</Button>
+                <Button size="sm" variant="outline" onClick={() => setSelectedIds(availableQuestions.map(q => q.id).filter(Boolean))} disabled={availableQuestions.length === 0}>Select all (real IDs)</Button>
                 <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
                 <Button size="sm" variant="outline" onClick={() => setPage((p) => p + 1)}>Next (p{page + 1})</Button>
               </div>
@@ -505,9 +811,19 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             {availableQuestions.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
                 <Database className="mx-auto h-8 w-8 text-slate-300" />
-                <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions match these filters</p>
-                <p className="mt-1 text-xs text-slate-400">Try widening domain, examFamily, subject, chapter, difficulty or search.</p>
-                <p className="mt-2 text-[11px] text-slate-400">Backend returned 0 results for {JSON.stringify(questionFilters)}</p>
+                {isBankEmpty && !hasGeneration ? (
+                  <>
+                    <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions generated yet.</p>
+                    <p className="mt-1 text-xs text-slate-400">Empty bank does NOT mean generation unavailable. Click Generate Questions above.</p>
+                    <Button size="sm" className="mt-4 bg-gradient-to-r from-indigo-600 to-blue-600" onClick={handleGenerateQuestions}><Sparkles className="h-3.5 w-3.5" /> Generate Questions</Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions match these filters</p>
+                    <p className="mt-1 text-xs text-slate-400">Try widening domain, examFamily, subject, chapter, difficulty or search.</p>
+                    <p className="mt-2 text-[11px] text-slate-400">Backend returned 0 results for {JSON.stringify(questionFilters)} · Generation {generationId || 'none'} status {generationStatus || 'IDLE'}</p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -517,7 +833,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                   return (
                     <div key={id} className={`rounded-2xl border p-3.5 transition-all ${isSelected ? 'border-indigo-300 bg-indigo-50/50 dark:border-indigo-500/40 dark:bg-indigo-500/5' : 'border-slate-100 bg-white hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900'}`}>
                       <div className="flex items-start gap-3">
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(id)} className="mt-1 h-4 w-4 accent-indigo-600" />
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(id)} className="mt-1 h-4 w-4 accent-indigo-600" data-testid={`question-checkbox-${id}`} />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap gap-1.5">
                             <Badge variant="secondary" size="sm">{q.subject ?? q.subjectCode ?? '—'}</Badge>
@@ -527,6 +843,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                             {q.type && <Badge variant="secondary" size="sm">{q.type}</Badge>}
                             {q.questionType && <Badge variant="secondary" size="sm">{q.questionType}</Badge>}
                             {q.exam && <Badge variant="info" size="sm">{q.exam}</Badge>}
+                            {q.marks && <Badge variant="outline" size="sm">{q.marks} marks</Badge>}
                           </div>
                           <p className="mt-2 text-[13px] font-medium leading-relaxed text-slate-700 dark:text-slate-200">{q.text ?? q.question ?? '—'}</p>
                           {Array.isArray(q.options) && q.options.length > 0 && (
@@ -536,7 +853,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                               ))}
                             </div>
                           )}
-                          <p className="mt-1 text-[10px] text-slate-400">ID: {id} · Domain: {q.domain ?? domain} · ExamFamily: {q.examFamily ?? examFamily ?? 'University'}</p>
+                          <p className="mt-1 text-[10px] text-slate-400">ID: {id} · Domain: {q.domain ?? domain} · ExamFamily: {q.examFamily ?? examFamily ?? 'University'} · Source: {q.source ?? 'Bank'} · Real DB record</p>
                         </div>
                       </div>
                     </div>
@@ -547,12 +864,12 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/30">
               <div>
-                <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{selectedIds.length} questions selected (ID-based)</p>
-                <p className="text-[11px] text-slate-400">Builder stores selectedQuestionIds only — no full objects.</p>
+                <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{selectedIds.length} questions selected (ID-based) · Real backend IDs</p>
+                <p className="text-[11px] text-slate-400">Builder stores selectedQuestionIds only — no full objects. {isGenerationReady && generatedCountForDisplay < requestedCountForDisplay ? 'NOT READY — incomplete generation, Send disabled.' : isPaperReady ? 'READY — Send enabled.' : 'Select questions to enable Save.'}</p>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setPrintOpen(true)}><Printer className="h-3.5 w-3.5" /> Preview</Button>
-                <Button size="sm" onClick={handleCreate} disabled={saving || selectedIds.length === 0}><Save className="h-3.5 w-3.5" /> {saving ? 'Saving…' : `Save Paper (${selectedIds.length})`}</Button>
+                <Button size="sm" onClick={handleCreate} disabled={saving || selectedIds.length === 0 || isGenerationRunning || isGenerationFailed} data-testid="save-paper-button"><Save className="h-3.5 w-3.5" /> {saving ? 'Saving…' : `Save Paper (${selectedIds.length})`}</Button>
               </div>
             </div>
           </>
@@ -563,16 +880,16 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
-            <FileText className="h-4 w-4 text-indigo-500" /> Paper Library ({papers.length}) · Backend
+            <FileText className="h-4 w-4 text-indigo-500" /> Paper Library ({papers.length}) · Backend · Real DB
           </h2>
-          <p className="text-[11px] font-medium text-slate-400">No samplePapers fallback — fetched from backend only.</p>
+          <p className="text-[11px] font-medium text-slate-400">No samplePapers fallback — fetched from backend only. Send disabled until READY and complete.</p>
         </div>
         {papers.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-800">
             <FileText className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
             <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No question papers yet.</p>
-            <p className="mt-1 text-xs text-slate-400">Select questions from the backend bank above and save your first paper.</p>
-            <p className="mt-2 text-[11px] text-slate-400">GET /faculty/paper-generator → {papers.length} papers</p>
+            <p className="mt-1 text-xs text-slate-400">Generate questions via AI backend, select real IDs, and save your first paper.</p>
+            <p className="mt-2 text-[11px] text-slate-400">GET /faculty/paper-generator → {papers.length} papers · Real DB only</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

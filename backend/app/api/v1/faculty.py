@@ -27,6 +27,14 @@ from app.services.examination import (
     publish_sql_paper,
     regenerate_sql_paper,
 )
+from app.services.question_generation import (
+    create_generation,
+    get_generation,
+    get_generation_questions,
+    list_generations,
+    retry_generation,
+    serialize_generation,
+)
 from app.services.spa_store import coll_key, kv_get, kv_set
 
 router = APIRouter(tags=["faculty"])
@@ -186,6 +194,41 @@ def question_bank(
         page=page,
         limit=limit,
     )
+
+
+@router.post("/faculty/question-bank/generate")
+def generate_questions(body: dict, db: DbDep, user: FacultyDep):
+    """Generate AI questions and persist to PostgreSQL.
+
+    Request body contains paper configuration:
+    domain, examFamily, subject, chapter, topic, questionCount,
+    difficulty, questionTypes, blueprint, examPattern, negativeMarking, etc.
+
+    Returns generationId, status, and persisted question IDs.
+    """
+    return create_generation(db, user, body or {})
+
+
+@router.get("/faculty/question-bank/generations")
+def list_question_generations(db: DbDep, user: FacultyDep, limit: int = 20):
+    gens = list_generations(db, user, limit=limit)
+    return {"items": [serialize_generation(g) for g in gens], "count": len(gens)}
+
+
+@router.get("/faculty/question-bank/generations/{generation_id}")
+def get_question_generation(generation_id: str, db: DbDep, user: FacultyDep):
+    gen = get_generation(db, user, generation_id)
+    return {"ok": True, "generation": serialize_generation(gen), **serialize_generation(gen)}
+
+
+@router.get("/faculty/question-bank/generations/{generation_id}/questions")
+def get_questions_for_generation(generation_id: str, db: DbDep, user: FacultyDep):
+    return get_generation_questions(db, user, generation_id)
+
+
+@router.post("/faculty/question-bank/generations/{generation_id}/retry")
+def retry_question_generation(generation_id: str, db: DbDep, user: FacultyDep):
+    return retry_generation(db, user, generation_id)
 
 
 @router.get("/faculty/research")

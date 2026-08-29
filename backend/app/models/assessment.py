@@ -92,3 +92,31 @@ class QuestionStudioSession(Base, TimestampMixin):
     source_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("content_sources.id"))
     settings: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default="open")
+
+
+class QuestionGeneration(Base, TimestampMixin):
+    """Faculty-initiated AI question generation job — real DB persistence.
+
+    Stores the faculty's paper configuration and tracks lifecycle:
+    GENERATING -> PROCESSING -> READY or FAILED.
+    Generated Question rows are linked via question_generation_items.
+    """
+
+    __tablename__ = "question_generations"
+
+    id: Mapped[str] = uuid_pk()
+    institution_id: Mapped[str] = mapped_column(String(36), ForeignKey("institutions.id"), index=True)
+    faculty_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="GENERATING")
+    config: Mapped[str] = mapped_column(Text, default="{}")
+    requested_count: Mapped[int] = mapped_column(Integer, default=0)
+    generated_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+
+
+class QuestionGenerationItem(Base):
+    __tablename__ = "question_generation_items"
+
+    generation_id: Mapped[str] = mapped_column(String(36), ForeignKey("question_generations.id"), primary_key=True)
+    question_id: Mapped[str] = mapped_column(String(36), ForeignKey("questions.id"), primary_key=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
