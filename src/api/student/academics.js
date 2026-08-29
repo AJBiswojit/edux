@@ -1,23 +1,20 @@
 /**
- * Student API — academics surfaces (mock tests, exams, settings) and the
- * campus portal reads (programs, forum, support, admit card).
+ * Student API — academics surfaces (Phase 9 Backend-Ready).
  *
- * "Mock test" here is product domain terminology (a practice/full-length
- * test), not prototype scaffolding — the /student/mock-tests contract is
- * preserved verbatim.
+ * Phase 9: Removed examination-specific mock routes:
+ *  - GET /student/mock-tests (seeded mockTests)
+ *  - GET /student/exams (seeded exams)
+ * These are now backend-only via centralized axios client (VITE_API_BASE_URL).
+ * No seeded fallback. Backend unavailable → empty state.
+ *
+ * Retained non-examination surfaces: settings, programs, forum, support, admit-card.
  */
 import { defineRoute } from '../core/router'
-import { mockTests, exams } from '@/datasets/student/academics.js'
 import { studentSettings } from '@/datasets/student/growth.js'
 import { studentPrograms, forumTopics, forumCategories, supportTickets, admitCard } from '@/datasets/student/portal.js'
 
 /* ---------------- Student ---------------- */
-/* Phase 3 — retired the legacy per-page student reads (profile, dashboard,
-   attendance, assignments, courses, course detail, subjects, events). Those
-   pages consume the Student Intelligence Foundation snapshot
-   (/intelligence/summary). */
-defineRoute('get', '/student/mock-tests', () => ({ items: mockTests }))
-defineRoute('get', '/student/exams', () => ({ items: exams }))
+/* Phase 9 — examination mocks removed. Student examinations now backend-only. */
 defineRoute('get', '/student/settings', () => studentSettings)
 defineRoute('patch', '/student/settings', ({ body }) => ({ ok: true, settings: { ...studentSettings, ...body } }))
 

@@ -1,22 +1,25 @@
 /**
- * Exams (legacy deep-link page) — keeps the /student/exams route working.
- * Reuses the shared Examination Intelligence components.
+ * EduX Phase 9 — Exams (legacy deep-link) · Backend-Ready
+ * GET /student/exams from backend, no seeded fallback.
  */
 
 import { useState } from 'react'
-import { CalendarDays, ClipboardList, FileText } from 'lucide-react'
-import { useExams } from '@/services'
+import { CalendarDays, ClipboardList, Database, FileText } from 'lucide-react'
+import { useStudentExams } from '@/services/student-examinations'
 import { useAdmitCard } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
-import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
-import { Badge, useToast } from '@/components/ui'
+import { DashboardSkeleton } from '@/components/shared/loading'
+import { Badge, Button, useToast } from '@/components/ui'
 import { UpcomingExamCard, ExamDetailsDialog } from '@/components/exam-workspace'
 import { formatDate, formatRelative } from '@/utils/format'
 
-/* Past-results table — preserved here and reused by any page needing it. */
 export function PastResultsTable({ items }) {
   if (!items?.length) {
-    return <p className="py-8 text-center text-sm text-slate-400">No completed exams yet.</p>
+    return (
+      <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
+        <p className="py-2 text-sm text-slate-400">No completed exams yet — backend returned 0. No seeded fallback.</p>
+      </div>
+    )
   }
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900">
@@ -49,62 +52,73 @@ export function PastResultsTable({ items }) {
 }
 
 function Exams() {
-  const { data, isLoading, isError, refetch } = useExams()
+  const { data, isLoading, isError, error, refetch } = useStudentExams()
   const { data: admitData } = useAdmitCard()
   const [selected, setSelected] = useState(null)
   const toast = useToast()
-  const items = data?.items ?? []
-  const upcoming = items.filter((e) => e.status === 'Upcoming')
-  const past = items.filter((e) => e.status === 'Completed')
 
   if (isLoading) return <DashboardSkeleton cards={2} />
-  if (isError) return <ErrorState onRetry={() => refetch()} />
+  if (isError) {
+    const isBackendDown = !error?.response || error?.response?.status >= 500
+    return (
+      <div>
+        <PageHeader eyebrow="Academics · Exams" title="Examinations · Backend-Ready" description="Backend only, no seeded fallback." breadcrumbs={[{ label: 'Student' }, { label: 'Exams' }]} />
+        <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-700">
+          <Database className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">{isBackendDown ? 'No examinations available' : 'Could not load examinations'}</p>
+          <p className="mt-1 text-xs text-slate-400">Connect the EduX backend — GET /student/exams → backend DB.</p>
+          <Button size="sm" variant="outline" className="mt-4" onClick={() => refetch()}>Retry</Button>
+        </div>
+      </div>
+    )
+  }
+
+  const items = data?.items ?? data?.exams ?? (Array.isArray(data) ? data : [])
+  const upcoming = items.filter((e) => (e.status ?? 'Upcoming') === 'Upcoming')
+  const past = items.filter((e) => e.status === 'Completed')
 
   const handleAddToPlanner = (exam) => {
-    toast.success(exam.inPlanner ? 'Already in planner' : 'Added to planner', exam.inPlanner
-      ? 'Revision sessions are already scheduled for this exam.'
-      : 'AI has scheduled revision sessions for this exam.')
+    toast.success(exam.inPlanner ? 'Already in planner' : 'Added to planner', exam.inPlanner ? 'Revision sessions already scheduled.' : 'AI has scheduled revision sessions.')
   }
 
   return (
     <div>
       <PageHeader
         eyebrow="Academics · Exams"
-        title="Examinations"
-        description="Upcoming midsems, past results and hall-ticket status — all in one place."
+        title="Examinations · Backend-Ready"
+        description="Upcoming and past examinations from backend — no seeded fallback, no answer keys in list."
         breadcrumbs={[{ label: 'Student' }, { label: 'Exams' }]}
-        actions={<Badge variant="gradient" className="px-3 py-1"><CalendarDays className="h-3 w-3" /> Midsems: Aug 19–23</Badge>}
+        actions={<Badge variant="gradient" className="px-3 py-1"><CalendarDays className="h-3 w-3" /> Backend only · {upcoming.length} upcoming</Badge>}
       />
 
       <div className="mb-4 flex items-center gap-2">
         <ClipboardList className="h-4 w-4 text-indigo-500" />
-        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Upcoming ({upcoming.length})</h2>
+        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Upcoming ({upcoming.length}) · Backend</h2>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {upcoming.map((e, i) => (
-          <div key={e.id} style={{ animationDelay: `${i * 60}ms` }} className="animate-fade-up">
-            <UpcomingExamCard
-              exam={e}
-              onViewDetails={() => setSelected(e)}
-              onAddToPlanner={() => handleAddToPlanner(e)}
-            />
-          </div>
-        ))}
-      </div>
+
+      {upcoming.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
+          <Database className="mx-auto h-6 w-6 text-slate-300" />
+          <p className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-200">No upcoming examinations</p>
+          <p className="mt-1 text-xs text-slate-400">Backend returned 0 published exams. No seeded fallback.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {upcoming.map((e, i) => (
+            <div key={e.id} style={{ animationDelay: `${i * 60}ms` }} className="animate-fade-up">
+              <UpcomingExamCard exam={e} onViewDetails={() => setSelected(e)} onAddToPlanner={() => handleAddToPlanner(e)} />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mb-4 mt-10 flex items-center gap-2">
         <FileText className="h-4 w-4 text-emerald-500" />
-        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Past results</h2>
+        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Past results · Backend</h2>
       </div>
       <PastResultsTable items={past} />
 
-      <ExamDetailsDialog
-        exam={selected}
-        open={!!selected}
-        onOpenChange={(v) => !v && setSelected(null)}
-        admit={admitData}
-        onDownload={() => toast.success('Downloading…', `admit-card-${selected?.id}.pdf saved.`)}
-      />
+      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.success('Downloading…', `admit-card-${selected?.id}.pdf saved.`)} />
     </div>
   )
 }

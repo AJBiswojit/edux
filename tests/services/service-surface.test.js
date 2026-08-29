@@ -68,6 +68,8 @@ describe('retired endpoints are gone', () => {
     '/ai/recommendations', '/ai/weaknesses', '/ai/prediction',
     '/platform/testimonials', '/platform/pricing', '/platform/faqs', '/platform/stats',
     '/faculty/ai-studio', '/faculty/paper-generator/shares', '/faculty/question-studio/approved',
+    // Phase 9 — examination mocks removed (backend-only)
+    '/student/mock-tests', '/student/exams', '/faculty/paper-generator',
   ])('%s has no mock handler', (path) => {
     expect(server.hasRouteHandler('get', path)).toBe(false)
   })
@@ -76,6 +78,11 @@ describe('retired endpoints are gone', () => {
     expect(server.hasRouteHandler('post', '/ai/generate-quiz')).toBe(false)
     expect(server.hasRouteHandler('post', '/ai/generate-exam')).toBe(false)
     expect(server.hasRouteHandler('post', '/auth/profile-setup')).toBe(false)
+    // Phase 9 — paper generator mutations backend-only
+    expect(server.hasRouteHandler('post', '/faculty/paper-generator/papers')).toBe(false)
+    expect(server.hasRouteHandler('delete', '/faculty/paper-generator/papers/:id')).toBe(false)
+    expect(server.hasRouteHandler('post', '/faculty/paper-generator/papers/:id/duplicate')).toBe(false)
+    expect(server.hasRouteHandler('post', '/faculty/paper-generator/papers/:id/share')).toBe(false)
   })
 })
 
@@ -125,7 +132,7 @@ describe('canonical exam attempts (University/JEE/NEET isolation)', () => {
 })
 
 describe('question intelligence data integrity', () => {
-  it('University question bank remains available', async () => {
+  it('University question bank remains available for Question Intelligence (prototype-backed temporarily)', async () => {
     const bank = await get('/faculty/question-bank')
     expect(bank.summary.total).toBeGreaterThan(0)
     expect(bank.questions.length).toBeGreaterThan(0)
@@ -146,11 +153,22 @@ describe('question intelligence data integrity', () => {
     expect((cqi.universityPyq ?? []).length).toBeGreaterThan(0)
   })
 
-  it('paper generator + paper library remain available with both exam modes', async () => {
-    const gen = await get('/faculty/paper-generator')
-    expect(gen.config.examModes).toEqual(expect.arrayContaining(['University', 'Competitive']))
-    expect(gen.config.competitiveExams).toEqual(expect.arrayContaining(['JEE', 'NEET']))
-    expect(Array.isArray(gen.generatedPapers)).toBe(true)
+  it('Phase 9 — paper generator + library are backend-only, no mock fallback (empty state expected in Arena)', async () => {
+    // Mock handler should be gone — backend-only
+    expect(server.hasRouteHandler('get', '/faculty/paper-generator')).toBe(false)
+    // Question bank mock remains for Question Intelligence, but Paper Generator must NOT use it
+    // Frontend uses src/services/faculty-questions.js → axios → VITE_API_BASE_URL → real DB
+    // No samplePapers fallback — verified by empty dataset
+    const { paperGenerator } = await import('@/datasets/faculty/paper-generator.js')
+    expect(paperGenerator.generatedPapers.length).toBe(0)
+  })
+
+  it('Phase 9 — student examinations are backend-only, no seeded exams fallback', async () => {
+    expect(server.hasRouteHandler('get', '/student/exams')).toBe(false)
+    expect(server.hasRouteHandler('get', '/student/mock-tests')).toBe(false)
+    const { mockTests, exams } = await import('@/datasets/student/academics.js')
+    expect(mockTests.length).toBe(0)
+    expect(exams.length).toBe(0)
   })
 })
 
