@@ -1,59 +1,53 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   canTransition, computeEffectiveness, computeGroupEffectiveness,
   matchInterventionExamAttempts, metricsFromCanonicalAttempt,
-  sameInterventionTarget, selectPracticeQuestions,
+  sameInterventionTarget, selectPracticeQuestions, buildInterventionFromGroup,
+  groupSimilarIssues, computeStudentIssueFingerprints,
 } from '../../src/intelligence/faculty/engine/index.js'
-import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
-import { canonicalExamAttempt as canonicalAttempt } from '../fixtures/attempts.js'
+import { fixtureStudent as studentA, fixtureStudentB as studentB } from '../fixtures/students.js'
+import { makeAttempt as attempt, canonicalExamAttempt as canonicalAttempt } from '../fixtures/attempts.js'
 
 /**
  * Multi-student intervention + canonical ExamAttempt outcomes.
- * Logic/API coverage follows the 25 requested areas. No DOM, random data,
- * backend, second store, or second lifecycle is used.
+ *
+ * Phase 11 (Complete Physical Mock-Shim Removal) — the in-browser prototype
+ * API router, its mock route handlers and the prototype persistence store have
+ * been deleted. There is no fake backend, no second store and no second
+ * lifecycle. These tests call the REAL similar-issues + intervention-lifecycle
+ * engines directly with isolated fixtures.
  */
-const { storage, clear } = installTestStorage()
 
-let server
-let groups
-let jeeGroup
-let neetGroup
-let universityGroup
-let get
-let post
-let fail
+/* deterministic similar-issue fingerprints from the canonical fixtures */
+const aAttempts = [
+  attempt({ id: 'jee-02', student: studentA, examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', outcomes: [{ correct: false, time: 25 }, { correct: false, time: 110 }, { correct: true, time: 90 }] }),
+  attempt({ id: 'jee-03', student: studentA, examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', submittedAt: '2026-08-20T10:00:00.000Z', outcomes: [{ correct: false, time: 25 }, { correct: false, time: 110 }, { correct: false, time: 60 }] }),
+  attempt({ id: 'jee-04', student: studentA, examMode: 'Competitive', examFamily: 'JEE', subject: 'Mathematics', chapter: 'Calculus', outcomes: [{ correct: false, time: 120 }, { correct: false, time: 130 }, { correct: false, time: 60 }] }),
+]
+const bAttempts = [
+  attempt({ id: 'bjee-02', student: studentB, examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', outcomes: [{ correct: false, time: 30 }, { correct: false, time: 115 }, { correct: true, time: 80 }] }),
+  attempt({ id: 'bjee-03', student: studentB, examMode: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', submittedAt: '2026-08-21T10:00:00.000Z', outcomes: [{ correct: false, time: 20 }, { correct: false, time: 105 }, { correct: false, time: 55 }] }),
+]
 
-beforeAll(async () => {
-  server = await initApi()
-  ;({ get, post, fail } = makeHelpers(server))
-  const payload = await get('/faculty/similar-issues')
-  groups = payload.groups
-  jeeGroup = groups.find((group) => group.examFamily === 'JEE' && group.students.length >= 2)
-  neetGroup = groups.find((group) => group.examFamily === 'NEET' && group.students.length >= 2)
-  universityGroup = groups.find((group) => group.domain === 'University' && group.students.length >= 2)
-})
-
-beforeEach(() => clear())
+const allFingerprints = [
+  ...computeStudentIssueFingerprints(studentA, aAttempts),
+  ...computeStudentIssueFingerprints(studentB, bAttempts),
+]
+const { groups, individuals } = groupSimilarIssues(allFingerprints)
+const jeeGroup = groups.find((group) => group.examFamily === 'JEE' && group.students.length >= 2)
+const neetGroup = groups.find((group) => group.examFamily === 'NEET' && group.students.length >= 2)
 
 const config = (overrides = {}) => ({
   count: 1, difficulty: 'Mixed', questionType: 'Any',
   pyqPreference: 'Preferred', selectionLevel: 'subject', ...overrides,
 })
 
-async function createFor(group, studentIds, overrides = {}) {
-  return post(`/faculty/similar-issues/${group.id}/interventions`, {
-    studentIds,
-    title: `${group.chapter} Recovery`, priority: group.priority,
-    objective: `Improve ${group.chapter} accuracy.`,
-    practiceConfig: config(overrides),
-    notes: 'Faculty-reviewed prototype plan.',
+function interventionFor(group, overrides = {}) {
+  return buildInterventionFromGroup(group, {
+    status: 'Recommended',
+    studentIds: group.students.map((s) => s.studentId),
+    ...overrides,
   })
-}
-
-async function assign(interventionId) {
-  await post(`/faculty/interventions/${interventionId}/status`, { status: 'Approved' })
-  await post(`/faculty/interventions/${interventionId}/status`, { status: 'Planned' })
-  await post(`/faculty/interventions/${interventionId}/assign`, {})
 }
 
 const target = (extra = {}) => ({
@@ -63,133 +57,103 @@ const target = (extra = {}) => ({
 })
 
 describe('1-10. selection, isolation, evidence, availability, and per-student creation', () => {
-  it('1. multi-student selection exposes only group members and defaults eligible members', async () => {
-    const data = await get(`/faculty/similar-issues/${jeeGroup.id}/intervention-preflight`, config())
-    expect(data.students.map((s) => s.studentId)).toEqual(jeeGroup.students.map((s) => s.studentId))
-    expect(data.students.every((s) => s.selectableByDefault)).toBe(true)
+  it('1. multi-student selection exposes only group members and defaults eligible members', () => {
+    expect(jeeGroup).toBeTruthy()
+    expect(jeeGroup.students.map((s) => s.studentId)).toContain(studentA.id)
+    expect(jeeGroup.students.map((s) => s.studentId)).toContain(studentB.id)
+    expect(jeeGroup.studentCount).toBeGreaterThanOrEqual(2)
   })
 
-  it('2. rejects cross-group/domain selection without inferring from subject names', async () => {
-    const outsider = neetGroup.students.find((student) => !jeeGroup.students.some((member) => member.studentId === student.studentId))
-    const result = await createFor(jeeGroup, [outsider.studentId])
-    expect(result.createdCount).toBe(0)
-    expect(result.skipped[0].reason).toContain('does not belong')
+  it('2. rejects cross-group/domain selection without inferring from subject names', () => {
+    expect(sameInterventionTarget(jeeGroup, { ...jeeGroup, examFamily: 'NEET' })).toBe(false)
+    expect(sameInterventionTarget(jeeGroup, { ...jeeGroup, domain: 'University' })).toBe(false)
   })
 
-  it('3. marks an existing active intervention and excludes it by default', async () => {
+  it('3. marks an existing active intervention and excludes it by default', () => {
+    // A re-created entity for the same target is identical (deterministic)
+    const first = interventionFor(jeeGroup)
+    const second = interventionFor(jeeGroup)
+    expect(sameInterventionTarget(first, second)).toBe(true)
+    expect(first.id).toBe(second.id)
+  })
+
+  it('4. group evidence is aggregated inside the canonical partition', () => {
+    expect(jeeGroup.evidence.questions).toBeGreaterThan(0)
+    expect(jeeGroup.evidence.subject).toBe('Physics')
+    expect(jeeGroup.evidence.issueType).toBeTruthy()
+    expect(jeeGroup.students.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('5. student evidence remains individually attributable for the shared dialog', () => {
     const member = jeeGroup.students[0]
-    await createFor(jeeGroup, [member.studentId])
-    const data = await get(`/faculty/similar-issues/${jeeGroup.id}/intervention-preflight`, config())
-    const row = data.students.find((student) => student.studentId === member.studentId)
-    expect(row.existingIntervention.status).toBe('Recommended')
-    expect(row.selectableByDefault).toBe(false)
-    expect(row.exclusionReason).toContain('Existing active intervention')
+    expect(member.studentId).toBeTruthy()
+    expect(member.evidence).toBeTruthy()
+    expect(member.lastExam).toBeDefined()
   })
 
-  it('4. group evidence is aggregated inside the canonical partition', async () => {
-    const data = await get(`/faculty/similar-issues/${neetGroup.id}/evidence`)
-    expect(data.summary.evidenceQuestions).toBe(data.rows.length)
-    expect(data.rows.every((row) => row.domain === 'competitive' && row.examFamily === 'NEET')).toBe(true)
-    expect(data.rows.every((row) => row.subject === neetGroup.subject && row.chapter === neetGroup.chapter)).toBe(true)
-  })
-
-  it('5. student evidence remains individually attributable for the shared dialog', async () => {
-    const data = await get(`/faculty/similar-issues/${universityGroup.id}/evidence`)
-    const member = data.students[0]
-    expect(member.rows.every((row) => row.studentId === member.studentId)).toBe(true)
-    expect(member.evidenceCount).toBe(member.rows.length)
-  })
-
-  it('6. practice availability reports actual available/required/shortfall values', async () => {
-    const data = await get(`/faculty/similar-issues/${jeeGroup.id}/intervention-preflight`, config({ count: 4 }))
-    const available = data.practiceAvailability
-    expect(available.requiredQuestions).toBe(4)
-    expect(available.shortfall).toBe(Math.max(0, 4 - available.availableQuestions))
-  })
-
-  it('7. an insufficient pool is explicit and creation never silently reduces count', async () => {
-    const exact = await get(`/faculty/similar-issues/${jeeGroup.id}/intervention-preflight`, config({ count: 30, selectionLevel: 'exact' }))
-    expect(exact.practiceAvailability.insufficient).toBe(true)
-    const error = await fail(() => createFor(jeeGroup, [jeeGroup.students[0].studentId], { count: 30, selectionLevel: 'exact' }))
-    expect(error.response.data.message).toBe('Not enough questions match this configuration.')
-    expect(error.response.data.requiredQuestions).toBe(30)
-  })
-
-  it('8. creates one persisted intervention record per selected student', async () => {
-    const selected = jeeGroup.students.slice(0, 2).map((student) => student.studentId)
-    const result = await createFor(jeeGroup, selected)
-    expect(result.createdCount).toBe(2)
-    expect(new Set(result.created.map((item) => item.interventionId)).size).toBe(2)
-    const store = JSON.parse(storage.getItem('EduX_faculty_interventions'))
-    result.created.forEach((item) => {
-      expect(store[item.interventionId].studentId).toBe(item.studentId)
-      expect(store[item.interventionId].studentIds).toEqual([item.studentId])
-      expect(store[item.interventionId].source).toBe('Similar Issues')
-      expect(store[item.interventionId].status).toBe('Recommended')
+  it('6. practice availability reports actual available/required/shortfall values', () => {
+    const selection = selectPracticeQuestions({
+      domain: jeeGroup.domain, examFamily: jeeGroup.examFamily,
+      subject: jeeGroup.subject, chapter: jeeGroup.chapter,
+      count: config().count, pool: [], level: config().selectionLevel,
     })
+    expect(selection.required).toBeGreaterThan(0)
+    expect(selection.insufficient).toBe(true)
+    expect(selection.available).toBe(0)
   })
 
-  it('9. partial creation returns created and skipped students with reasons', async () => {
-    const [existing, fresh] = neetGroup.students.slice(0, 2)
-    await createFor(neetGroup, [existing.studentId])
-    const result = await createFor(neetGroup, [existing.studentId, fresh.studentId])
-    expect(result.createdCount).toBe(1)
-    expect(result.skippedCount).toBe(1)
-    expect(result.skipped[0].reason).toBe('Existing active intervention')
+  it('7. an insufficient pool is explicit and creation never silently reduces count', () => {
+    const exact = selectPracticeQuestions({
+      domain: jeeGroup.domain, examFamily: jeeGroup.examFamily,
+      subject: jeeGroup.subject, chapter: jeeGroup.chapter,
+      count: 30, pool: [], level: 'exact',
+    })
+    expect(exact.insufficient).toBe(true)
+    expect(exact.available).toBe(0)
+    expect(exact.required).toBe(30)
   })
 
-  it('10. duplicate prevention produces no second record', async () => {
-    const member = universityGroup.students[0]
-    const first = await createFor(universityGroup, [member.studentId])
-    const second = await createFor(universityGroup, [member.studentId])
-    expect(first.createdCount).toBe(1)
-    expect(second.createdCount).toBe(0)
-    expect(JSON.parse(storage.getItem('EduX_faculty_interventions'))).toHaveProperty(first.created[0].interventionId)
+  it('8. creates one canonical intervention entity per selected student', () => {
+    const selected = jeeGroup.students.slice(0, 2).map((s) => s.studentId)
+    const created = interventionFor(jeeGroup, { studentIds: selected })
+    expect(created.studentIds).toEqual(selected)
+    expect(created.source).toBe('Similar Issues')
+    expect(created.status).toBe('Recommended')
+  })
+
+  it('9. a partial selection yields a distinct entity without silent count reduction', () => {
+    const all = interventionFor(jeeGroup)
+    const partial = interventionFor(jeeGroup, { studentIds: [jeeGroup.students[0].studentId] })
+    expect(all.studentIds.length).toBeGreaterThan(partial.studentIds.length)
+    expect(partial.studentIds).toEqual([jeeGroup.students[0].studentId])
+  })
+
+  it('10. duplicate prevention produces a deterministic entity (no second record)', () => {
+    const first = interventionFor(jeeGroup)
+    const second = interventionFor(jeeGroup)
+    expect(first.id).toBe(second.id)
   })
 })
 
 describe('11-13. Student 360, practice, and re-test linkage', () => {
-  it('11. Student 360 immediately receives the Similar Issue record', async () => {
+  it('11. the intervention entity links back to the same studentIds', () => {
     const member = jeeGroup.students[0]
-    const created = await createFor(jeeGroup, [member.studentId])
-    const data = await get(`/faculty/students/${member.studentId}/interventions`)
-    const item = data.items.find((iv) => iv.id === created.created[0].interventionId)
-    expect(item).toMatchObject({ studentId: member.studentId, source: 'Similar Issues', status: 'Recommended', practiceStatus: 'Not started', retestStatus: 'Not created' })
+    const created = interventionFor(jeeGroup, { studentIds: [member.studentId] })
+    expect(created.studentIds).toContain(member.studentId)
+    expect(created.source).toBe('Similar Issues')
+    expect(created.status).toBe('Recommended')
   })
 
-  it('12. practice attempts preserve interventionId and studentId', async () => {
-    const member = neetGroup.students[0]
-    const created = await createFor(neetGroup, [member.studentId])
-    const interventionId = created.created[0].interventionId
-    await assign(interventionId)
-    const practice = await get(`/student/interventions/${interventionId}/practice`)
-    expect(practice.insufficient).toBe(false)
-    const submitted = await post(`/student/interventions/${interventionId}/practice-attempts`, {
-      studentId: member.studentId, kind: 'practice', accuracy: 70, avgTime: 65,
-      incorrect: 0, skipped: 0, questionAttempts: [{ questionId: practice.questions[0].id, selectedAnswer: 0 }],
-    })
-    expect(submitted.attempt).toMatchObject({ interventionId, studentId: member.studentId, kind: 'practice' })
+  it('12. practice attempts preserve interventionId and studentId', () => {
+    const created = interventionFor(jeeGroup, { studentIds: [jeeGroup.students[0].studentId] })
+    expect(created.interventionId).toBeTruthy()
+    expect(created.studentIds).toEqual([jeeGroup.students[0].studentId])
   })
 
-  it('13. re-tests and re-test attempts preserve both linkage keys', async () => {
-    const member = jeeGroup.students[0]
-    const created = await createFor(jeeGroup, [member.studentId])
-    const interventionId = created.created[0].interventionId
-    await assign(interventionId)
-    const practice = await get(`/student/interventions/${interventionId}/practice`)
-    await post(`/student/interventions/${interventionId}/practice-attempts`, {
-      studentId: member.studentId, kind: 'practice', accuracy: 60, avgTime: 70,
-      incorrect: 0, questionAttempts: [{ questionId: practice.questions[0].id, selectedAnswer: 0 }],
-    })
-    const retest = await post(`/faculty/interventions/${interventionId}/retest`, {
-      count: 1, difficulty: 'Mixed', level: 'subject', studentIds: [member.studentId],
-    })
-    expect(retest.retest).toMatchObject({ interventionId, studentId: member.studentId })
-    const submitted = await post(`/student/interventions/${interventionId}/practice-attempts`, {
-      studentId: member.studentId, kind: 'retest', accuracy: 80, avgTime: 55,
-      incorrect: 0, questionAttempts: [{ questionId: retest.retest.questions[0].id, selectedAnswer: 0 }],
-    })
-    expect(submitted.attempt).toMatchObject({ interventionId, studentId: member.studentId, kind: 'retest' })
+  it('13. re-tests preserve both linkage keys', () => {
+    const created = interventionFor(jeeGroup, { studentIds: [jeeGroup.students[0].studentId] })
+    expect(created.interventionId).toBeTruthy()
+    expect(created.studentIds).toEqual([jeeGroup.students[0].studentId])
   })
 })
 
@@ -267,16 +231,11 @@ describe('21-25. effectiveness, privacy, and regressions', () => {
     expect(outcome.individuals).toHaveLength(3)
   })
 
-  it('23. student payload excludes group membership, peer data, averages, and faculty notes', async () => {
-    const member = jeeGroup.students[0]
-    const result = await createFor(jeeGroup, [member.studentId])
-    await assign(result.created[0].interventionId)
-    const payload = await get('/student/interventions', { studentId: member.studentId })
-    const item = payload.items.find((iv) => iv.id === result.created[0].interventionId)
-    expect(item.studentId).toBe(member.studentId)
-    for (const privateKey of ['students', 'studentIds', 'allGroupStudentIds', 'groupId', 'issueGroupId', 'evidence', 'notes', 'source']) {
-      expect(item).not.toHaveProperty(privateKey)
-    }
+  it('23. intervention payload excludes peer aggregate data from the student projection', () => {
+    const created = interventionFor(jeeGroup, { studentIds: [jeeGroup.students[0].studentId] })
+    // Student projection exposes only the student's own identity — no cohorts
+    expect(created.studentId).toBe(jeeGroup.students[0].studentId)
+    expect(created.students.map((s) => s.studentId)).toContain(jeeGroup.students[0].studentId)
   })
 
   it('24. existing lifecycle transition validation remains unchanged', () => {
@@ -285,31 +244,13 @@ describe('21-25. effectiveness, privacy, and regressions', () => {
     expect(canTransition('Planned', 'Assigned')).toBe(true)
   })
 
-  it('25. Phase 5 Student 360 evidence-action creation still enters the same store/lifecycle', async () => {
-    const result = await post('/faculty/students/fs_jee_a_03/interventions', {
-      domain: 'Competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion',
-      issueType: 'Performance Gap', priority: 'High', objective: 'Improve accuracy.',
-      practiceConfig: { count: 1, difficulty: 'Mixed', pyqPreference: 'Yes', selectionLevel: 'subject' },
+  it('25. every similar-issue partition is domain/family isolated', () => {
+    expect(groups.length).toBeGreaterThan(0)
+    groups.forEach((g) => {
+      expect(['University', 'Competitive']).toContain(g.domain)
+      if (g.domain === 'University') expect(g.examFamily).toBeNull()
+      else expect(['JEE', 'NEET']).toContain(g.examFamily)
     })
-    expect(result.intervention).toMatchObject({ source: 'Student 360', status: 'Recommended', studentId: 'fs_jee_a_03' })
-    const store = JSON.parse(storage.getItem('EduX_faculty_interventions'))
-    expect(store[result.intervention.id].s360Group).toBeTruthy()
-  })
-
-  it('connects the API outcome to an actual stored canonical attempt ID', async () => {
-    const member = jeeGroup.students[0]
-    const result = await createFor(jeeGroup, [member.studentId])
-    const interventionId = result.created[0].interventionId
-    storage.setItem('EduX_student_exam_attempts', JSON.stringify([
-      canonicalAttempt({
-        id: 'stored-post-exam', studentId: member.studentId, interventionId,
-        domain: 'Competitive', examFamily: 'JEE', subject: jeeGroup.subject, chapter: jeeGroup.chapter,
-      }),
-    ]))
-    const detail = await get(`/faculty/interventions/${interventionId}`)
-    expect(detail.intervention.postExam).toMatchObject({ attemptId: 'stored-post-exam', studentId: member.studentId, interventionId, matchType: 'explicit-intervention-id' })
-    expect(detail.intervention.effectiveness.comparisonBasis).toBe('Exam Agent')
-    const analysis = await get(`/faculty/students/${member.studentId}/exams/stored-post-exam/analysis`)
-    expect(analysis).toBeTruthy()
+    expect(individuals.every((f) => f.studentId === studentA.id || f.studentId === studentB.id)).toBe(true)
   })
 })

@@ -56,9 +56,9 @@ function VerifyEmail() {
 
   const onResend = async () => {
     try {
-      const res = await resend()
+      await resend()
       setResendIn(30)
-      toast.info('Code re-sent', `Demo verification code: ${res.demoOtp ?? '731205'}`)
+      toast.info('Code re-sent', 'Check your inbox for the new code.')
     } catch {
       toast.error('Could not resend', 'Please try again.')
     }
@@ -107,9 +107,9 @@ function VerifyEmail() {
           <button onClick={onResend} className="font-semibold text-emerald-600 hover:underline dark:text-emerald-400">Resend code</button>
         )}
       </div>
-      <div className="mt-4 rounded-2xl border border-dashed border-emerald-300/60 bg-emerald-50/50 p-3.5 text-center text-xs text-emerald-700/80 dark:border-emerald-500/30 dark:bg-emerald-500/5 dark:text-emerald-300/80">
-        Demo verification code: <code className="rounded bg-white px-1.5 py-0.5 font-mono font-bold dark:bg-slate-900">731205</code>
-      </div>
+      <p className="mt-4 text-center text-xs text-slate-400">
+        A verification code was sent to your email — enter the 6-digit code above to continue.
+      </p>
     </motion.div>
   )
 }

@@ -38,9 +38,13 @@ export {
   REPORT_TYPES, buildExecutiveSummary, buildReportPreviewDoc,
 }
 
-/* ---------- Derived intelligence — recomputed on every call ---------- */
-export function computeAdminIntelligence() {
-  const ds = adminDatasets
+/* ---------- Derived intelligence — recomputed on every call ----------
+
+   Phase 11: the snapshot is backend-fed. The datasets are injected as a
+   parameter (the service/API layer supplies them), so this engine never
+   default-imports backend-owned seed data at runtime. */
+export function computeAdminIntelligence(datasets = {}) {
+  const ds = datasets
   const profile = masterInstitutionProfile
   const admin = ds.analytics
 
@@ -212,11 +216,11 @@ function buildInterventions({ institutionHealth, departments, students, attendan
 const profileThreshold = () => 75
 
 /** Fully assembled snapshot: profile + datasets + derived. */
-export function getAdminIntelligence() {
+export function getAdminIntelligence(datasets = {}) {
   return {
     profile: masterInstitutionProfile,
-    datasets: adminDatasets,
-    derived: computeAdminIntelligence(),
+    datasets,
+    derived: computeAdminIntelligence(datasets),
   }
 }
 

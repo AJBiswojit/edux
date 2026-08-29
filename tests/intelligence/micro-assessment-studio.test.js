@@ -1,5 +1,5 @@
 import React from 'react'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
 import {
   MICRO_ASSESSMENT_COUNTS,
@@ -9,24 +9,42 @@ import {
   filterMicroSources,
   generateMicroQuestions,
   sameMicroContext,
+  processMicroSource,
+  buildPrototypeMicroAttempts,
+  studentAttemptStatus,
+  sourceFilterOptions,
 } from '../../src/intelligence/faculty/engine/micro-assessments.js'
-import { microAssessmentSources } from '../../src/datasets/faculty/micro-assessments.js'
+import { MICRO_ASSESSMENT_SOURCE_TYPES, MICRO_ASSESSMENT_EXAM_FAMILIES, MICRO_ASSESSMENT_DOMAINS } from '../fixtures/micro-assessments.js'
+import { microAssessmentSources } from '../fixtures/micro-assessments.js'
 import { activeSourceFilters, deriveSourceFilterOptions, sanitizeSourceFilters, sourceMatchesFilters } from '../../src/components/micro-assessment-studio/source-library-filters.js'
 import { Select, SelectItem } from '../../src/components/ui/select.jsx'
 import { containsInternalGenerationLabel, formatFacultyAnswer } from '../../src/components/micro-assessment-studio/question-presentation.js'
-import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
+import { installTestStorage } from '../setup/api.js'
 
-const { storage, clear } = installTestStorage()
-let server
-let get
-let post
+/**
+ * AI Micro-Assessment Studio — engine + UI contract suite.
+ *
+ * Phase 11 (Complete Physical Mock-Shim Removal) — the in-browser prototype
+ * API router and its route handlers (sources/process/generate/participants/
+ * send/results/intervention) have been deleted. The "faculty send → student
+ * flow → results" section that exercised the prototype STORE now has no
+ * production behaviour to verify (there is no backend in this repo, so
+ * nothing is persisted or exposed to a student at runtime). Those tests are
+ * intentionally dropped — they only verified deleted mock infrastructure.
+ *
+ * The remaining assertions are all legitimate ENGINE/UI contract tests:
+ *   · curated source contract (10 sources / domain-family isolation)
+ *   · Source Library filter derivation + connected Selects
+ *   · deterministic question generation + concept coverage
+ *   · progress/comprehension helpers (formatFacultyAnswer, internal labels)
+ *   · engine-level processMicroSource / prototype attempts / results
+ *     (these do NOT touch storage and never create an intervention
+ *      automatically — results.automatic === false and noAutoIntervention)
+ */
 
-beforeAll(async () => {
-  server = await initApi()
-  ;({ get, post } = makeHelpers(server))
-})
+installTestStorage()
 
-beforeEach(() => clear())
+const { storage } = installTestStorage()
 
 describe('curated source contract and canonical context isolation', () => {
   it('contains exactly five University, three JEE and two NEET sources', () => {
@@ -38,9 +56,9 @@ describe('curated source contract and canonical context isolation', () => {
   })
 
   it('keeps University Physics, JEE Physics and NEET Physics in distinct contexts', () => {
-    const university = filterMicroSources({ domain: 'university', subject: 'Physics' })
-    const jee = filterMicroSources({ domain: 'competitive', examFamily: 'JEE', subject: 'Physics' })
-    const neet = filterMicroSources({ domain: 'competitive', examFamily: 'NEET', subject: 'Physics' })
+    const university = filterMicroSources({ domain: 'university', subject: 'Physics' }, microAssessmentSources)
+    const jee = filterMicroSources({ domain: 'competitive', examFamily: 'JEE', subject: 'Physics' }, microAssessmentSources)
+    const neet = filterMicroSources({ domain: 'competitive', examFamily: 'NEET', subject: 'Physics' }, microAssessmentSources)
     expect(university.map((source) => source.id)).toEqual(['mas-uni-physics-wave-particle'])
     expect(jee.map((source) => source.id)).toEqual(['mas-jee-physics-rotational-motion'])
     expect(neet).toEqual([])
@@ -48,8 +66,8 @@ describe('curated source contract and canonical context isolation', () => {
   })
 
   it('keeps JEE Chemistry separate from NEET Chemistry without subject heuristics', () => {
-    const jee = filterMicroSources({ domain: 'competitive', examFamily: 'JEE', subject: 'Chemistry' })
-    const neet = filterMicroSources({ domain: 'competitive', examFamily: 'NEET', subject: 'Chemistry' })
+    const jee = filterMicroSources({ domain: 'competitive', examFamily: 'JEE', subject: 'Chemistry' }, microAssessmentSources)
+    const neet = filterMicroSources({ domain: 'competitive', examFamily: 'NEET', subject: 'Chemistry' }, microAssessmentSources)
     expect(jee).toHaveLength(1)
     expect(jee[0].chapter).toBe('Chemical Equilibrium')
     expect(neet).toHaveLength(1)
@@ -67,27 +85,12 @@ describe('curated source contract and canonical context isolation', () => {
     }
   })
 
-  it('source filtering supports domain, exam family, subject, chapter and type', async () => {
-    const response = await get('/faculty/micro-assessments/sources', { domain: 'competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', sourceType: 'NCERT / Study Material' })
-    expect(response.items).toHaveLength(1)
-    expect(response.items[0].id).toBe('mas-jee-physics-rotational-motion')
-    expect(response.filters.subjects).toEqual(['Physics'])
-    expect(response.filters.chapters).toEqual(['Rotational Motion'])
-    expect(response.filters.topics).toEqual(['Torque and Angular Momentum'])
-    const filtered = await get('/faculty/micro-assessments/sources', { domain: 'competitive', examFamily: 'NEET' })
-    expect(filtered.items.every((source) => source.domain === 'competitive' && source.examFamily === 'NEET')).toBe(true)
-    expect(filtered.filters.subjects).toEqual(expect.arrayContaining(['Biology', 'Chemistry']))
-    expect(filtered.filters.subjects).not.toContain('Mathematics')
-    expect(server.hasRouteHandler('get', '/faculty/micro-assessments/sources')).toBe(true)
-    expect(server.hasRouteHandler('post', '/faculty/micro-assessments/process')).toBe(true)
-    expect(server.hasRouteHandler('post', '/faculty/micro-assessments/generate')).toBe(true)
-    expect(server.hasRouteHandler('post', '/student/micro-assessments/a/attempts')).toBe(true)
-  })
-
-  it('does not expose unrelated University cohorts to a non-CSE sample', async () => {
-    const response = await get('/faculty/micro-assessments/participants', { sourceId: 'mas-uni-physics-wave-particle', domain: 'university' })
-    expect(response.students).toEqual([])
-    expect(response.batches).toEqual([])
+  it('keeps canonical source-type / domain / family contract constants', () => {
+    expect(MICRO_ASSESSMENT_SOURCE_TYPES).toEqual(expect.arrayContaining(['Textbook', 'NCERT', 'Custom Text']))
+    expect(MICRO_ASSESSMENT_DOMAINS).toEqual(['university', 'competitive'])
+    expect(MICRO_ASSESSMENT_EXAM_FAMILIES).toEqual(['JEE', 'NEET'])
+    // UI derives its filter options from the source catalog, never from a mock route
+    expect(sourceFilterOptions(microAssessmentSources).subjects.length).toBeGreaterThan(0)
   })
 })
 
@@ -135,10 +138,10 @@ describe('connected Source Library filters', () => {
 
   it('supports case-insensitive content search and combined final matching', () => {
     expect(sourceMatchesFilters(microAssessmentSources[5], { ...base, domain: 'competitive', examFamily: 'JEE', subject: 'Physics', search: 'ANGULAR MOMENTUM' })).toBe(true)
-    expect(filterMicroSources({ domain: 'competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque and Angular Momentum', search: 'torque' })).toHaveLength(1)
-    expect(filterMicroSources({ domain: 'university', subject: 'Physics', sourceType: 'Textbook' })).toHaveLength(1)
-    expect(filterMicroSources({ domain: 'competitive', examFamily: 'JEE', sourceType: 'NCERT / Study Material' })).toHaveLength(1)
-    expect(filterMicroSources({ search: 'not-a-real-source' })).toHaveLength(0)
+    expect(filterMicroSources({ domain: 'competitive', examFamily: 'JEE', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque and Angular Momentum', search: 'torque' }, microAssessmentSources)).toHaveLength(1)
+    expect(filterMicroSources({ domain: 'university', subject: 'Physics', sourceType: 'Textbook' }, microAssessmentSources)).toHaveLength(1)
+    expect(filterMicroSources({ domain: 'competitive', examFamily: 'JEE', sourceType: 'NCERT / Study Material' }, microAssessmentSources)).toHaveLength(1)
+    expect(filterMicroSources({ search: 'not-a-real-source' }, microAssessmentSources)).toHaveLength(0)
   })
 
   it('normalizes All placeholders, exposes active filters, and supports clear-all state', () => {
@@ -232,72 +235,47 @@ describe('deterministic understanding, question generation and coverage', () => 
   })
 })
 
-describe('faculty send, student flow, results and explicit intervention hand-off', () => {
-  it('processes source content and returns AI Understanding without a real model', async () => {
+describe('engine-level processing, prototype attempts and results (no store, no storage writes)', () => {
+  it('processes source content and returns AI Understanding without a real model', () => {
     const source = microAssessmentSources[0]
-    const processed = await post('/faculty/micro-assessments/process', { sourceId: source.id })
+    const processed = processMicroSource(source)
+    expect(processed.ok).toBe(true)
     expect(processed.understanding.chapter).toBe('Data Structures')
     expect(processed.understanding.concepts.length).toBeGreaterThan(2)
     expect(processed.processingSteps).toEqual(['Reading source', 'Identifying concepts', 'Finding question opportunities', 'Preparing assessment'])
     expect(processed.note).toContain('no real LLM')
   })
 
-  it('creates a context-aware assessment, exposes it to the student, and calculates results separately', async () => {
+  it('computes results from prototype attempts without creating an intervention automatically', () => {
     const source = microAssessmentSources[0]
-    const generated = await post('/faculty/micro-assessments/generate', { sourceId: source.id, count: 10 })
-    const audience = await get('/faculty/micro-assessments/participants', { domain: 'university' })
-    expect(audience.batches.every((batch) => batch.domain === 'University' && batch.examFamily == null)).toBe(true)
-    expect(audience.students.every((student) => student.domain === 'University' && student.examFamily == null)).toBe(true)
-    const sent = await post('/faculty/micro-assessments', {
-      sourceId: source.id,
-      questions: generated.questions,
-      title: 'Graph Traversal · Micro Check',
-      description: 'A short formative check.',
-      instructions: 'Read each prompt carefully.',
-      difficulty: 'Mixed',
-      duration: 15,
-      deadline: '2026-08-30',
-      audience: 'Selected Batch',
-      batchIds: ['batch_uni_cse_a'],
-      studentIds: [],
-    })
-    expect(sent.summary.studentsSelected).toBe(18)
-    expect(sent.assessment.prototypeOnly).toBe(true)
-    expect(storage.getItem('EduX_faculty_interventions')).toBeNull()
-
-    const studentList = await get('/student/micro-assessments', { studentId: 'u_stu_001' })
-    expect(studentList.items[0]).toMatchObject({ title: 'Graph Traversal · Micro Check', status: 'Not Started', domain: 'university', examFamily: null })
-    const detail = await get(`/student/micro-assessments/${sent.assessment.id}`, { studentId: 'u_stu_001' })
-    expect(detail.attempt).toBeNull()
-    const results = await get(`/faculty/micro-assessments/${sent.assessment.id}/results`)
-    expect(results.studentsCompleted).toBe(12)
+    const generated = generateMicroQuestions({ source, count: 10 })
+    const assessment = {
+      id: 'ma-1', sourceId: source.id, questions: generated.questions,
+      target: { studentIds: ['s1', 's2', 's3', 's4', 's5'] },
+    }
+    const storageBefore = storage.getItem('EduX_faculty_interventions')
+    const attempts = buildPrototypeMicroAttempts(assessment, assessment.target.studentIds)
+    const results = computeMicroAssessmentResults(assessment, attempts)
+    expect(results.studentsCompleted).toBe(attempts.length)
     expect(results.averageAccuracy).toBeLessThan(100)
     expect(results.weakConcepts.length).toBeGreaterThan(0)
-    expect(results.interventionRecommendation.automatic).toBe(false)
-    expect(storage.getItem('EduX_faculty_interventions')).toBeNull()
-
-    const answers = Object.fromEntries(generated.questions.map((question) => [question.id, question.correctAnswer]))
-    const submitted = await post(`/student/micro-assessments/${sent.assessment.id}/attempts`, { studentId: 'u_stu_001', status: 'completed', answers })
-    expect(submitted.attempt.mode).toBe('formative-micro-assessment')
-    expect(storage.getItem('EduX_student_exam_attempts')).toBeNull()
+    expect(results.interventionRecommendation?.automatic).toBe(false)
+    expect(results.noAutomaticIntervention).toBe(true)
+    // No intervention is persisted anywhere — no storage write happened
+    expect(storage.getItem('EduX_faculty_interventions')).toBe(storageBefore)
   })
 
-  it('only creates an intervention after explicit faculty approval action', async () => {
-    const source = microAssessmentSources[5]
-    const generated = await post('/faculty/micro-assessments/generate', { sourceId: source.id, count: 10 })
-    const sent = await post('/faculty/micro-assessments', {
-      sourceId: source.id, questions: generated.questions, title: 'Torque Concept Check', duration: 15, deadline: '2026-08-30',
-      audience: 'Selected Batch', batchIds: ['batch_jee_2027_a'], studentIds: [],
-    })
-    const results = await get(`/faculty/micro-assessments/${sent.assessment.id}/results`)
-    expect(storage.getItem('EduX_faculty_interventions')).toBeNull()
-    const created = await post(`/faculty/micro-assessments/${sent.assessment.id}/intervention`, { studentIds: sent.assessment.target.studentIds })
-    expect(created.created).toBe(true)
-    expect(created.intervention.status).toBe('Recommended')
-    expect(created.intervention.source).toBe('AI Micro-Assessment Studio')
-    expect(JSON.parse(storage.getItem('EduX_faculty_interventions'))[created.intervention.id].status).toBe('Recommended')
-    const existingLifecycle = await get('/faculty/interventions')
-    expect(existingLifecycle.items.some((item) => item.id === created.intervention.id && item.status === 'Recommended')).toBe(true)
-    expect(results.noAutomaticIntervention).toBe(true)
+  it('reports student attempt status from the engine without a store', () => {
+    const source = microAssessmentSources[0]
+    const generated = generateMicroQuestions({ source, count: 5 })
+    // buildPrototypeMicroAttempts derives completed attempts from the target list,
+    // deliberately excluding the very first student id (s1) as the "not yet attempted".
+    const assessment = { id: 'ma-2', sourceId: source.id, questions: generated.questions, target: { studentIds: ['s1', 's2'] } }
+    const attempts = buildPrototypeMicroAttempts(assessment, ['s1', 's2'])
+    expect(attempts.length).toBeGreaterThan(0)
+    expect(studentAttemptStatus(assessment, attempts[0].studentId, attempts).status).toBe('Completed')
+    expect(studentAttemptStatus(assessment, 's1', attempts).status).toBe('Not Started')
+    expect(studentAttemptStatus(assessment, 's-missing', attempts).status).toBe('Not Started')
+    expect(studentAttemptStatus(assessment, 's-missing', attempts).attempt).toBeNull()
   })
 })

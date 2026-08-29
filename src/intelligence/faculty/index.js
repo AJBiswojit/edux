@@ -94,9 +94,13 @@ export {
   sourceFilterOptions, QUESTION_TYPES,
 }
 
-/* ---------- Derived intelligence — recomputed on every call ---------- */
-export function computeFacultyIntelligence() {
-  const ds = facultyDatasets
+/* ---------- Derived intelligence — recomputed on every call ----------
+
+   Phase 11: the snapshot is now backend-fed. The datasets are injected as a
+   parameter (the service/API layer supplies them), so this engine never
+   default-imports backend-owned seed data at runtime. */
+export function computeFacultyIntelligence(datasets = {}) {
+  const ds = datasets
 
   /* analytics */
   const courseProgress = computeCourseProgress({ courses: ds.courses, attendance: ds.attendance })
@@ -239,11 +243,11 @@ export function computeFacultyIntelligence() {
 }
 
 /** Fully assembled snapshot: profile + datasets + derived. */
-export function getFacultyIntelligence() {
+export function getFacultyIntelligence(datasets = {}) {
   return {
     profile: masterFacultyProfile,
-    datasets: facultyDatasets,
-    derived: computeFacultyIntelligence(),
+    datasets,
+    derived: computeFacultyIntelligence(datasets),
   }
 }
 

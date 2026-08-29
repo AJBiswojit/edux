@@ -6,15 +6,26 @@
  * subject name, or write to the official ExamAttempt store.
  */
 
-import {
-  MICRO_ASSESSMENT_EXAM_FAMILIES,
-  MICRO_ASSESSMENT_SOURCE_TYPES,
-  microAssessmentSources,
-} from '@/datasets/faculty/micro-assessments.js'
 import { generateQuestions as generateStudioQuestions } from './question-studio.js'
 
 export const MICRO_ASSESSMENT_COUNTS = [5, 10, 15, 20]
 export const MICRO_ASSESSMENT_DIFFICULTIES = ['Mixed', 'Easy', 'Medium', 'Hard']
+
+/* Question taxonomy contract — the accepted exam-family vocabulary for a
+   competitive micro-assessment source. This is configuration, not seeded
+   content; sources are supplied to the engine as injectable parameters. */
+export const MICRO_ASSESSMENT_EXAM_FAMILIES = ['JEE', 'NEET']
+export const MICRO_ASSESSMENT_SOURCE_TYPES = [
+  'Textbook',
+  'NCERT',
+  'Lecture Notes',
+  'PDF',
+  'Faculty Notes',
+  'Custom Text',
+  'NCERT / Study Material',
+  'Study Material',
+]
+export const MICRO_ASSESSMENT_DOMAINS = ['university', 'competitive']
 
 const QUESTION_TYPES = [
   'Short Answer',
@@ -167,11 +178,11 @@ export function buildMicroSource(input = {}, base = null) {
   return source
 }
 
-export function findMicroSource(id) {
-  return microAssessmentSources.find((source) => source.id === id) ?? null
+export function findMicroSource(id, sources = []) {
+  return sources.find((source) => source.id === id) ?? null
 }
 
-export function filterMicroSources(filters = {}, sources = microAssessmentSources) {
+export function filterMicroSources(filters = {}, sources = []) {
   let items = [...sources]
   const optionalFilter = (value) => {
     const normalized = String(value ?? '').trim()
@@ -519,7 +530,7 @@ export function studentAttemptStatus(assessment, studentId, attempts = []) {
   }
 }
 
-export function sourceFilterOptions(sources = microAssessmentSources) {
+export function sourceFilterOptions(sources = []) {
   return {
     domains: [...new Set(sources.map((source) => source.domain))],
     examFamilies: [...new Set(sources.map((source) => source.examFamily).filter(Boolean))],

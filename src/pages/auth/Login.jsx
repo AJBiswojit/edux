@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
-import { ArrowRight, Bot, Eye, EyeOff, GraduationCap, HeartHandshake, KeyRound, LogIn, ShieldCheck } from 'lucide-react'
+import { Bot, Eye, EyeOff, GraduationCap, HeartHandshake, LogIn, ShieldCheck } from 'lucide-react'
 import { Button, Checkbox, Field, Input, useToast } from '@/components/ui'
 import { useAuth } from '@/contexts/auth-context'
 import { RULES } from '@/validators'
@@ -10,10 +10,10 @@ import { ROLE_HOME, ROLES, FEATURE_FLAGS } from '@/config'
 import { cn } from '@/utils/cn'
 
 const ROLES_META = [
-  { id: ROLES.STUDENT, label: 'Student', icon: GraduationCap, desc: 'Learn, practice, grow', demoEmail: 'aarav.sharma@medixoedux.edu' },
-  { id: ROLES.FACULTY, label: 'Faculty', icon: Bot, desc: 'Teach with AI superpowers', demoEmail: 'meera.krishnan@medixoedux.edu' },
-  { id: ROLES.PARENT, label: 'Parent', icon: HeartHandshake, desc: 'Stay close, without hovering', demoEmail: 'rajesh.sharma@medixoedux.edu' },
-  { id: ROLES.ADMIN, label: 'Admin', icon: ShieldCheck, desc: 'Run the institution on data', demoEmail: 'ananya.iyer@medixoedux.edu' },
+  { id: ROLES.STUDENT, label: 'Student', icon: GraduationCap, desc: 'Learn, practice, grow' },
+  { id: ROLES.FACULTY, label: 'Faculty', icon: Bot, desc: 'Teach with AI superpowers' },
+  { id: ROLES.PARENT, label: 'Parent', icon: HeartHandshake, desc: 'Stay close, without hovering' },
+  { id: ROLES.ADMIN, label: 'Admin', icon: ShieldCheck, desc: 'Run the institution on data' },
 ]
 
 /* Phase 27.2 (audit P2-7): while the Parent portal is feature-flagged off,
@@ -40,12 +40,6 @@ function Login() {
       setRole(fromQuery)
     }
   }, [params])
-
-  const fillDemo = () => {
-    setValue('email', roleMeta.demoEmail)
-    setValue('password', 'Edux12345')
-    toast.info('Demo credentials filled', `Password for all demos: Edux12345`)
-  }
 
   const onSubmit = async (values) => {
     if (role === ROLES.PARENT && parentDisabled) {
@@ -177,23 +171,6 @@ function Login() {
           )}
         </Button>
       </form>
-
-      {/* Demo access */}
-      <div className="mt-6 rounded-2xl border border-dashed border-indigo-300/60 bg-indigo-50/50 p-4 dark:border-indigo-500/30 dark:bg-indigo-500/5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300">
-              <KeyRound className="h-3.5 w-3.5" /> Try the {roleMeta.label} demo
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-indigo-600/80 dark:text-indigo-400/80">
-              {roleMeta.demoEmail} · password <code className="rounded bg-white/70 px-1 py-0.5 font-mono dark:bg-slate-900">Edux12345</code>
-            </p>
-          </div>
-          <Button type="button" size="sm" variant="outline" onClick={fillDemo} className="shrink-0">
-            Fill for me <ArrowRight className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
 
       <p className="mt-6 text-center text-xs text-slate-400">
         By continuing you agree to MediXO EduX’s <Link to="/terms" className="font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300">Terms</Link> and{' '}

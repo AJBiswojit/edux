@@ -1,202 +1,83 @@
-import { beforeAll, describe, expect, it } from 'vitest'
-import { installTestStorage, initApi, makeHelpers } from '../setup/api.js'
+import { describe, expect, it } from 'vitest'
 
 /**
- * Service/API surface protection suite.
+ * Service/API surface protection suite — Phase 11 (Complete Physical Mock-Shim
+ * Removal).
  *
- * Proves that:
- *   · every CANONICAL endpoint still serves its contract (Student/Admin/
- *     Faculty intelligence snapshots, My Students, Student 360, Exam
- *     Analysis, Exam Agent attempts, Question Intelligence, PYQ, Paper
- *     Generator/Library, Intervention lifecycle);
- *   · retired endpoints are actually gone (mock server answers 404);
- *   · University / JEE / NEET data remains reachable and isolated;
- *   · the memoized snapshots return consistent results.
- * Tests hit the REAL API router dispatch the same way the service layer
- * does, with latency zeroed.
+ * Phase 11 deleted the in-browser prototype API router, its mock route
+ * handlers, the prototype stores and the fake persistence entirely. There is
+ * NO fake backend, no mock router and no seeded response available to tests.
+ *
+ * What this suite therefore guarantees:
+ *   · the production API layer is a STRICT backend consumer — the central
+ *     axios client + `request()` wrapper only, no route module, no dispatch;
+ *   · the intelligence engines are pure functions over the canonical fixture
+ *     attempts (University / JEE / NEET domain isolation preserved);
+ *   · backend-owned examination datasets carry NO seeded/mock fallback
+ *     (paperGenerator.generatedPapers, student academics mockTests/exams).
+ *
+ * It does NOT assert route presence/absence via a mock server — that
+ * infrastructure is gone. Those assertions were removed because they only
+ * verified deleted mock infrastructure.
  */
 
-installTestStorage()
-
-let server
-let get
-
-beforeAll(async () => {
-  server = await initApi()
-  ;({ get } = makeHelpers(server))
-})
-
-describe('canonical intelligence snapshots', () => {
-  it('serves the student snapshot (profile + datasets + derived)', async () => {
-    const data = await get('/intelligence/summary')
-    expect(data.profile?.name ?? data.profile?.student?.name ?? data.profile).toBeTruthy()
-    expect(data.datasets).toBeTruthy()
-    expect(data.derived).toBeTruthy()
+describe('Phase 11 — production runtime is a strict backend consumer', () => {
+  it('the prototype mock router is removed from production src/api', () => {
+    // The in-browser prototype adapter no longer exists anywhere in the repo.
+    // Production src/api exposes ONLY the central axios client + request().
+    expect(() => import.meta.resolve('@/api/core/router.js')).toThrow()
   })
 
-  it('serves the master student profile for agent/exam pages', async () => {
-    const profile = await get('/intelligence/profile')
-    expect(profile).toBeTruthy()
+  it('the API index exposes only the central client and request() wrapper', async () => {
+    const mod = await import('@/api/index.js')
+    expect(typeof mod.default).toBe('function') // request()
+    expect(mod.request).toBe(mod.default)
+    expect(mod.api).toBeTruthy() // axios instance
+    // No route registry / dispatchRequest / mock router is exported.
+    expect(mod.router).toBeUndefined()
+    expect(mod.dispatchRequest).toBeUndefined()
   })
 
-  it('serves ONE canonical faculty snapshot and memoizes it', async () => {
-    const a = await get('/faculty-intelligence/summary')
-    const b = await get('/faculty-intelligence/summary')
-    expect(a.profile).toBeTruthy()
-    expect(a.derived?.assessment).toBeTruthy()
-    expect(a).toBe(b) // lazy singleton — identical payload object
-  })
-
-  it('serves ONE canonical admin snapshot and memoizes it', async () => {
-    const a = await get('/admin-intelligence/summary')
-    const b = await get('/admin-intelligence/summary')
-    expect(a.profile?.totals?.students).toBeGreaterThan(0)
-    expect(a.derived).toBeTruthy()
-    expect(a).toBe(b)
+  it('src/api contains no route/handler modules', async () => {
+    const reg = await import.meta.glob('/src/api/**/*.js')
+    const modules = Object.keys(reg)
+    expect(modules.some((p) => /router|dispatch|route|handler|mock/i.test(p))).toBe(false)
+    // Only the central client surface is present.
+    expect(modules).toContain('/src/api/client.js')
+    expect(modules).toContain('/src/api/axios.js')
+    expect(modules).toContain('/src/api/index.js')
   })
 })
 
-describe('retired endpoints are gone', () => {
-  it.each([
-    '/student/profile', '/student/dashboard', '/student/attendance', '/student/assignments',
-    '/student/courses', '/student/subjects', '/student/events', '/student/exam-analysis',
-    '/student/academic-profile', '/student/academic-resources', '/student/academic-progress',
-    '/student/performance-accuracy', '/admin/dashboard', '/admin/analytics', '/admin/performance',
-    '/admin/placements', '/admin/attendance-analytics', '/admin/assignment-analytics',
-    '/admin/exam-analytics', '/intelligence/datasets', '/intelligence/derived',
-    '/admin-intelligence/profile', '/admin-intelligence/datasets', '/admin-intelligence/derived',
-    '/ai/recommendations', '/ai/weaknesses', '/ai/prediction',
-    '/platform/testimonials', '/platform/pricing', '/platform/faqs', '/platform/stats',
-    '/faculty/ai-studio', '/faculty/paper-generator/shares', '/faculty/question-studio/approved',
-    // Phase 9 — examination mocks removed (backend-only)
-    '/student/mock-tests', '/student/exams', '/faculty/paper-generator',
-  ])('%s has no mock handler', (path) => {
-    expect(server.hasRouteHandler('get', path)).toBe(false)
-  })
-
-  it('retired mutation endpoints are gone too', () => {
-    expect(server.hasRouteHandler('post', '/ai/generate-quiz')).toBe(false)
-    expect(server.hasRouteHandler('post', '/ai/generate-exam')).toBe(false)
-    expect(server.hasRouteHandler('post', '/auth/profile-setup')).toBe(false)
-    // Phase 9 — paper generator mutations backend-only
-    expect(server.hasRouteHandler('post', '/faculty/paper-generator/papers')).toBe(false)
-    expect(server.hasRouteHandler('delete', '/faculty/paper-generator/papers/:id')).toBe(false)
-    expect(server.hasRouteHandler('post', '/faculty/paper-generator/papers/:id/duplicate')).toBe(false)
-    expect(server.hasRouteHandler('post', '/faculty/paper-generator/papers/:id/share')).toBe(false)
-  })
-})
-
-describe('faculty students + Student 360 (canonical path)', () => {
-  it('serves the My Students directory with batches', async () => {
-    const data = await get('/faculty/students')
-    expect(data.students?.length).toBeGreaterThan(0)
-    expect(data.batches?.length).toBeGreaterThan(0)
-    expect(data.batches.map((b) => b.examFamily ?? 'University')).toContain('JEE')
-  })
-
-  it('serves Student 360 with domain-isolated pools', async () => {
-    const directory = await get('/faculty/students')
-    const studentId = directory.students[0].id
-    const s360 = await get(`/faculty/students/${studentId}/360`)
-    expect(s360.student?.id).toBe(studentId)
-    expect(s360.subjects?.university).toBeDefined()
-    expect(s360.subjects?.competitive?.JEE).toBeDefined()
-    expect(s360.subjects?.competitive?.NEET).toBeDefined()
-    expect(s360.question?.byContext).toBeTruthy()
-  })
-})
-
-describe('canonical exam attempts (University/JEE/NEET isolation)', () => {
-  it('returns all three contexts and never leaks across filters', async () => {
-    const all = await get('/intelligence/exam-attempts')
-    expect(all.items.length).toBeGreaterThan(0)
-
-    const jee = await get('/intelligence/exam-attempts', { examFamily: 'JEE' })
-    const neet = await get('/intelligence/exam-attempts', { examFamily: 'NEET' })
-    const uni = await get('/intelligence/exam-attempts', { examMode: 'University' })
-    expect(jee.items.length).toBeGreaterThan(0)
-    expect(jee.items.every((a) => a.examFamily === 'JEE')).toBe(true)
-    expect(neet.items.every((a) => a.examFamily === 'NEET')).toBe(true)
-    expect(uni.items.length).toBeGreaterThan(0)
-    expect(uni.items.every((a) => a.examMode === 'University')).toBe(true)
-    // isolation: no University attempt inside a family filter and vice versa
-    expect(jee.items.some((a) => a.examMode === 'University')).toBe(false)
-    expect(uni.items.some((a) => a.examFamily === 'JEE' || a.examFamily === 'NEET')).toBe(false)
-  })
-
-  it('exam agent surfaces the same canonical attempts', async () => {
-    const exams = await get('/student/exam-agent/exams')
-    const attempts = await get('/student/exam-agent/attempts')
-    expect(exams ?? attempts).toBeTruthy()
-  })
-})
-
-describe('question intelligence data integrity', () => {
-  it('University question bank remains available for Question Intelligence (prototype-backed temporarily)', async () => {
-    const bank = await get('/faculty/question-bank')
-    expect(bank.summary.total).toBeGreaterThan(0)
-    expect(bank.questions.length).toBeGreaterThan(0)
-  })
-
-  it('University PYQ analysis remains available', async () => {
-    const pyq = await get('/faculty/pyq-analysis')
-    expect(pyq.overview.totalPapers).toBeGreaterThan(0)
-  })
-
-  it('JEE + NEET competitive questions and University PYQs remain in the faculty snapshot', async () => {
-    const { derived } = await get('/faculty-intelligence/summary')
-    const cqi = derived.competitiveQuestionIntelligence
-    const families = new Set((cqi.pyqRecords ?? []).map((q) => q.examFamily ?? q.exam ?? 'JEE'))
-    expect(cqi.pyqRecords.length).toBeGreaterThan(0)
-    expect([...families].some((f) => String(f).includes('JEE'))).toBe(true)
-    expect([...families].some((f) => String(f).includes('NEET'))).toBe(true)
-    expect((cqi.universityPyq ?? []).length).toBeGreaterThan(0)
-  })
-
-  it('Phase 9 — paper generator + library are backend-only, no mock fallback (empty state expected in Arena)', async () => {
-    // Mock handler should be gone — backend-only
-    expect(server.hasRouteHandler('get', '/faculty/paper-generator')).toBe(false)
-    // Question bank mock remains for Question Intelligence, but Paper Generator must NOT use it
-    // Frontend uses src/services/faculty-questions.js → axios → VITE_API_BASE_URL → real DB
-    // No samplePapers fallback — verified by empty dataset
+describe('backend-owned examination datasets carry no mock fallback', () => {
+  it('Phase 9 — paper generator is backend-only, no generatedPapers fallback', async () => {
     const { paperGenerator } = await import('@/datasets/faculty/paper-generator.js')
     expect(paperGenerator.generatedPapers.length).toBe(0)
   })
 
-  it('Phase 9 — student examinations are backend-only, no seeded exams fallback', async () => {
-    expect(server.hasRouteHandler('get', '/student/exams')).toBe(false)
-    expect(server.hasRouteHandler('get', '/student/mock-tests')).toBe(false)
+  it('Phase 9 — student examinations are backend-only, no seeded exams/mock tests', async () => {
     const { mockTests, exams } = await import('@/datasets/student/academics.js')
     expect(mockTests.length).toBe(0)
     expect(exams.length).toBe(0)
   })
-})
 
-describe('intervention lifecycle remains intact', () => {
-  it('interventions carry status, baseline and effectiveness (standalone read retired)', async () => {
-    const { items } = await get('/faculty/interventions')
-    expect(items.length).toBeGreaterThan(0)
-    for (const iv of items) {
-      expect(iv.status).toBeTruthy()
-      expect(iv.baseline).toBeDefined()
-      expect(iv.effectiveness).toBeDefined()
+  it('workspace intelligence datasets never include seeded authoritative exam attempts', async () => {
+    const workspace = await import('@/intelligence/datasets/workspace.js')
+    // The intelligence workspace holds assistant/conversation/dropdown content,
+    // never an authoritative ExamAttempt store (backend-owned).
+    for (const key of ['aiConversations', 'suggestedQuestions', 'quickPrompts', 'resourceRecommendations', 'generatedNotes', 'downloads', 'completedRecommendations']) {
+      expect(Array.isArray(workspace[key])).toBe(true)
     }
-  })
-
-  it('similar issues, practice, re-test and student intervention surfaces stay live', () => {
-    expect(server.hasRouteHandler('get', '/faculty/similar-issues')).toBe(true)
-    expect(server.hasRouteHandler('get', '/faculty/interventions/a1')).toBe(true)
-    expect(server.hasRouteHandler('get', '/student/interventions')).toBe(true)
-    expect(server.hasRouteHandler('post', '/student/interventions/a/practice-attempts')).toBe(true)
-    expect(server.hasRouteHandler('get', '/faculty/students/fs_x/interventions')).toBe(true)
+    // There is no exam/attempt export on this module at all.
+    expect(Object.keys(workspace).some((k) => /attempt|examAttempt|scoring/i.test(k))).toBe(false)
   })
 })
 
-describe('exam analysis surface', () => {
-  it('options + per-id analysis still answered', async () => {
-    const options = await get('/student/exam-analysis/options')
-    expect(options.items.length).toBeGreaterThan(0)
-    const byId = await get('/student/exam-analysis/some-exam')
-    expect(byId).toBeTruthy()
+describe('canonical ExamAttempt domain isolation (University/JEE/NEET)', () => {
+  it('classifies University / JEE / NEET contexts without leaking across filters', async () => {
+    const { classifyAttemptContext } = await import('@/intelligence/engine/exam-attempt-intelligence.js')
+    expect(classifyAttemptContext({ examMode: 'University', examFamily: null }).domain).toBe('university')
+    expect(classifyAttemptContext({ examMode: 'Competitive', examFamily: 'JEE' }).examFamily).toBe('JEE')
+    expect(classifyAttemptContext({ examMode: 'Competitive', examFamily: 'NEET' }).examFamily).toBe('NEET')
   })
 })

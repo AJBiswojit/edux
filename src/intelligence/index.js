@@ -413,20 +413,22 @@ export function computeDerivedIntelligence(extra = {}) {
   }
 }
 
-/** Fully assembled Student Intelligence snapshot (profile + base + derived). */
-export function getStudentIntelligence(extra = {}) {
+/** Fully assembled Student Intelligence snapshot (profile + base + derived).
+    Phase 11: base datasets are injected by the service layer (backend), so
+    this assembler never default-imports backend-owned seed data at runtime. */
+export function getStudentIntelligence(extra = {}, baseDatasets = datasets) {
   return {
     profile: masterStudentProfile,
-    datasets,
+    datasets: baseDatasets,
     derived: computeDerivedIntelligence(extra),
   }
 }
 
 /** Deterministic snapshot for caching/SSR — strips the timestamp. */
-export function getStudentIntelligenceSnapshot(extra = {}) {
+export function getStudentIntelligenceSnapshot(extra = {}, baseDatasets = datasets) {
   const derived = computeDerivedIntelligence(extra)
   delete derived.generatedAt
-  return { profile: masterStudentProfile, datasets, derived }
+  return { profile: masterStudentProfile, datasets: baseDatasets, derived }
 }
 
 export default getStudentIntelligence

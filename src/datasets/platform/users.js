@@ -1,167 +1,18 @@
 /**
- * Demo user directory (prototype sign-in accounts).
+ * Platform directory — backend-owned users/departments (DATA SHELL).
  *
- * DEMO_USERS are clearly-labelled demo credentials used by the prototype
- * auth flow — password for every demo account: Edux12345.
- * STUDENT_ROSTER / FACULTY_LIST / ADMIN_USERS / DEPARTMENTS are the
- * deterministic institution directory consumed by the intelligence layer.
+ * Phase 11 (Complete Physical Mock-Shim Removal): the authoritative student
+ * roster, faculty list, admin users and department catalogue were backend-
+ * owned entity seeds served by the (now-removed) in-browser prototype
+ * adapter. They are physically REMOVED — no seeded identities remain.
  *
- * CURRENT: frontend deterministic dataset · FUTURE: backend-owned (identity
- * + directory services). Authentication behaviour is unchanged in Phase 7.
+ * The Admin / Student / Faculty pages receive their people and department
+ * data from the service layer (backend). This module now only preserves the
+ * export contract (names) so the intelligence aggregation still resolves;
+ * every value is empty.
  */
-export const DEMO_USERS = [
-  {
-    id: 'u_stu_001',
-    role: 'student',
-    email: 'aarav.sharma@medixoedux.edu',
-    password: 'Edux12345',
-    fullName: 'Aarav Sharma',
-    firstName: 'Aarav',
-    avatar: null,
-    institution: 'Meridian Institute of Technology',
-    department: 'Computer Science & Engineering',
-    program: 'B.Tech — Computer Science',
-    semester: 'Semester 5',
-    rollNo: '21CS114',
-    admissionYear: 2024,
-    cgpa: 8.72,
-    phone: '+91 98765 43210',
-    city: 'Pune, Maharashtra',
-    bio: 'CS undergrad passionate about machine learning and system design. Competitive programmer, 3★ CodeChef, finalist at Smart India Hackathon.',
-    joinedAt: '2024-07-19',
-    links: { github: 'github.com/aaravs', linkedin: 'linkedin.com/in/aaravsharma' },
-  },
-  {
-    id: 'u_fac_001',
-    role: 'faculty',
-    email: 'meera.krishnan@medixoedux.edu',
-    password: 'Edux12345',
-    fullName: 'Dr. Meera Krishnan',
-    firstName: 'Meera',
-    avatar: null,
-    institution: 'Meridian Institute of Technology',
-    department: 'Computer Science & Engineering',
-    designation: 'Professor & Head, CSE',
-    specialization: 'Algorithms, Machine Learning',
-    phone: '+91 98220 11456',
-    officeHours: 'Mon & Wed, 3:00 – 5:00 PM',
-    joinedAt: '2014-01-06',
-    bio: 'PhD (IIT Bombay). 22+ years in academia, 60+ publications, 3 patents. Leads the AI & Systems Lab.',
-  },
-  {
-    id: 'u_fac_002',
-    role: 'faculty',
-    email: 'vikram.rao@medixoedux.edu',
-    password: 'Edux12345',
-    fullName: 'Prof. Vikram Rao',
-    firstName: 'Vikram',
-    avatar: null,
-    institution: 'Meridian Institute of Technology',
-    department: 'Electronics & Communication',
-    designation: 'Associate Professor',
-    specialization: 'VLSI Design, Embedded Systems',
-    joinedAt: '2016-06-01',
-  },
-  {
-    id: 'u_fac_003',
-    role: 'faculty',
-    email: 'priya.nair@medixoedux.edu',
-    password: 'Edux12345',
-    fullName: 'Dr. Priya Nair',
-    firstName: 'Priya',
-    avatar: null,
-    institution: 'Meridian Institute of Technology',
-    department: 'Mathematics',
-    designation: 'Assistant Professor',
-    specialization: 'Discrete Mathematics, Probability',
-    joinedAt: '2019-07-15',
-  },
-  {
-    id: 'u_par_001',
-    role: 'parent',
-    email: 'rajesh.sharma@medixoedux.edu',
-    password: 'Edux12345',
-    fullName: 'Rajesh Sharma',
-    firstName: 'Rajesh',
-    avatar: null,
-    institution: 'Meridian Institute of Technology',
-    wardId: 'u_stu_001',
-    wardName: 'Aarav Sharma',
-    phone: '+91 98111 22334',
-    city: 'Indore, Madhya Pradesh',
-    occupation: 'Sr. Engineering Manager, Infosys',
-  },
-  {
-    id: 'u_adm_001',
-    role: 'admin',
-    email: 'ananya.iyer@medixoedux.edu',
-    password: 'Edux12345',
-    fullName: 'Ananya Iyer',
-    firstName: 'Ananya',
-    avatar: null,
-    institution: 'Meridian Institute of Technology',
-    designation: 'Director, Digital Learning & Registrar (Systems)',
-    phone: '+91 99870 55678',
-    joinedAt: '2018-03-12',
-  },
-]
 
-export const STUDENT_ROSTER = [
-  { id: 's1', name: 'Aarav Sharma', roll: '21CS114', cgpa: 8.72, attendance: 92.4, internalMarks: 87, status: 'Good' },
-  { id: 's2', name: 'Ishita Gupta', roll: '21CS101', cgpa: 9.1, attendance: 96.8, internalMarks: 91, status: 'Excellent' },
-  { id: 's3', name: 'Rohan Verma', roll: '21CS102', cgpa: 7.4, attendance: 84.2, internalMarks: 72, status: 'At Risk' },
-  { id: 's4', name: 'Sneha Patil', roll: '21CS103', cgpa: 8.9, attendance: 94.1, internalMarks: 88, status: 'Excellent' },
-  { id: 's5', name: 'Karan Mehta', roll: '21CS104', cgpa: 6.8, attendance: 78.5, internalMarks: 65, status: 'At Risk' },
-  { id: 's6', name: 'Divya Krishnan', roll: '21CS105', cgpa: 9.3, attendance: 98.2, internalMarks: 94, status: 'Excellent' },
-  { id: 's7', name: 'Aditya Singh', roll: '21CS106', cgpa: 7.9, attendance: 88.9, internalMarks: 79, status: 'Good' },
-  { id: 's8', name: 'Pooja Reddy', roll: '21CS107', cgpa: 8.4, attendance: 91.3, internalMarks: 84, status: 'Good' },
-  { id: 's9', name: 'Nikhil Joshi', roll: '21CS108', cgpa: 6.2, attendance: 74.6, internalMarks: 58, status: 'At Risk' },
-  { id: 's10', name: 'Ananya Desai', roll: '21CS109', cgpa: 8.8, attendance: 93.7, internalMarks: 89, status: 'Excellent' },
-  { id: 's11', name: 'Vivek Kumar', roll: '21CS110', cgpa: 7.1, attendance: 81.2, internalMarks: 70, status: 'Good' },
-  { id: 's12', name: 'Ritika Sharma', roll: '21CS111', cgpa: 8.1, attendance: 89.8, internalMarks: 82, status: 'Good' },
-  { id: 's13', name: 'Arjun Nair', roll: '21CS112', cgpa: 7.6, attendance: 86.4, internalMarks: 76, status: 'Good' },
-  { id: 's14', name: 'Neha Kulkarni', roll: '21CS113', cgpa: 8.5, attendance: 92.0, internalMarks: 85, status: 'Good' },
-  { id: 's15', name: 'Sanjay Patel', roll: '21CS115', cgpa: 6.9, attendance: 79.8, internalMarks: 66, status: 'At Risk' },
-  { id: 's16', name: 'Kavya Menon', roll: '21CS116', cgpa: 9.0, attendance: 95.5, internalMarks: 90, status: 'Excellent' },
-]
-
-export const FACULTY_LIST = [
-  { id: 'f1', name: 'Dr. Meera Krishnan', dept: 'Computer Science', role: 'Professor', courses: 3, students: 312 },
-  { id: 'f2', name: 'Prof. Vikram Rao', dept: 'Electronics & Communication', role: 'Associate Professor', courses: 2, students: 180 },
-  { id: 'f3', name: 'Dr. Priya Nair', dept: 'Mathematics', role: 'Assistant Professor', courses: 4, students: 420 },
-  { id: 'f4', name: 'Dr. Arvind Kulkarni', dept: 'Computer Science', role: 'Professor', courses: 2, students: 210 },
-  { id: 'f5', name: 'Prof. Sunita Bose', dept: 'Mechanical', role: 'Associate Professor', courses: 3, students: 265 },
-  { id: 'f6', name: 'Dr. Farhan Ali', dept: 'Electrical', role: 'Professor', courses: 2, students: 190 },
-  { id: 'f7', name: 'Dr. Ritu Agarwal', dept: 'Business School', role: 'Associate Professor', courses: 3, students: 240 },
-  { id: 'f8', name: 'Prof. James Thomas', dept: 'Civil', role: 'Assistant Professor', courses: 2, students: 150 },
-]
-
-export const ADMIN_USERS = [
-  { id: 'au1', name: 'Aarav Sharma', email: 'aarav.sharma@medixoedux.edu', role: 'Student', dept: 'CSE', status: 'Active', lastActive: '2 min ago' },
-  { id: 'au2', name: 'Dr. Meera Krishnan', email: 'meera.krishnan@medixoedux.edu', role: 'Faculty', dept: 'CSE', status: 'Active', lastActive: '12 min ago' },
-  { id: 'au3', name: 'Rajesh Sharma', email: 'rajesh.sharma@medixoedux.edu', role: 'Parent', dept: '—', status: 'Active', lastActive: '1 hr ago' },
-  { id: 'au4', name: 'Ananya Iyer', email: 'ananya.iyer@medixoedux.edu', role: 'Admin', dept: 'Administration', status: 'Active', lastActive: 'now' },
-  { id: 'au5', name: 'Ishita Gupta', email: 'ishita.gupta@medixoedux.edu', role: 'Student', dept: 'CSE', status: 'Active', lastActive: '8 min ago' },
-  { id: 'au6', name: 'Rohan Verma', email: 'rohan.verma@medixoedux.edu', role: 'Student', dept: 'CSE', status: 'Suspended', lastActive: '3 days ago' },
-  { id: 'au7', name: 'Prof. Vikram Rao', email: 'vikram.rao@medixoedux.edu', role: 'Faculty', dept: 'ECE', status: 'Active', lastActive: '35 min ago' },
-  { id: 'au8', name: 'Dr. Priya Nair', email: 'priya.nair@medixoedux.edu', role: 'Faculty', dept: 'Mathematics', status: 'Active', lastActive: '1 hr ago' },
-  { id: 'au9', name: 'Sneha Patil', email: 'sneha.patil@medixoedux.edu', role: 'Student', dept: 'CSE', status: 'Active', lastActive: '22 min ago' },
-  { id: 'au10', name: 'Karan Mehta', email: 'karan.mehta@medixoedux.edu', role: 'Student', dept: 'CSE', status: 'Invited', lastActive: '—' },
-  { id: 'au11', name: 'Dr. Arvind Kulkarni', email: 'arvind.kulkarni@medixoedux.edu', role: 'Faculty', dept: 'CSE', status: 'Active', lastActive: '50 min ago' },
-  { id: 'au12', name: 'Prof. Sunita Bose', email: 'sunita.bose@medixoedux.edu', role: 'Faculty', dept: 'Mechanical', status: 'Active', lastActive: '2 hrs ago' },
-  { id: 'au13', name: 'Kavya Menon', email: 'kavya.menon@medixoedux.edu', role: 'Student', dept: 'CSE', status: 'Active', lastActive: '5 min ago' },
-  { id: 'au14', name: 'Nikhil Joshi', email: 'nikhil.joshi@medixoedux.edu', role: 'Student', dept: 'CSE', status: 'Inactive', lastActive: '2 weeks ago' },
-  { id: 'au15', name: 'Dr. Farhan Ali', email: 'farhan.ali@medixoedux.edu', role: 'Faculty', dept: 'Electrical', status: 'Active', lastActive: '4 hrs ago' },
-  { id: 'au16', name: 'Dr. Ritu Agarwal', email: 'ritu.agarwal@medixoedux.edu', role: 'Faculty', dept: 'Business School', status: 'Active', lastActive: '1 hr ago' },
-]
-
-export const DEPARTMENTS = [
-  { id: 'd1', name: 'Computer Science & Engineering', code: 'CSE', students: 2480, faculty: 82, programs: 4, hod: 'Dr. Meera Krishnan', placement: 96.2 },
-  { id: 'd2', name: 'Electronics & Communication', code: 'ECE', students: 1930, faculty: 71, programs: 3, hod: 'Prof. Vikram Rao', placement: 91.8 },
-  { id: 'd3', name: 'Mechanical Engineering', code: 'ME', students: 1640, faculty: 64, programs: 3, hod: 'Prof. Sunita Bose', placement: 86.4 },
-  { id: 'd4', name: 'Electrical Engineering', code: 'EE', students: 1420, faculty: 58, programs: 3, hod: 'Dr. Farhan Ali', placement: 89.1 },
-  { id: 'd5', name: 'Civil Engineering', code: 'CE', students: 1180, faculty: 49, programs: 2, hod: 'Prof. James Thomas', placement: 78.6 },
-  { id: 'd6', name: 'Mathematics & Sciences', code: 'MATH', students: 860, faculty: 41, programs: 2, hod: 'Dr. Priya Nair', placement: 84.9 },
-  { id: 'd7', name: 'School of Business', code: 'MBA', students: 1240, faculty: 52, programs: 3, hod: 'Dr. Ritu Agarwal', placement: 93.5 },
-  { id: 'd8', name: 'School of Design & Media', code: 'DES', students: 730, faculty: 33, programs: 2, hod: 'Prof. Aditi Sen', placement: 88.2 },
-]
+export const STUDENT_ROSTER = []
+export const FACULTY_LIST = []
+export const ADMIN_USERS = []
+export const DEPARTMENTS = []
