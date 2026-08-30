@@ -232,7 +232,7 @@ export function generateExecResponse(question, derived) {
       /* Unsupported → helpful fallback (never "offline") */
       r.title = 'How I can help'
       r.summary = 'I can currently help with institutional performance, student risk, faculty performance, department analysis, attendance, assessments, outcomes and executive reporting.'
-      r.insights = ['Ask about the institution, a department, students, faculty, assessments or outcomes — my answers use the live intelligence snapshot.']
+      r.insights = ['Ask about the institution, a department, students, faculty, assessments or outcomes — my answers use the latest institution data.']
       r.recommendations = ['Try one of the suggested prompts below.']
       r.actions = [{ label: 'View Institution Intelligence', to: '/admin/institution-intelligence' }, { label: 'Open Reports', to: '/admin/reports' }]
       r.intent = 'unsupported'

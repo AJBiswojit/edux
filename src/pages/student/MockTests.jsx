@@ -11,8 +11,8 @@ function MockTests() {
     <div>
       <PageHeader
         eyebrow="Academics · Mock Tests"
-        title="Mock tests · Backend-Ready"
-        description="Timed, scored and analysed — fetched from backend via GET /student/mock-tests, no seeded fallback."
+        title="Mock tests"
+        description="Timed, scored and analysed mock tests."
         breadcrumbs={[{ label: 'Student' }, { label: 'Mock Tests' }]}
       />
       <MockTestsContent />

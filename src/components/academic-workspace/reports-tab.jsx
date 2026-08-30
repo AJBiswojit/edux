@@ -52,7 +52,7 @@ function ReportsTab({ derived, profile, datasets }) {
           <div className="bg-dots absolute inset-0 opacity-15" />
           <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">Academic snapshot</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">Academic summary</p>
               <h2 className="mt-1 font-display text-xl font-bold">MediXO EduX · Academic Intelligence Report</h2>
             </div>
             <Badge className="bg-white/15 text-white ring-white/30"><Sparkles className="h-3 w-3" /> AI generated</Badge>

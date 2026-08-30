@@ -43,7 +43,7 @@ function Portfolio() {
         breadcrumbs={[{ label: 'Student' }, { label: 'Digital Portfolio' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Portfolio PDF export is not available yet.')}><Download className="h-4 w-4" /> Export portfolio</Button>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Not available yet', 'Portfolio PDF export is not available yet.')}><Download className="h-4 w-4" /> Export portfolio</Button>
             <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print portfolio</Button>
             <Button asChild size="sm"><Link to="/student/mentor"><Sparkles className="h-4 w-4" /> Improve with AI</Link></Button>
           </>
@@ -278,7 +278,7 @@ function Portfolio() {
 
       {/* resume preview */}
       <Card className="p-6">
-        <p className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white"><FileText className="h-4 w-4 text-indigo-500" /> Resume snapshot</p>
+        <p className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white"><FileText className="h-4 w-4 text-indigo-500" /> Resume summary</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Headline</p>
@@ -298,8 +298,8 @@ function Portfolio() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Resume PDF preview is not available yet.')}><FileText className="h-3.5 w-3.5" /> View resume</Button>
-          <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Portfolio PDF export is not available yet.')}><Download className="h-3.5 w-3.5" /> Export</Button>
+          <Button variant="outline" size="sm" onClick={() => toast.info('Not available yet', 'Resume PDF preview is not available yet.')}><FileText className="h-3.5 w-3.5" /> View resume</Button>
+          <Button variant="outline" size="sm" onClick={() => toast.info('Not available yet', 'Portfolio PDF export is not available yet.')}><Download className="h-3.5 w-3.5" /> Export</Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /> Print</Button>
           {portfolio.profiles?.github ? <a href={`https://${portfolio.profiles.github}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-[11.5px] font-bold text-slate-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300"><Github className="h-3.5 w-3.5" /> GitHub <ExternalLink className="h-3 w-3" /></a> : null}
           {portfolio.profiles?.linkedin ? <a href={`https://${portfolio.profiles.linkedin}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-[11.5px] font-bold text-slate-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300"><Linkedin className="h-3.5 w-3.5" /> LinkedIn <ExternalLink className="h-3 w-3" /></a> : null}

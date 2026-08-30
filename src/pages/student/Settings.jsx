@@ -64,10 +64,10 @@ function Settings() {
         contact={`${data.profile?.email || ''} · ${data.profile?.phone || ''}`}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Profile editing is not available yet.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Not available yet', 'Profile editing is not available yet.')}>
               <User className="h-4 w-4" /> Edit
             </Button>
-            <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Data export is not available yet — no export endpoint.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Not available yet', 'Data export is not available yet.')}>
               <Download className="h-4 w-4" /> Export data
             </Button>
           </>
@@ -192,7 +192,7 @@ function Settings() {
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Delete my account</p>
                 <p className="text-xs text-slate-400">Permanently remove your account and all learning data. This cannot be undone.</p>
               </div>
-              <Button variant="destructive" size="sm" onClick={() => toast.error('Action blocked', 'In this demo, account deletion is disabled. Contact your institution.')}>
+              <Button variant="destructive" size="sm" onClick={() => toast.error('Action blocked', 'Account deletion is disabled. Contact your institution.')}>
                 Delete account
               </Button>
             </div>

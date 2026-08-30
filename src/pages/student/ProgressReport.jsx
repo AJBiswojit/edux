@@ -326,7 +326,7 @@ function ProgressReport() {
       <PageHeader
         eyebrow="AI Academic Intelligence · Progress Report"
         title="AI Academic Progress Report"
-        description="A formal, document-ready progress report combining your university, competitive, attendance, assessment, DNA and learning data into one understandable snapshot."
+        description="A formal, document-ready progress report combining your university, competitive, attendance, assessment, DNA and learning data into one understandable summary."
         breadcrumbs={[{ label: 'Student' }, { label: 'AI Academic Progress Report' }]}
         actions={
           <>
@@ -354,7 +354,7 @@ function ProgressReport() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><FileBarChart className="h-5 w-5 text-indigo-500" /> Report preview</DialogTitle>
           </DialogHeader>
-          <ReportDocument report={r} onDownload={() => { setPreviewOpen(false); toast.info('Download via Print', 'Choose "Save as PDF" in the print dialog — no backend PDF is generated (prototype).'); window.print() }} onPrint={() => window.print()} onClose={() => setPreviewOpen(false)} />
+          <ReportDocument report={r} onDownload={() => { setPreviewOpen(false); toast.info('Download via Print', 'Choose "Save as PDF" in the print dialog — the report is generated in your browser.'); window.print() }} onPrint={() => window.print()} onClose={() => setPreviewOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>

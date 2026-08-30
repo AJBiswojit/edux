@@ -15,7 +15,7 @@ function AiConfig() {
 
   const toggle = (key) => {
     setGuardrails((prev) => ({ ...(prev ?? data.guardrails), [key]: !(prev ?? data.guardrails)[key] }))
-    toast.info('Unavailable', 'BACKEND GAP — AI guardrails are not persisted yet.')
+    toast.info('Unavailable', 'AI guardrails cannot be saved yet.')
   }
 
   if (isLoading) return <DashboardSkeleton cards={2} />
@@ -129,10 +129,10 @@ function AiConfig() {
           </div>
           <div>
             <p className="text-[14.5px] font-bold">AI budget this period: not tracked</p>
-            <p className="text-xs text-white/80">BACKEND GAP — AI cost reporting is not operational yet.</p>
+            <p className="text-xs text-white/80">AI cost reporting is not available yet.</p>
           </div>
         </div>
-        <Button variant="secondary" className="bg-white text-indigo-700 hover:bg-indigo-50" onClick={() => toast.info('Unavailable', 'BACKEND GAP — AI cost reporting is not operational yet.')}>
+        <Button variant="secondary" className="bg-white text-indigo-700 hover:bg-indigo-50" onClick={() => toast.info('Unavailable', 'AI cost reporting is not available yet.')}>
           <Gauge className="h-4 w-4" /> Cost report
         </Button>
       </div>

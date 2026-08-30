@@ -130,7 +130,7 @@ function Assignments() {
                     <Button size="sm" className="flex-1" onClick={() => setSubmitFor(a)}>
                       <UploadCloud className="h-4 w-4" /> Submit work
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => toast.info('BACKEND GAP', 'AI assignment drafting is not available yet.')}>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => toast.info('Not available yet', 'AI assignment drafting is not available yet.')}>
                       <Sparkles className="h-4 w-4 text-indigo-500" /> AI draft
                     </Button>
                   </div>

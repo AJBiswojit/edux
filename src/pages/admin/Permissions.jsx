@@ -35,7 +35,7 @@ function Permissions() {
         description="Granular capability control per module and role. Changes take effect instantly and are audit-logged."
         breadcrumbs={[{ label: 'Admin' }, { label: 'Permissions' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — permission matrix is not persisted yet.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'Permission updates cannot be saved yet.')}>
             <KeyRound className="h-4 w-4" /> Save changes
           </Button>
         }

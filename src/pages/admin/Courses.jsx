@@ -70,7 +70,7 @@ function Courses() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'Courses' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'BACKEND GAP — catalogue export is not implemented.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'Catalogue export is not available yet.')}>
               <Download className="h-4 w-4" /> Export
             </Button>
             <Button size="sm" onClick={async () => {

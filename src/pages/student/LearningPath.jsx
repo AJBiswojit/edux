@@ -97,7 +97,7 @@ function LearningPath() {
               <div className="mt-3.5 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3.5 text-[11px] font-semibold text-slate-400 dark:border-slate-800">
                 <span className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-indigo-500" /> {step.effort}</span>
                 <Badge variant={IMPACT_STYLES[step.impact]} size="sm">{step.impact} impact</Badge>
-                <Button size="sm" variant="ghost" className="ml-auto" onClick={() => toast.info('BACKEND GAP', 'Planner writes are not available yet — no planner mutation exists.')}>
+                <Button size="sm" variant="ghost" className="ml-auto" onClick={() => toast.info('Not available yet', 'Adding this to your planner is not available yet.')}>
                   Add to planner
                 </Button>
               </div>

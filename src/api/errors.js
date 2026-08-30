@@ -55,7 +55,7 @@ export function normalizeAxiosError(error) {
   const fromBody = messageFromPayload(error.response?.data)
   if (fromBody) error.message = fromBody
   else if (!error.response) {
-    error.message = error.message || 'Network error — connect the EduX backend'
+    error.message = error.message || 'Network error — please check your connection and try again'
   }
   return error
 }

@@ -28,7 +28,7 @@ export function PaperMetaChips({ paper }) {
   const qCount = paper.questions ?? paper.selectedQuestionIds?.length ?? paper.questionList?.length ?? 0
   return (
     <div className="mt-3.5 flex flex-wrap gap-2 text-[11px] font-medium text-slate-400">
-      <span className="rounded-full bg-slate-50 px-2.5 py-1 dark:bg-slate-800/60">{qCount} questions (ID-based)</span>
+      <span className="rounded-full bg-slate-50 px-2.5 py-1 dark:bg-slate-800/60">{qCount} questions</span>
       <span className="rounded-full bg-slate-50 px-2.5 py-1 dark:bg-slate-800/60">{paper.totalMarks} marks</span>
       <span className="rounded-full bg-slate-50 px-2.5 py-1 dark:bg-slate-800/60">{paper.duration} min</span>
       {paper.coverage && <span className="rounded-full bg-slate-50 px-2.5 py-1 dark:bg-slate-800/60">CO coverage {paper.coverage}%</span>}
@@ -77,7 +77,7 @@ export function PaperCard({
           <span>Created {formatDate(paper.created ?? paper.generated, 'MMM d, yyyy')}</span>
           <span>· Modified {formatDate(paper.modified ?? paper.generated, 'MMM d, yyyy')}</span>
           <span>· {paper.faculty || '—'}</span>
-          <span>· {qCount} IDs</span>
+          <span>· {qCount} questions</span>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -145,7 +145,7 @@ export function PaperPreviewDialog({ open, onOpenChange, paper }) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-indigo-500" /> {paper?.title}</DialogTitle>
           <DialogDescription>
-            {paper?.course ? `${paper.course} · ` : ''}{paper?.totalMarks} marks · {paper?.duration} min · {qCount} questions · ID-based builder · created {formatDate(paper?.created ?? paper?.generated, 'MMM d, yyyy')}
+            {paper?.course ? `${paper.course} · ` : ''}{paper?.totalMarks} marks · {paper?.duration} min · {qCount} questions · created {formatDate(paper?.created ?? paper?.generated, 'MMM d, yyyy')}
           </DialogDescription>
         </DialogHeader>
         <div className="-mt-1 mb-1 flex flex-wrap items-center gap-1.5">
@@ -155,18 +155,18 @@ export function PaperPreviewDialog({ open, onOpenChange, paper }) {
           {paper?.exam && <Badge variant="outline" size="sm">{paper.exam}</Badge>}
           {paper?.subject && <Badge variant="outline" size="sm">{paper.subject}</Badge>}
           {paper?.examType && <Badge variant="outline" size="sm">{paper.examType}</Badge>}
-          <Badge variant="secondary" size="sm">IDs: {selectedIds.length || qCount}</Badge>
+          <Badge variant="secondary" size="sm">Questions: {selectedIds.length || qCount}</Badge>
         </div>
 
         <div className="max-h-[50vh] space-y-3 overflow-y-auto scrollbar-thin pr-1">
           {selectedIds.length > 0 && !hasQuestions && (
             <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
-              <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">Paper stores selectedQuestionIds only (backend-ready)</p>
+              <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">Question details are not available for this paper yet</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {selectedIds.slice(0, 20).map((id) => <Badge key={id} variant="outline" size="sm">{id}</Badge>)}
                 {selectedIds.length > 20 && <Badge variant="secondary" size="sm">+{selectedIds.length - 20} more</Badge>}
               </div>
-              <p className="mt-2 text-[11px] text-slate-400">Full question content is fetched from backend via GET /faculty/question-bank with these IDs when needed. No full objects stored in paper.</p>
+              <p className="mt-2 text-[11px] text-slate-400">These are the questions included in the paper.</p>
             </div>
           )}
           {hasQuestions ? questionList.map((q, qi) => (
@@ -186,7 +186,7 @@ export function PaperPreviewDialog({ open, onOpenChange, paper }) {
               )}
             </div>
           )) : selectedIds.length === 0 ? (
-            <p className="py-8 text-center text-xs text-slate-400">No questions stored — paper uses ID-based builder. Select from backend bank.</p>
+            <p className="py-8 text-center text-xs text-slate-400">No questions in this paper yet. Select questions from the question bank.</p>
           ) : null}
         </div>
 
@@ -195,13 +195,13 @@ export function PaperPreviewDialog({ open, onOpenChange, paper }) {
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Marking scheme (derived)</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {markingScheme.slice(0, 6).map((m) => <Badge key={m.type} variant="outline" size="sm">{m.type}: +{m.marks}/−{m.negative}</Badge>)}
-              {markingScheme.length === 0 && <span className="text-[11px] text-slate-400">Derived from backend questions when available</span>}
+              {markingScheme.length === 0 && <span className="text-[11px] text-slate-400">Derived from the paper questions when available</span>}
             </div>
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Backend contract</p>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Paper creation uses selectedQuestionIds only. No questionList with full objects. POST /faculty/paper-generator/papers with domain+examFamily isolation.</p>
-            <Button size="sm" variant="ghost" className="mt-1 p-0 text-indigo-600 dark:text-indigo-300" onClick={() => toast.success('Backend contract', 'selectedQuestionIds only, domain+examFamily preserved.')}>View contract</Button>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Paper summary</p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Every paper keeps its selected questions together with its domain and exam family.</p>
+            <Button size="sm" variant="ghost" className="mt-1 p-0 text-indigo-600 dark:text-indigo-300" onClick={() => toast.success('Paper summary', 'Selected questions, domain and exam family are saved with the paper.')}>View details</Button>
           </div>
         </div>
         <DialogFooter className="flex-wrap gap-2">
@@ -216,10 +216,10 @@ export function PaperPreviewDialog({ open, onOpenChange, paper }) {
                 await publishPaper(paper.id)
                 toast.success('Published', `${paper?.title} is now available to students.`)
               } catch (e) {
-                toast.error('Could not publish', e?.response?.data?.detail ?? e?.message ?? 'Backend publish failed.')
+                toast.error('Could not publish', e?.response?.data?.detail ?? e?.message ?? 'Could not publish this paper.')
               }
             }}
-          ><Send className="h-4 w-4" /> {publishing ? 'Publishing…' : 'Publish via backend'}</Button>
+          ><Send className="h-4 w-4" /> {publishing ? 'Publishing…' : 'Publish'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -232,7 +232,7 @@ export function PaperDeleteDialog({ open, onOpenChange, paper, onConfirm, deleti
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Trash2 className="h-5 w-5 text-rose-500" /> Delete generated paper?</DialogTitle>
-          <DialogDescription>This permanently removes <span className="font-bold text-slate-700 dark:text-slate-200">{paper?.title}</span> ({paper?.id}) via backend.</DialogDescription>
+          <DialogDescription>This permanently removes <span className="font-bold text-slate-700 dark:text-slate-200">{paper?.title}</span>.</DialogDescription>
         </DialogHeader>
         <div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-4 text-[12px] leading-relaxed text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/5 dark:text-rose-300">
           {paper?.questions ?? paper?.selectedQuestionIds?.length ?? 0} questions · {paper?.totalMarks} marks · {paper?.duration} min · created {formatDate(paper?.created ?? paper?.generated, 'MMM d, yyyy')}
@@ -273,7 +273,7 @@ export function SharePaperDialog({ paper, open, onOpenChange }) {
         payload: { audience, recipients: audience === 'Entire class' ? roster.map((r) => r.name) : selected, message },
       })
       if (res?.ok || res?.share) {
-        toast.success('Paper shared via backend', `"${paper.title}" shared to ${audience === 'Entire class' ? 'entire class' : `${selected.length} students`} via backend.`)
+        toast.success('Paper shared', `"${paper.title}" shared to ${audience === 'Entire class' ? 'entire class' : `${selected.length} students`}.`)
         onOpenChange(false)
         setMessage('')
         setSelected([])
@@ -281,7 +281,7 @@ export function SharePaperDialog({ paper, open, onOpenChange }) {
     } catch (e) {
       const isBackendDown = !e?.response || e?.response?.status >= 500
       if (isBackendDown) {
-        toast.error('Connect the EduX backend', 'Sharing requires backend — POST /faculty/paper-generator/papers/:id/share')
+        toast.error('Could not share', 'Sharing is temporarily unavailable. Please try again later.')
       } else {
         toast.error('Could not share', e?.response?.data?.detail ?? e?.response?.data?.message ?? 'Please try again.')
       }
@@ -294,12 +294,12 @@ export function SharePaperDialog({ paper, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto scrollbar-thin">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-teal-500" /> Share paper via backend</DialogTitle>
-          <DialogDescription>{paper?.title} · {paper?.domain ?? paper?.mode ?? 'University'} · {paper?.totalMarks} marks · backend share, no localStorage.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-teal-500" /> Share paper</DialogTitle>
+          <DialogDescription>{paper?.title} · {paper?.domain ?? paper?.mode ?? 'University'} · {paper?.totalMarks} marks.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Audience (backend)</p>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Audience</p>
             <div className="flex flex-wrap gap-1.5">
               {['Entire class', 'Selected students', 'Batch', 'Course group'].map((a) => (
                 <button key={a} onClick={() => setAudience(a)} className={`rounded-full px-3.5 py-1.5 text-[11.5px] font-bold transition-all ${audience === a ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-md shadow-teal-500/25' : 'border border-slate-200 text-slate-500 hover:border-teal-300 dark:border-slate-700 dark:text-slate-400'}`}>{a}</button>
@@ -328,7 +328,7 @@ export function SharePaperDialog({ paper, open, onOpenChange }) {
         </div>
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleShare} disabled={sharing || !paperSendReadiness(paper).canSend} className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:brightness-110">{sharing ? 'Sharing via backend…' : <><Send className="h-4 w-4" /> Share via backend</>}</Button>
+          <Button onClick={handleShare} disabled={sharing || !paperSendReadiness(paper).canSend} className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:brightness-110">{sharing ? 'Sharing…' : <><Send className="h-4 w-4" /> Share</>}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -356,7 +356,7 @@ export function PaperQualityPanel({ questions }) {
   return (
     <div className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
       <p className="flex items-center gap-2 text-[13px] font-bold text-slate-900 dark:text-white"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Paper Quality (live)</p>
-      <p className="mt-0.5 text-[11px] text-slate-400">Derived from {n} selected questions (ID-based).</p>
+      <p className="mt-0.5 text-[11px] text-slate-400">Derived from {n} selected questions.</p>
       <div className="mt-3 space-y-1.5">
         {Object.entries(byDiff).map(([d, c]) => <div key={d} className="flex justify-between text-[11px]"><span>{d}</span><span className="font-bold">{c}</span></div>)}
       </div>
@@ -372,14 +372,14 @@ export function PaperPrintPreview({ paper, open, onOpenChange }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] max-w-3xl overflow-y-auto scrollbar-thin">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Printer className="h-5 w-5 text-indigo-500" /> Paper preview · ID-based</DialogTitle>
-          <DialogDescription>Backend-ready preview — selectedQuestionIds only, no localStorage.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2"><Printer className="h-5 w-5 text-indigo-500" /> Paper preview</DialogTitle>
+          <DialogDescription>Review the paper before printing or sharing.</DialogDescription>
         </DialogHeader>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
           <p className="text-center text-[15px] font-bold">{paper.title}</p>
-          <p className="mt-1 text-center text-[11px] text-slate-500">{paper.domain ?? paper.mode} · {paper.totalMarks} marks · {paper.duration} min · {selectedIds.length || questionList.length} questions (ID-based)</p>
+          <p className="mt-1 text-center text-[11px] text-slate-500">{paper.domain ?? paper.mode} · {paper.totalMarks} marks · {paper.duration} min · {selectedIds.length || questionList.length} questions</p>
           <div className="mt-4 space-y-2">
-            {questionList.length > 0 ? questionList.map((q, i) => <p key={q.id} className="text-[12px]"><span className="font-bold">{i + 1}.</span> {q.text} [{q.marks} marks]</p>) : selectedIds.map((id, i) => <p key={id} className="text-[12px]"><span className="font-bold">{i + 1}.</span> {id} (fetch from backend)</p>)}
+            {questionList.length > 0 ? questionList.map((q, i) => <p key={q.id} className="text-[12px]"><span className="font-bold">{i + 1}.</span> {q.text} [{q.marks} marks]</p>) : selectedIds.map((id, i) => <p key={id} className="text-[12px]"><span className="font-bold">{i + 1}.</span> {id}</p>)}
             {questionList.length === 0 && selectedIds.length === 0 && <p className="text-[11px] text-slate-400">No questions selected.</p>}
           </div>
         </div>
@@ -396,9 +396,9 @@ export function ShareHistoryList({ paperId }) {
   const items = (data?.items || []).filter((row) => row.paperId === paperId)
   return (
     <div className="rounded-2xl border border-dashed border-slate-200 p-4 dark:border-slate-700">
-      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400"><Database className="h-3 w-3" /> Share history · Backend</p>
+      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400"><Database className="h-3 w-3" /> Share history</p>
       {items.length === 0 ? (
-        <p className="mt-2 text-[11px] text-slate-400">No shares recorded for this paper. Sharing publishes through the examination spine and writes a paper_shares row.</p>
+        <p className="mt-2 text-[11px] text-slate-400">No shares recorded for this paper yet.</p>
       ) : (
         <ul className="mt-2 space-y-1.5">
           {items.map((row) => (

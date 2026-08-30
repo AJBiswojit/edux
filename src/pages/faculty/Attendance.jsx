@@ -60,7 +60,7 @@ function Attendance() {
         })
       }
     } catch (e) {
-      toast.error('Could not open class sheet', e?.response?.data?.detail ?? e?.message ?? 'Backend session create failed.')
+      toast.error('Could not open class sheet', e?.response?.data?.detail ?? e?.message ?? 'Please try again.')
     }
   }
 
@@ -77,7 +77,7 @@ function Attendance() {
         setMarking(null)
       }
     } catch (e) {
-      toast.error('Could not save attendance', e?.response?.data?.detail ?? e?.message ?? 'Backend mark failed.')
+      toast.error('Could not save attendance', e?.response?.data?.detail ?? e?.message ?? 'Please try again.')
     }
   }
 

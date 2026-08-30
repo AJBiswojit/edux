@@ -35,7 +35,7 @@ function UploadDialog({ open, onOpenChange }) {
           <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
             <Upload className="mx-auto h-8 w-8 text-slate-300" />
             <p className="mt-2 text-[12px] font-semibold text-slate-500">Drop a file or click to browse</p>
-            <p className="mt-1 text-[10.5px] text-slate-400">Frontend prototype — files are NOT parsed. The name maps to a curated demo source profile.</p>
+            <p className="mt-1 text-[10.5px] text-slate-400">Prototype — files are NOT parsed. The name maps to a curated demo source profile.</p>
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">
@@ -131,7 +131,7 @@ function AIQuestionStudio() {
       <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
 
       <p className="mt-6 rounded-2xl bg-slate-50 px-4 py-3 text-[11px] font-medium leading-relaxed text-slate-400 dark:bg-slate-800/60">
-        <span className="font-bold text-slate-500 dark:text-slate-300">Prototype boundaries:</span> source upload processing, content analysis, question generation and quality scores are all simulated/deterministic ("Prototype Content Intelligence") — no real AI model, no file parsing, no backend. Demo sources are original educational content, never extracts from copyrighted textbooks; generated questions are never labelled as PYQs.
+        <span className="font-bold text-slate-500 dark:text-slate-300">Prototype boundaries:</span> source upload processing, content analysis, question generation and quality scores are all simulated/deterministic ("Prototype Content Intelligence") — no real AI model and no file parsing. Demo sources are original educational content, never extracts from copyrighted textbooks; generated questions are never labelled as PYQs.
       </p>
     </div>
   )

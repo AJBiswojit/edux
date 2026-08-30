@@ -72,7 +72,7 @@ function AIWorkspace() {
 
   const execActions = [
     { label: 'Copy', icon: Copy, onClick: () => { const text = `${summary.overall.status}\n\nPositives:\n${summary.positives.join('\n')}\n\nAttention:\n${summary.attention.join('\n')}\n\nRisks:\n${summary.risks.join('\n')}\n\nRecommendations:\n${summary.recommendations.join('\n')}`; navigator.clipboard?.writeText(text).catch(() => {}) } },
-    { label: 'Regenerate', icon: RefreshCw, onClick: () => toast.info('Summary refreshed', 'Recomputed from the live intelligence snapshot.') },
+    { label: 'Regenerate', icon: RefreshCw, onClick: () => toast.info('Summary refreshed', 'Recomputed from the latest institution data.') },
     { label: 'Save insight', icon: Save, onClick: () => handleSaveInsight({ title: 'Executive Summary', summary: summary.overall.status, risks: summary.risks, nav: null }) },
     { label: 'View report', icon: FileBarChart, onClick: () => { window.history.pushState({}, '', '/admin/reports'); window.dispatchEvent(new PopStateEvent('popstate')) } },
   ]
@@ -102,7 +102,7 @@ function AIWorkspace() {
             {weakest && <span className="ml-2">· Current Priority: <span className="font-bold">{weakest.label}</span> requires attention.</span>}
           </p>
         </div>
-        <Badge className="bg-white/15 text-white ring-white/30">Answers from the intelligence snapshot</Badge>
+        <Badge className="bg-white/15 text-white ring-white/30">Answers from live institution data</Badge>
       </Card>
 
       <Tabs value={tab} onValueChange={setTab}>

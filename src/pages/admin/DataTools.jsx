@@ -26,7 +26,7 @@ function DataTools() {
       toast.error('No file selected', 'Drop a CSV, XLSX or JSON file first.')
       return
     }
-    toast.info('Unavailable', 'BACKEND GAP — data import is not operational yet.')
+    toast.info('Unavailable', 'Data import is not available yet.')
   }
 
   const statusMeta = { Ready: ['success', CheckCircle2], Queued: ['secondary', RefreshCw], Processing: ['info', RefreshCw], Completed: ['success', CheckCircle2], Failed: ['danger', XCircle] }
@@ -140,7 +140,7 @@ function DataTools() {
                   </div>
                   <h3 className="mt-3 font-mono text-[13px] font-bold text-slate-900 dark:text-white">{t.name}</h3>
                   <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">{t.desc}</p>
-                  <Button size="sm" variant="outline" className="mt-3.5 w-full" onClick={() => toast.info('Unavailable', 'BACKEND GAP — import templates are not operational yet.')}>
+                  <Button size="sm" variant="outline" className="mt-3.5 w-full" onClick={() => toast.info('Unavailable', 'Import templates are not available yet.')}>
                     <Download className="h-3.5 w-3.5" /> Download template
                   </Button>
                 </Card>

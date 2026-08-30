@@ -29,7 +29,7 @@ function MockTestsContent() {
       <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-700">
         <Database className="mx-auto h-8 w-8 text-slate-300" />
         <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">{isBackendDown ? 'No mock tests available' : 'Could not load mock tests'}</p>
-        <p className="mt-1 text-xs text-slate-400">{isBackendDown ? 'Connect the EduX backend — GET /student/mock-tests → backend DB. No seeded fallback.' : String(error?.message ?? 'Error')}</p>
+        <p className="mt-1 text-xs text-slate-400">{isBackendDown ? 'Mock tests are temporarily unavailable. Please try again later.' : String(error?.message ?? 'Error')}</p>
         <Button size="sm" variant="outline" className="mt-4" onClick={() => refetch()}>Retry</Button>
       </div>
     )
@@ -52,7 +52,7 @@ function MockTestsContent() {
           <motion.div key={s.label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={`rounded-3xl bg-gradient-to-br ${s.grad} p-5 text-white shadow-lg`}>
             <s.icon className="h-5 w-5 opacity-80" />
             <p className="mt-2 font-display text-2xl font-bold">{s.value}</p>
-            <p className="text-[11px] font-medium text-white/75">{s.label} · backend only</p>
+            <p className="text-[11px] font-medium text-white/75">{s.label}</p>
           </motion.div>
         ))}
       </div>
@@ -70,7 +70,7 @@ function MockTestsContent() {
         <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
           <Database className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No {cat === 'University' ? 'university' : cat === 'Competitive' ? 'competitive' : ''} mock tests available</p>
-          <p className="mt-1 text-xs text-slate-400">Backend returned 0 items for GET /student/mock-tests. No seeded fallback.</p>
+          <p className="mt-1 text-xs text-slate-400">New mock tests will appear here as soon as they are published.</p>
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
@@ -118,8 +118,8 @@ function MockTestsContent() {
 
       <Dialog open={!!preview} onOpenChange={(v) => !v && setPreview(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{preview?.title}</DialogTitle><DialogDescription>{preview?.status === 'Scheduled' ? 'Ready when you are — backend will provide questions without answers.' : 'Analysis from backend.'}</DialogDescription></DialogHeader>
-          <DialogFooter><Button variant="outline" onClick={() => setPreview(null)}>Close</Button><Button onClick={() => setPreview(null)}>{preview?.status === 'Scheduled' ? 'Begin test (backend)' : 'Open planner'}</Button></DialogFooter>
+          <DialogHeader><DialogTitle>{preview?.title}</DialogTitle><DialogDescription>{preview?.status === 'Scheduled' ? 'Ready when you are — questions are provided without answers.' : 'Detailed analysis for this attempt.'}</DialogDescription></DialogHeader>
+          <DialogFooter><Button variant="outline" onClick={() => setPreview(null)}>Close</Button><Button onClick={() => setPreview(null)}>{preview?.status === 'Scheduled' ? 'Begin test' : 'Open planner'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

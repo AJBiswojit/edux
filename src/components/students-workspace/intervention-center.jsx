@@ -28,6 +28,12 @@ const STATUS_STYLE = {
 }
 const TIMELINE = ['Detected', 'Recommended', 'Approved', 'Planned', 'Assigned', 'In Progress', 'Completed', 'Re-test Pending', 'Evaluating']
 const OUTCOME_STYLE = { Resolved: 'success', Improving: 'info', 'Partially Effective': 'warning', 'No Significant Change': 'secondary', Persistent: 'danger', Pending: 'secondary' }
+/* Display labels for the attempt-matching strategy used on the post-intervention exam. */
+const MATCH_TYPE_LABEL = {
+  'explicit-intervention-id': 'linked to this intervention',
+  'strict-contextual-fallback': 'matched by subject and chapter',
+}
+const matchTypeLabel = (v) => MATCH_TYPE_LABEL[v] ?? 'matched attempt'
 
 /* ================= Detail dialog ================= */
 function Timeline({ status }) {
@@ -90,7 +96,7 @@ function EffectivenessPanel({ iv }) {
           ['Before', before], ['Practice', eff.practice], ['Re-test', eff.retest],
         ].map(([label, metrics]) => <div key={label} className="rounded-xl border border-slate-100 p-2.5 text-[10.5px] dark:border-slate-800"><p className="font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-slate-600 dark:text-slate-300">Accuracy {show(metrics?.accuracy, '%')} · Score {show(metrics?.score)} · Avg time {show(metrics?.avgTime, 's')}</p><p className="text-slate-500">Incorrect {show(metrics?.incorrect)} · Skipped {show(metrics?.skipped)} · Questions {show(metrics?.questions)}</p></div>)}
       </div>
-      {iv.postExam && <div className="mt-3 rounded-2xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-500/25 dark:bg-sky-500/5"><p className="text-[10px] font-bold uppercase tracking-widest text-sky-700 dark:text-sky-300">Post-Intervention Exam Performance</p><p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-100">{iv.postExam.examName}</p><p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">Date {formatDate(iv.postExam.date, 'MMM d, yyyy')} · Attempt {iv.postExam.attemptId} · Score {show(iv.postExam.score)}{iv.postExam.maxScore != null ? `/${iv.postExam.maxScore}` : ''} · Accuracy {show(iv.postExam.accuracy, '%')} · Avg time {show(iv.postExam.avgTime, 's')}</p><p className="mt-1 text-[10.5px] text-slate-500">Comparison: before intervention vs after intervention · {iv.postExam.matchType}</p><Link to={`/faculty/my-students/${iv.studentId}/exams/${iv.postExam.attemptId}`}><Button size="sm" variant="outline" className="mt-2">View Exam Analysis</Button></Link></div>}
+      {iv.postExam && <div className="mt-3 rounded-2xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-500/25 dark:bg-sky-500/5"><p className="text-[10px] font-bold uppercase tracking-widest text-sky-700 dark:text-sky-300">Post-Intervention Exam Performance</p><p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-100">{iv.postExam.examName}</p><p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">Date {formatDate(iv.postExam.date, 'MMM d, yyyy')} · Attempt {iv.postExam.attemptId} · Score {show(iv.postExam.score)}{iv.postExam.maxScore != null ? `/${iv.postExam.maxScore}` : ''} · Accuracy {show(iv.postExam.accuracy, '%')} · Avg time {show(iv.postExam.avgTime, 's')}</p><p className="mt-1 text-[10.5px] text-slate-500">Comparison: before intervention vs after intervention · {matchTypeLabel(iv.postExam.matchType)}</p><Link to={`/faculty/my-students/${iv.studentId}/exams/${iv.postExam.attemptId}`}><Button size="sm" variant="outline" className="mt-2">View Exam Analysis</Button></Link></div>}
       <p className="mt-2.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">{eff.evidence}</p>
       <p className="mt-1 text-[10px] font-medium text-slate-400">Observed outcome after intervention. Deterministic prototype calculation — not a scientifically validated or causal measure.</p>
     </div>

@@ -87,7 +87,7 @@ function Users() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'Users' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'BACKEND GAP — directory export is not implemented.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'Directory export is not available yet.')}>
               <Download className="h-4 w-4" /> Export
             </Button>
             <Button size="sm" onClick={() => setInviteOpen(true)}>

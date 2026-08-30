@@ -199,7 +199,7 @@ function Academics() {
                         <Badge variant="secondary" size="sm">{r.type}</Badge>
                         <span>{r.size}</span>·<span>{r.updated}</span>
                       </div>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => toast.info('BACKEND GAP', 'Resource files are not downloadable yet — no file endpoint.')} aria-label={`Download ${r.title}`}>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => toast.info('Not available yet', 'Resource files are not downloadable yet.')} aria-label={`Download ${r.title}`}>
                         <Download className="h-4 w-4" />
                       </Button>
                     </div>
@@ -241,7 +241,7 @@ function Academics() {
                 </div>
               </ChartCard>
               <Card className="p-5">
-                <p className="text-[13px] font-semibold text-slate-900 dark:text-white">Grade snapshot</p>
+                <p className="text-[13px] font-semibold text-slate-900 dark:text-white">Grade summary</p>
                 <div className="mt-3 space-y-2">
                   {progress.courses.filter((c) => c.grade).map((c) => (
                     <div key={c.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2 text-xs dark:bg-slate-800/60">

@@ -71,8 +71,8 @@ function Examinations() {
         <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-700">
           <Database className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">{isBackendDown ? 'No examinations available' : 'Could not load examinations'}</p>
-          <p className="mt-1 text-xs text-slate-400">{isBackendDown ? 'Connect the EduX backend to view published examinations. GET /student/exams → backend DB.' : String(error?.message ?? 'Error')}</p>
-          <p className="mt-2 text-[11px] text-slate-400">No seeded exams fallback — backend only.</p>
+          <p className="mt-1 text-xs text-slate-400">{isBackendDown ? 'Examinations are temporarily unavailable. Please try again later.' : String(error?.message ?? 'Error')}</p>
+          <p className="mt-2 text-[11px] text-slate-400">Published examinations will appear here.</p>
           <Button size="sm" variant="outline" className="mt-4" onClick={() => refetch()}>Retry</Button>
         </div>
       </div>
@@ -91,20 +91,20 @@ function Examinations() {
   const visible = category === 'All' ? upcoming : category === 'University' ? university : competitive
 
   const handleAddToPlanner = () => {
-    toast.info('BACKEND GAP', 'Planner writes are not available yet — no planner mutation exists.')
+    toast.info('Not available yet', 'Adding this exam to your planner is not available yet.')
   }
   const handleAddToCalendar = () => {
-    toast.info('BACKEND GAP', 'Calendar writes are not available yet — no calendar mutation exists.')
+    toast.info('Not available yet', 'Adding this exam to your calendar is not available yet.')
   }
 
   return (
     <div>
       <PageHeader
         eyebrow="Academics · Examinations"
-        title="Examinations · Backend-Ready"
-        description="Published examinations from backend — no seeded fallback, no answer keys exposure. Domain isolation via domain+examFamily."
+        title="Examinations"
+        description="Your published university and competitive examinations — answer keys stay hidden until the exam is over."
         breadcrumbs={[{ label: 'Student' }, { label: 'Examinations' }]}
-        actions={<Badge variant="gradient" className="px-3 py-1"><CalendarDays className="h-3 w-3" /> {university.length} University · {competitive.length} Competitive · Backend only</Badge>}
+        actions={<Badge variant="gradient" className="px-3 py-1"><CalendarDays className="h-3 w-3" /> {university.length} University · {competitive.length} Competitive</Badge>}
       />
 
       {studentInterventionsData?.count > 0 && (
@@ -136,8 +136,8 @@ function Examinations() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-1 flex w-full flex-wrap justify-start sm:w-auto">
-          <TabsTrigger value="upcoming"><ClipboardList className="h-3.5 w-3.5" /> Upcoming ({upcoming.length}) · Backend</TabsTrigger>
-          <TabsTrigger value="mock"><Timer className="h-3.5 w-3.5" /> Mock Tests · Backend</TabsTrigger>
+          <TabsTrigger value="upcoming"><ClipboardList className="h-3.5 w-3.5" /> Upcoming ({upcoming.length})</TabsTrigger>
+          <TabsTrigger value="mock"><Timer className="h-3.5 w-3.5" /> Mock Tests</TabsTrigger>
           <TabsTrigger value="readiness"><Target className="h-3.5 w-3.5" /> AI Exam Readiness</TabsTrigger>
         </TabsList>
 
@@ -155,8 +155,7 @@ function Examinations() {
             <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-800">
               <Database className="mx-auto h-8 w-8 text-slate-300" />
               <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No {category === 'University' ? 'university' : category === 'Competitive' ? 'competitive' : ''} examinations available</p>
-              <p className="mt-1 text-xs text-slate-400">Backend returned 0 published exams for this filter. Connect the EduX backend.</p>
-              <p className="mt-2 text-[11px] text-slate-400">GET /student/exams?domain={category} → 0 items · No seeded fallback</p>
+              <p className="mt-1 text-xs text-slate-400">No published examinations match this filter yet.</p>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
@@ -168,7 +167,7 @@ function Examinations() {
             </div>
           )}
 
-          <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-[11.5px] font-medium text-slate-400 dark:bg-slate-800/60">Admit cards inside each exam's View details dialog — no answer keys exposure in list endpoint.</p>
+          <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-[11.5px] font-medium text-slate-400 dark:bg-slate-800/60">Admit cards are inside each exam's View details dialog — answer keys stay hidden.</p>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-gradient-to-r from-indigo-600/10 to-teal-500/10 p-5 ring-1 ring-indigo-500/15">
             <div className="flex items-start gap-3">
@@ -186,7 +185,7 @@ function Examinations() {
         <TabsContent value="readiness"><ReadinessTab readiness={null} /></TabsContent>
       </Tabs>
 
-      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.info('BACKEND GAP', 'Admit-card PDF download is not available yet.')} />
+      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.info('Not available yet', 'Admit-card PDF download is not available yet.')} />
     </div>
   )
 }
