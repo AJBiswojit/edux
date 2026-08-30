@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     ai_max_tokens: int = 2048
 
+    # External AI Paper Generation microservice (3-agent Kimi pipeline).
+    # EduX triggers generation here; the service writes ai_generated_papers /
+    # ai_generated_paper_questions into the shared DB, EduX reads them back.
+    ai_paper_api_url: str = "http://18.60.0.133:8000"
+    ai_paper_api_timeout: int = 30
+
     parent_portal_enabled: bool = False
     seed_demo_users: bool = True
     demo_password: str = "aurora123"

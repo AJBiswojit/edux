@@ -1,4 +1,5 @@
 from app.models.ai import AiConversation, AiMessage, AiPromptTemplate, AiTrace
+from app.models.ai_papers import AiGeneratedPaper, AiGeneratedPaperQuestion, AiPaperStatus
 from app.models.assessment import ContentChunk, ContentSource, Paper, PaperQuestion, Question, QuestionGeneration, QuestionGenerationItem, QuestionStudioSession, QuestionVersion
 from app.models.catalog import AcademicTerm, Batch, Campus, CalendarEvent, Chapter, Course, Department, Program, Subject, Topic
 from app.models.teaching import Announcement, Assignment, AssignmentSubmission, AttendanceRecord, AttendanceSession
@@ -24,6 +25,10 @@ __all__ = [
     "AiMessage",
     "AiPromptTemplate",
     "AiTrace",
+    "AiGeneratedPaper",
+    "AiGeneratedPaperQuestion",
+    "AiPaperStatus",
+    "ContentChunk",
     "ContentSource",
     "Paper",
     "PaperQuestion",
@@ -32,6 +37,7 @@ __all__ = [
     "QuestionGeneration",
     "QuestionGenerationItem",
     "QuestionStudioSession",
+    "QuestionVersion",
     "AcademicTerm",
     "Batch",
     "Chapter",

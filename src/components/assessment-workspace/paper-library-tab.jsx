@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { BookOpen, Database, History } from 'lucide-react'
-import { usePaperLibrary, usePaperDeleteBackend, usePaperDuplicateBackend, usePaperArchiveBackend } from '@/services/faculty-papers'
+import { useAiPaperLibrary, usePaperDeleteBackend, usePaperDuplicateBackend, usePaperArchiveBackend } from '@/services/faculty-papers'
 import { StatCard } from '@/components/shared/stat-card'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, useToast } from '@/components/ui'
@@ -14,7 +14,7 @@ import { PaperCard, PaperPreviewDialog, PaperDeleteDialog, SharePaperDialog } fr
 import { formatDate } from '@/utils/format'
 
 function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
-  const { data, isLoading, isError, error, refetch } = usePaperLibrary()
+  const { data, isLoading, isError, error, refetch } = useAiPaperLibrary()
   const { mutateAsync: deletePaper } = usePaperDeleteBackend()
   const { mutateAsync: duplicatePaper } = usePaperDuplicateBackend()
   const { mutateAsync: archivePaper } = usePaperArchiveBackend()

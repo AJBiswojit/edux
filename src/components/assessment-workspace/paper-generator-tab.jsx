@@ -17,18 +17,14 @@ import {
   CheckCircle2, FileText, Printer, Save, Send, SlidersHorizontal, ChevronDown, Wand2, AlertTriangle, Database,
   Sparkles, Loader2, RefreshCw,
 } from 'lucide-react'
-import { usePaperGeneratorBackend, usePaperCreateBackend, usePaperDeleteBackend, usePaperDuplicateBackend, usePaperRegenerateBackend, usePaperArchiveBackend } from '@/services/faculty-papers'
+import { usePaperGeneratorCatalog, usePaperCreateBackend, useGenerateDemoPaper, generateAiPaper, fetchAiPaperStatus, fetchAiPaper, fetchAiActive } from '@/services/faculty-papers'
 import { useFacultyQuestions } from '@/services/faculty-questions'
 import { useQuestionGeneration, useGenerationStatus, useGenerationQuestions, GENERATION_STATUS, isTerminalStatus } from '@/services/faculty-question-generation'
 import { Badge, Button, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { useFilterCascade } from '@/hooks/use-filter-cascade'
 import { buildPaperGeneratorCascade } from './paper-generator-cascade'
-import {
-  PaperCard, PaperPreviewDialog, PaperDeleteDialog, SharePaperDialog,
-  PaperQualityPanel, PaperPrintPreview, ShareHistoryList,
-  DIFF_STYLES,
-} from './paper-parts'
+import { PaperPrintPreview, DIFF_STYLES } from './paper-parts'
 import { formatDate } from '@/utils/format'
 
 function Section({ n, title, subtitle, children, right }) {
@@ -62,13 +58,10 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [searchParams] = useSearchParams()
   const toast = useToast()
 
-  // Backend-ready paper library (no mock fallback)
-  const { data: paperData, isLoading: libLoading, isError: libError, refetch: refetchLib, error: libErr } = usePaperGeneratorBackend()
+  // Catalog config for the generator. The Paper Library lives in its own tab now.
+  const { data: catalogData, isLoading: catalogLoading, isError: catalogError, refetch: refetchCatalog } = usePaperGeneratorCatalog()
   const { mutateAsync: createPaper } = usePaperCreateBackend()
-  const { mutateAsync: deletePaper } = usePaperDeleteBackend()
-  const { mutateAsync: duplicatePaper } = usePaperDuplicateBackend()
-  const { mutateAsync: regeneratePaper } = usePaperRegenerateBackend()
-  const { mutateAsync: archivePaper } = usePaperArchiveBackend()
+  const { mutateAsync: generateDemo } = useGenerateDemoPaper()
 
   // Form state — domain isolation explicit
   const [domain, setDomain] = useState(() => (searchParams.get('mode') === 'Competitive' ? 'Competitive' : 'University'))
@@ -342,13 +335,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   // Paper builder — ID-based only, real backend IDs
   const [selectedIds, setSelectedIds] = useState([])
   const [saving, setSaving] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(false)
   const [printOpen, setPrintOpen] = useState(false)
-  const [shareTarget, setShareTarget] = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null)
-  const [deleting, setDeleting] = useState(false)
-  const [versionsOpen, setVersionsOpen] = useState(false)
-  const [selectedPaper, setSelectedPaper] = useState(null)
 
   // Edit paper from library — load IDs only
   useEffect(() => {
@@ -384,13 +371,64 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editPaper])
 
-  const papers = paperData?.generatedPapers ?? []
-
   const toggleSelect = (id) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
   const toggleQType = (t) => setQTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
+
+  // Load a finished AI paper's questions into the Section 6 review list.
+  const loadAiQuestions = async (paperId) => {
+    const res = await fetchAiPaper(paperId)
+    const qs = res?.questions ?? []
+    setGenerationQuestions(qs)
+    setSelectedIds(qs.map((q) => q.id).filter(Boolean))
+    return qs
+  }
+
+  // Resume-on-mount: if the faculty has an AI job still running (or one that
+  // finished while they were away), restore the progress bar and, when it's done,
+  // auto-load the questions. Progress comes from the DB so it survives tab switches.
+  useEffect(() => {
+    let cancelled = false
+    let timer = null
+
+    const poll = async () => {
+      try {
+        const { active } = await fetchAiActive()
+        if (cancelled || !active) return
+        // Don't clobber an in-flight generation started in this same session.
+        if (isGenerating) return
+
+        if (active.status === 'completed' || (active.total && active.generated >= active.total)) {
+          // Only load if we aren't already showing this paper's questions.
+          setGenerationQuestions((prev) => {
+            if (prev.length > 0) return prev
+            loadAiQuestions(active.paper_id).then((qs) => {
+              if (!cancelled && qs.length > 0) {
+                toast.success('AI paper ready', `${qs.length} question${qs.length > 1 ? 's' : ''} generated while you were away. Review, then save.`)
+              }
+            }).catch(() => {})
+            return prev
+          })
+          return
+        }
+
+        if (active.status === 'pending' || active.status === 'running') {
+          timer = setTimeout(poll, 5000)
+        }
+      } catch {
+        // ignore transient errors; the tab still works without resume
+      }
+    }
+
+    poll()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const isPaperReady = useMemo(() => {
     if (isGenerationRunning) return false
@@ -404,6 +442,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     }
     return true
   }, [isGenerationRunning, isGenerationFailed, selectedIds.length, isGenerationReady, generatedCountForDisplay, requestedCountForDisplay])
+>>>>>>> Stashed changes
 
   const handleCreate = async () => {
     if (!title.trim()) {
@@ -458,11 +497,13 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         coverage: 90,
         sets: 1,
         interventionId: searchParams.get('intervention') ?? null,
+        // Pass the active generation ID so the backend marks this paper as
+        // AI-generated and includes it in the Paper Library filter.
+        generationId: generationId ?? null,
       })
       if (res?.ok || res?.paper) {
         toast.success('Paper saved to library', `"${title.trim()}" is now in your Paper Library with ${selectedIds.length} questions.`)
         setSelectedIds([])
-        refetchLib()
       } else {
         toast.error(res?.error ?? 'Could not save', res?.message ?? 'Please try again.')
       }
@@ -478,38 +519,8 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     }
   }
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    setDeleting(true)
-    try {
-      await deletePaper(deleteTarget.id)
-      toast.success('Paper deleted', `${deleteTarget.title} was permanently removed.`)
-      setDeleteTarget(null)
-      refetchLib()
-    } catch {
-      toast.error('Could not delete', 'Please try again.')
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  if (libLoading) return <DashboardSkeleton cards={3} />
-  if (libError) {
-    // Backend unavailable → empty state, not error throw
-    const isBackendDown = !libErr?.response || libErr?.response?.status >= 500
-    if (isBackendDown) {
-      return (
-        <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-700">
-          <Database className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">Paper Library unavailable</p>
-          <p className="mt-1 text-xs text-slate-400">The paper library is temporarily unavailable. Please try again later.</p>
-          <p className="mt-2 text-[11px] text-slate-400">{String(libErr?.message ?? 'Network error')}</p>
-          <Button size="sm" variant="outline" className="mt-4" onClick={() => refetchLib()}>Retry</Button>
-        </div>
-      )
-    }
-    return <ErrorState onRetry={() => refetchLib()} />
-  }
+  if (catalogLoading) return <DashboardSkeleton cards={3} />
+  if (catalogError) return <ErrorState onRetry={() => refetchCatalog()} />
 
   const TYPE_OPTIONS = domain === 'Competitive' ? QTYPE_OPTIONS_COMP : QTYPE_OPTIONS_UNI
 
@@ -523,7 +534,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
           </p>
           <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">Design, generate and publish question papers</h2>
         </div>
-        <Badge variant="gradient" className="px-3 py-1"><FileText className="h-3 w-3" /> {papers.length} papers in library</Badge>
       </div>
 
       {/* Section 1 */}
@@ -855,33 +865,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         </div>
       </Section>
 
-      {/* Question Bank — Backend only, now with generation distinction */}
-      <Section n={6} title="Question Bank" subtitle={`Domain: ${domain} ${domain === 'Competitive' ? `· Exam Family: ${examFamily}` : ''} · Filters: course, subject, chapter, topic, difficulty, question type, page · Generation: ${generationStatusLabel}`}>
-        {qLoading && !isGenerationRunning && <DashboardSkeleton cards={2} />}
-        {qError && !isGenerationRunning && !isGenerationReady && (
-          <div className="rounded-3xl border border-dashed border-amber-300/70 bg-amber-50/50 p-8 text-center dark:border-amber-500/30 dark:bg-amber-500/5">
-            <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
-            <p className="mt-3 text-sm font-bold text-amber-800 dark:text-amber-200">Question bank unavailable</p>
-            <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80">The question bank is temporarily unavailable. Please try again later.</p>
-            <p className="mt-2 text-[11px] text-slate-400">{String(qErr?.message ?? 'Network error')}</p>
-            <Button size="sm" variant="outline" className="mt-3 border-amber-300 text-amber-700" onClick={() => refetchQuestions()}>Retry</Button>
-          </div>
-        )}
-        {!qLoading && !qError && (
-          <>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[12px] font-semibold text-slate-500">
-                {isGenerationReady ? `${generatedCountForDisplay} generated · ` : `${totalQuestions} questions · `}
-                {availableQuestions.length} on this page · {selectedIds.length} selected
-              </p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => { setSelectedIds([]) }}>Clear selection</Button>
-                <Button size="sm" variant="outline" onClick={() => setSelectedIds(availableQuestions.map(q => q.id).filter(Boolean))} disabled={availableQuestions.length === 0}>Select all</Button>
-                <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
-                <Button size="sm" variant="outline" onClick={() => setPage((p) => p + 1)}>Next (p{page + 1})</Button>
-              </div>
-            </div>
-
             {availableQuestions.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
                 <Database className="mx-auto h-8 w-8 text-slate-300" />
@@ -949,68 +932,11 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         )}
       </Section>
 
-      {/* Paper Library — backend only, no samplePapers fallback */}
-      <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
-            <FileText className="h-4 w-4 text-indigo-500" /> Paper Library ({papers.length})
-          </h2>
-          <p className="text-[11px] font-medium text-slate-400">Send is enabled once a paper is complete.</p>
-        </div>
-        {papers.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-800">
-            <FileText className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
-            <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No question papers yet.</p>
-            <p className="mt-1 text-xs text-slate-400">Generate questions, select them and save your first paper.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {papers.map((p, i) => (
-              <PaperCard
-                key={p.id}
-                paper={p}
-                index={i}
-                onView={() => { setSelectedPaper(p); setPreviewOpen(true) }}
-                onEdit={() => {
-                  setTitle(p.title)
-                  setDomain(p.domain ?? p.mode ?? 'University')
-                  setPaperType(p.paperType ?? p.examType ?? 'Mid Semester')
-                  if (Array.isArray(p.selectedQuestionIds)) setSelectedIds(p.selectedQuestionIds)
-                  else if (Array.isArray(p.questionList)) setSelectedIds(p.questionList.map((q) => q.id).filter(Boolean))
-                }}
-                onDuplicate={async (paper) => {
-                  try {
-                    const res = await duplicatePaper(paper.id)
-                    if (res?.ok) { toast.success('Duplicated', `${res.paper.title} added as a copy.`); refetchLib() }
-                  } catch { toast.error('Could not duplicate', 'Please try again.') }
-                }}
-                onDelete={setDeleteTarget}
-                onRegenerate={async (paper) => {
-                  try {
-                    const res = await regeneratePaper(paper.id)
-                    if (res?.ok) { toast.success('Regenerated ♻️', `${res.paper.title} → version v1.${res.paper.versions - 1}.`); refetchLib() }
-                  } catch { toast.error('Could not regenerate', 'Please try again.') }
-                }}
-                onArchive={async (paper) => {
-                  try {
-                    const res = await archivePaper({ id: paper.id, archived: !paper.archived })
-                    toast.success(paper.archived ? 'Restored' : 'Archived', `${res.paper?.title ?? paper.title} ${paper.archived ? 'restored.' : 'moved to archive.'}`)
-                    refetchLib()
-                  } catch { toast.error('Could not archive', 'Please try again.') }
-                }}
-                onVersions={(paper) => { setSelectedPaper(paper); setVersionsOpen(true) }}
-                onShare={setShareTarget}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Paper Library removed — it now lives in the dedicated Paper Library tab. */}
 
-      {/* Dialogs */}
+      {/* Dialogs — print preview is used by the Section 6 Preview button. */}
       <PaperPrintPreview paper={{ title, totalMarks: Number(marks) || 50, duration: Number(duration) || 120, questions: selectedIds.length, questionList: availableQuestions.filter((q) => selectedIds.includes(q.id ?? q._id)) }} open={printOpen} onOpenChange={setPrintOpen} />
-      <SharePaperDialog paper={shareTarget} open={!!shareTarget} onOpenChange={(v) => !v && setShareTarget(null)} />
-      <PaperPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} paper={selectedPaper} />
-      <PaperDeleteDialog open={!!deleteTarget} onOpenChange={(v) => !v && !deleting && setDeleteTarget(null)} paper={deleteTarget} onConfirm={handleDelete} deleting={deleting} />
+>>>>>>> Stashed changes
     </div>
   )
 }

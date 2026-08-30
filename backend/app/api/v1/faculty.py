@@ -2,11 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
+from sqlalchemy import func, select
 
 from app.core.deps import DbDep, UserDep, require_roles
 from app.models.exams import ExamAttempt
 from app.models.identity import User
-from app.services import live_catalog
+from app.models.assessment import Paper, PaperQuestion
+from app.models.ai_papers import AiGeneratedPaper, AiGeneratedPaperQuestion, AiPaperStatus
+from app.models.catalog import Subject, Course
+from app.services import ai_paper_client, live_catalog
 from app.services import faculty_runtime
 from app.services import micro_assessments
 from app.services import studio_lifecycle
@@ -289,6 +293,330 @@ def list_papers(db: DbDep, user: FacultyDep):
 def paper_detail(paper_id: str, db: DbDep, user: FacultyDep):
     paper = get_faculty_paper(db, user, paper_id)
     return {"paper": paper, **paper}
+
+
+# --- AI paper generation (external microservice, Option A) ---------------------
+#
+# EduX writes the ai_paper_status lifecycle record and triggers the AI service.
+# The AI service writes ai_generated_papers / ai_generated_paper_questions into
+# the shared DB keyed on the paper_id we send; EduX reads those back.
+
+_AI_STATUS_MAP = {
+    "queued": "running",
+    "running": "running",
+    "completed": "completed",
+    "failed": "failed",
+    "cancelled": "failed",
+}
+
+
+def _ai_chapters_from_cfg(body: dict) -> list[dict]:
+    """Build the AI service chapter list from EduX scope config."""
+    chapters = body.get("chapters")
+    if isinstance(chapters, list) and chapters:
+        out = []
+        for ch in chapters:
+            if isinstance(ch, dict) and ch.get("name"):
+                out.append({k: ch[k] for k in ("name", "count", "notes") if ch.get(k) is not None})
+            elif isinstance(ch, str) and ch.strip():
+                out.append({"name": ch.strip()})
+        if out:
+            return out
+    # Fall back to a single chapter from the flat scope fields.
+    chapter = body.get("chapter")
+    if isinstance(chapter, str) and chapter.strip() and not chapter.lower().startswith("all "):
+        return [{"name": chapter.strip()}]
+    raise HTTPException(status_code=400, detail="Select at least one chapter for AI generation.")
+
+
+@router.post("/faculty/paper-generator/generate-ai")
+def generate_ai_paper(body: dict, db: DbDep, user: FacultyDep):
+    """Trigger AI question generation via the external microservice.
+
+    Writes an ai_paper_status intake record (pending -> running) and returns the
+    job id + paper id so the frontend can poll for progress.
+    """
+    exam_family = body.get("examFamily") or body.get("exam_family") or body.get("exam")
+    subject = body.get("subject")
+    if isinstance(subject, str) and subject.lower().startswith("all "):
+        subject = None
+    if not subject:
+        raise HTTPException(status_code=400, detail="Subject is required for AI generation.")
+
+    chapters = _ai_chapters_from_cfg(body)
+    total_questions = body.get("total_questions") or body.get("questionCount") or body.get("questions")
+    try:
+        total_questions = int(total_questions)
+    except (TypeError, ValueError):
+        total_questions = 10
+    difficulty = (body.get("difficulty") or "mixed").strip().lower()
+    test_name = body.get("test_name") or body.get("title")
+    question_type = body.get("question_type") or body.get("questionType")
+
+    paper_id = str(uuid4())
+
+    try:
+        request_body = ai_paper_client.build_generate_request(
+            paper_id=paper_id,
+            exam_family=exam_family,
+            subject=subject,
+            chapters=chapters,
+            total_questions=total_questions,
+            difficulty=difficulty,
+            test_name=test_name,
+            institution=user.institution_id or "",
+            question_type=question_type if question_type and question_type != "All" else None,
+            scope_notes=body.get("scope_notes"),
+        )
+    except ai_paper_client.AiPaperClientError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Intake record — EduX owns this table.
+    status_row = AiPaperStatus(
+        id=paper_id,
+        exam_family=request_body["exam_family"],
+        subject=request_body["subject"],
+        chapters=request_body["chapters"],
+        total_questions=request_body["total_questions"],
+        difficulty=request_body["difficulty"],
+        status="pending",
+        created_by=user.id,
+    )
+    db.add(status_row)
+    db.commit()
+
+    # Fire the job.
+    try:
+        job = ai_paper_client.generate_async(request_body)
+    except ai_paper_client.AiPaperClientError as exc:
+        status_row.status = "failed"
+        db.commit()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    status_row.status = _AI_STATUS_MAP.get(job.get("status", "queued"), "running")
+    db.commit()
+
+    return {
+        "ok": True,
+        "paper_id": paper_id,
+        "job_id": job.get("job_id"),
+        "status": status_row.status,
+        "queue_position": job.get("queue_position", 0),
+        "total_questions": job.get("total_questions", request_body["total_questions"]),
+        "estimated_minutes": job.get("estimated_minutes"),
+        "resolved_chapters": job.get("resolved_chapters", []),
+    }
+
+
+@router.get("/faculty/paper-generator/ai-status/{job_id}")
+def ai_paper_status(job_id: str, db: DbDep, user: FacultyDep):
+    """Proxy the AI job status and sync the ai_paper_status lifecycle record."""
+    try:
+        job = ai_paper_client.job_status(job_id)
+    except ai_paper_client.AiPaperClientError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    paper_id = job.get("paper_id")
+    if paper_id:
+        row = db.get(AiPaperStatus, paper_id)
+        if row:
+            new_status = _AI_STATUS_MAP.get(job.get("status", "running"), "running")
+            if row.status != new_status:
+                row.status = new_status
+                db.commit()
+
+    return {
+        "job_id": job.get("job_id", job_id),
+        "paper_id": paper_id,
+        "status": job.get("status"),
+        "questions_generated": job.get("questions_generated", 0),
+        "questions_dropped": job.get("questions_dropped", 0),
+        "total_questions": job.get("total_questions", 0),
+        "current_chapter": job.get("current_chapter"),
+        "elapsed_seconds": job.get("elapsed_seconds", 0),
+        "error": job.get("error"),
+    }
+
+
+@router.get("/faculty/paper-generator/ai-paper/{paper_id}")
+def ai_paper_detail(paper_id: str, db: DbDep, user: FacultyDep):
+    """Read back an AI-generated paper + its questions from the shared DB.
+
+    Shapes the questions to match the Section 6 review list contract used by the
+    deterministic generator so the frontend can reuse the same UI.
+    """
+    paper = db.get(AiGeneratedPaper, paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="AI paper not found yet.")
+
+    rows = db.scalars(
+        select(AiGeneratedPaperQuestion)
+        .where(AiGeneratedPaperQuestion.paper_id == paper_id)
+        .order_by(AiGeneratedPaperQuestion.position)
+    ).all()
+
+    def _difficulty_label(level: str | None) -> str:
+        return (level or "medium").strip().capitalize()
+
+    questions = []
+    for q in rows:
+        extra = q.extra or {}
+        options = []
+        for opt in q.options or []:
+            if isinstance(opt, dict):
+                options.append(opt.get("text") or opt.get("key") or "")
+            else:
+                options.append(str(opt))
+        questions.append({
+            "id": q.id,
+            "subject": paper.subject_name or extra.get("subject_name"),
+            "chapter": extra.get("chapter_name") or paper.chapter_name,
+            "topic": extra.get("topic_name"),
+            "difficulty": _difficulty_label(q.level),
+            "type": "MCQ",
+            "text": q.stem_text,
+            "options": options,
+            "correctOption": q.correct_option,
+            "solution": q.solution,
+            "explanation": q.explanation,
+            "marks": q.marks,
+            "negativeMarks": q.negative_marks,
+            "containsFormula": q.contains_formula,
+            "blooms": extra.get("blooms"),
+            "qualityScore": extra.get("quality_score"),
+        })
+
+    dist: dict[str, int] = {}
+    for item in questions:
+        dist[item["difficulty"]] = dist.get(item["difficulty"], 0) + 1
+
+    return {
+        "ok": True,
+        "paper_id": paper.id,
+        "title": paper.title,
+        "examFamily": paper.exam_family,
+        "subject": paper.subject_name,
+        "status": paper.status,
+        "requested": paper.question_count,
+        "generated": len(questions),
+        "difficulty": (paper.difficulty_mix or {}).get("difficulty", "mixed"),
+        "distribution": dist,
+        "questions": questions,
+    }
+
+
+@router.get("/faculty/paper-generator/ai-active")
+def ai_active_generation(db: DbDep, user: FacultyDep):
+    """Resume support — return the faculty's most recent AI generation job that is
+    still in progress (or just finished), with DB-based progress.
+
+    Progress is computed directly from the shared DB (count of written questions vs
+    requested total), so it survives page reloads and tab switches without needing
+    to hold the AI job_id in the browser.
+    """
+    row = db.scalar(
+        select(AiPaperStatus)
+        .where(AiPaperStatus.created_by == user.id)
+        .order_by(AiPaperStatus.created_at.desc())
+    )
+    if not row:
+        return {"active": None}
+
+    # Only resume something recent and not-yet-reviewed. Terminal jobs older than a
+    # short window are ignored so we don't keep re-surfacing old completions.
+    generated = db.scalar(
+        select(func.count(AiGeneratedPaperQuestion.id))
+        .where(AiGeneratedPaperQuestion.paper_id == row.id)
+    ) or 0
+
+    # Derive completion from the DB: if every requested question is written, the
+    # job is done even if nothing has polled ai-status/{job_id} to flip the flag.
+    effective_status = row.status
+    if row.status in ("pending", "running") and row.total_questions and generated >= row.total_questions:
+        effective_status = "completed"
+        row.status = "completed"
+        db.commit()
+
+    if effective_status not in ("pending", "running", "completed"):
+        return {"active": None}
+
+    return {
+        "active": {
+            "paper_id": row.id,
+            "status": effective_status,
+            "examFamily": row.exam_family,
+            "subject": row.subject,
+            "difficulty": row.difficulty,
+            "generated": generated,
+            "total": row.total_questions,
+            "createdAt": row.created_at.isoformat() if row.created_at else None,
+        }
+    }
+
+
+# Map the AI service's exam_family enum back to EduX-facing labels.
+_AI_EXAM_LABEL = {"JEE_MAIN": "JEE", "JEE_ADVANCED": "JEE", "NEET": "NEET"}
+
+
+@router.get("/faculty/paper-generator/ai-library")
+def ai_paper_library(db: DbDep, user: FacultyDep):
+    """Paper Library backed by ai_generated_papers.
+
+    Shaped to the same contract the Paper Library UI already consumes
+    (PaperCard / PaperMetaChips), so the cosmetics are unchanged. AI papers are
+    shared across institutions (same model as the question bank / paper library).
+    """
+    papers = db.scalars(
+        select(AiGeneratedPaper).order_by(AiGeneratedPaper.created_at.desc())
+    ).all()
+
+    # Live question counts per paper (single grouped query).
+    counts = dict(
+        db.execute(
+            select(
+                AiGeneratedPaperQuestion.paper_id,
+                func.count(AiGeneratedPaperQuestion.id),
+            ).group_by(AiGeneratedPaperQuestion.paper_id)
+        ).all()
+    )
+
+    items = []
+    for p in papers:
+        exam_label = _AI_EXAM_LABEL.get(p.exam_family or "", p.exam_family)
+        q_count = counts.get(p.id, 0) or p.question_count or 0
+        created = p.created_at.date().isoformat() if p.created_at else _today()
+        published = p.published_at.date().isoformat() if p.published_at else created
+        items.append({
+            "id": p.id,
+            "paperCode": p.paper_code,
+            "title": p.title,
+            "course": None,
+            "subject": p.subject_name,
+            "mode": p.exam_mode or "Competitive",
+            "domain": p.exam_mode or "Competitive",
+            "exam": exam_label,
+            "examFamily": exam_label,
+            "examType": "AI Generated",
+            "paperType": "AI Generated",
+            "chapter": p.chapter_name,
+            "topic": p.topic_name,
+            "faculty": user.full_name,
+            "totalMarks": p.total_marks or (q_count * 4),
+            "duration": p.duration_minutes or (q_count * 2),
+            "questions": q_count,
+            "status": (p.status or "draft").title(),
+            "generated": created,
+            "created": created,
+            "modified": published,
+            "coverage": None,
+            "sets": 1,
+            "archived": False,
+            "versions": 1,
+            "difficulty": (p.difficulty_mix or {}).get("difficulty", "mixed"),
+            "source": "ai",
+        })
+
+    return {"generatedPapers": items, "versionHistory": {}}
 
 
 @router.post("/faculty/paper-generator/papers")

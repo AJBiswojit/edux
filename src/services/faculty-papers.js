@@ -4,6 +4,21 @@
  * Persistence is SQL `papers` / `paper_questions`. Create sends
  * selectedQuestionIds; publish is POST .../papers/{id}/publish.
  *
+ * Endpoints (real backend):
+ *  GET    /faculty/paper-generator           -> config + library
+ *  POST   /faculty/paper-generator/papers    -> create paper (selectedQuestionIds only)
+ *  DELETE /faculty/paper-generator/papers/:id
+ *  POST   /faculty/paper-generator/papers/:id/duplicate
+ *  POST   /faculty/paper-generator/papers/:id/regenerate
+ *  PATCH  /faculty/paper-generator/papers/:id/archive
+ *  POST   /faculty/paper-generator/papers/:id/share
+ *  GET    /faculty/paper-generator/papers/:id  (optional detail)
+ *  POST   /faculty/paper-generator/generate-ai        -> trigger AI generation
+ *  GET    /faculty/paper-generator/ai-status/:jobId   -> poll AI job progress
+ *  GET    /faculty/paper-generator/ai-paper/:paperId  -> read back AI questions
+ *  GET    /faculty/paper-generator/ai-active          -> resume latest in-progress job
+ *
+ * Domain isolation preserved via domain+examFamily, not subject inference.
  * `{ ok: false }` HTTP 200 is rejected by the axios interceptor.
  */
 
@@ -15,6 +30,42 @@ import { normalizePaper, normalizePaperGeneratorPayload } from '@/api/adapters/p
 export async function fetchPaperGenerator() {
   const { data } = await api.get('/faculty/paper-generator')
   return normalizePaperGeneratorPayload(data)
+}
+
+// --- AI generation (external microservice, Option A) ---
+// EduX triggers the AI service, polls job status, then reads the questions back.
+
+/** Trigger AI generation. Returns { paper_id, job_id, status, estimated_minutes, ... }. */
+export async function generateAiPaper(config) {
+  const { data } = await api.post('/faculty/paper-generator/generate-ai', config)
+  return data
+}
+
+/** Poll an AI generation job's progress. */
+export async function fetchAiPaperStatus(jobId) {
+  const { data } = await api.get(`/faculty/paper-generator/ai-status/${jobId}`)
+  return data
+}
+
+/** Read back the finished AI paper + questions (Section 6 review contract). */
+export async function fetchAiPaper(paperId) {
+  const { data } = await api.get(`/faculty/paper-generator/ai-paper/${paperId}`)
+  return data
+}
+
+/** Resume support — latest in-progress/recent AI job for the current faculty. */
+export async function fetchAiActive() {
+  const { data } = await api.get('/faculty/paper-generator/ai-active')
+  return data
+}
+
+/** Paper Library backed by ai_generated_papers (same shape as fetchPapers). */
+export async function fetchAiLibrary() {
+  const { data } = await api.get('/faculty/paper-generator/ai-library')
+  return {
+    generatedPapers: data?.generatedPapers ?? [],
+    versionHistory: data?.versionHistory ?? {},
+  }
 }
 
 export async function fetchPapers() {
@@ -64,6 +115,10 @@ export async function createPaper(payload) {
     coverage: payload.coverage ?? 90,
     sets: payload.sets ?? 1,
     interventionId: payload.interventionId ?? null,
+    // AI-generation provenance: the QuestionGeneration job ID whose questions
+    // were selected for this paper.  Backend uses this to mark the paper as
+    // AI-generated so it appears in the Paper Library.  null = non-AI paper.
+    generationId: payload.generationId ?? null,
   }
 
   const { data } = await api.post('/faculty/paper-generator/papers', body)
@@ -113,6 +168,15 @@ export function usePaperLibrary() {
   return useQuery({
     queryKey: ['faculty', 'paper-library', 'backend'],
     queryFn: fetchPapers,
+    retry: false,
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
+export function useAiPaperLibrary() {
+  return useQuery({
+    queryKey: ['faculty', 'paper-library', 'ai'],
+    queryFn: fetchAiLibrary,
     retry: false,
     staleTime: 1000 * 60 * 2,
   })

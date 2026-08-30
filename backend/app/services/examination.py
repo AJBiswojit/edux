@@ -13,7 +13,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.assessment import Paper, PaperQuestion, Question
+from app.models.assessment import Paper, PaperQuestion, Question, QuestionGeneration
 from app.models.catalog import Chapter, Course, Subject, Topic
 from app.models.exams import ExamAttempt, ExamQuestionAttempt, ExamSitting
 from app.models.identity import User
@@ -410,6 +410,7 @@ def serialize_paper_faculty(db: Session, paper: Paper, *, include_questions: boo
         "versions": paper.version,
         "negativeMarking": "Enabled" if paper.negative_marking else "Disabled",
         "interventionId": paper.intervention_id,
+        "generationId": blueprint.get("generationId"),
         "questionList": [],
     }
     if include_questions:
@@ -439,11 +440,26 @@ def serialize_paper_faculty(db: Session, paper: Paper, *, include_questions: boo
 
 
 def list_faculty_papers(db: Session, user: User) -> list[dict]:
+    """Return only AI-generated papers — those saved from the question-generation workflow.
+
+    A paper is considered AI-generated when its blueprint JSON contains a non-null
+    ``generationId`` field, which is written by ``create_sql_paper`` whenever the
+    caller supplies a ``generationId`` from a completed ``QuestionGeneration`` job.
+
+    Non-AI / manually-assembled papers (no ``generationId`` in blueprint) are
+    intentionally excluded.  An empty result set is returned as ``[]`` — never
+    mock data.
+    """
     query = select(Paper).where(Paper.institution_id == user.institution_id)
     if not is_admin(user):
         query = query.where(Paper.created_by == user.id)
     rows = db.scalars(query.order_by(Paper.created_at.desc())).all()
-    return [serialize_paper_faculty(db, paper, include_questions=False) for paper in rows]
+    results = []
+    for paper in rows:
+        bp = parse_json(paper.blueprint, {})
+        if bp.get("generationId"):
+            results.append(serialize_paper_faculty(db, paper, include_questions=False))
+    return results
 
 
 def get_faculty_paper(db: Session, user: User, paper_id: str) -> dict:
@@ -486,6 +502,24 @@ def _load_selected_questions(db: Session, user: User, ids: list[str], mode: str,
             "Selected questions are not compatible with this paper's domain/exam family",
         )
     return ordered
+
+
+def _resolve_generation_id(db: Session, user: User, generation_id: str | None) -> str | None:
+    """Validate that a generationId belongs to this faculty/institution and return it.
+
+    Returns None if generation_id is absent, blank, or does not exist in the DB —
+    ensuring only real, persisted QuestionGeneration records are stamped onto papers.
+    """
+    if not generation_id or not str(generation_id).strip():
+        return None
+    gen = db.get(QuestionGeneration, str(generation_id).strip())
+    if gen is None:
+        return None
+    if gen.institution_id != user.institution_id:
+        return None
+    if not is_admin(user) and gen.faculty_id != user.id:
+        return None
+    return gen.id
 
 
 def create_sql_paper(db: Session, user: User, body: dict) -> dict:
@@ -543,6 +577,10 @@ def create_sql_paper(db: Session, user: User, body: dict) -> dict:
                 "config": body.get("config"),
                 "questionCount": body.get("questions") or body.get("questionCount") or len(questions),
                 "requestedQuestionCount": body.get("requestedQuestionCount") or body.get("questions") or body.get("questionCount") or len(questions),
+                # AI-generation provenance: set when paper is assembled from a QuestionGeneration
+                # job.  Absent (None) means a manually-created / non-AI paper — those are excluded
+                # from the Paper Library by list_faculty_papers().
+                "generationId": _resolve_generation_id(db, user, body.get("generationId")),
             }
         ),
         status=STATUS_DRAFT,

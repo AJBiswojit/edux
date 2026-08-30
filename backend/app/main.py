@@ -13,6 +13,7 @@ from app.models import identity as _identity  # noqa: F401
 from app.models import catalog as _catalog  # noqa: F401
 from app.models import people as _people  # noqa: F401
 from app.models import assessment as _assessment  # noqa: F401
+from app.models import ai_papers as _ai_papers  # noqa: F401
 from app.models import exams as _exams  # noqa: F401
 from app.models import interventions as _interventions  # noqa: F401
 from app.models import intelligence as _intelligence  # noqa: F401

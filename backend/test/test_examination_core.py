@@ -278,3 +278,302 @@ def test_faculty_cannot_use_other_institution_questions(client, world):
         question_ids=["q_other_inst"],
     )
     assert res.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Paper Library regression tests — AI-generated papers ONLY
+# ---------------------------------------------------------------------------
+
+def _generate_and_create_ai_paper(client, faculty, *, title, domain="University", exam_family=None):
+    """Helper: generate AI questions then create a paper from them.
+
+    Returns (paper_dict, generation_id).
+    """
+    gen_body = {
+        "domain": domain,
+        "examFamily": exam_family,
+        "subject": "AI Test Subject",
+        "questionCount": 2,
+        "difficulty": "Medium",
+        "questionTypes": ["MCQ"],
+    }
+    gen_res = client.post("/v1/faculty/question-bank/generate", json=gen_body, headers=auth_header(faculty))
+    assert gen_res.status_code == 200, gen_res.text
+    gen_data = gen_res.json()
+    generation_id = gen_data["generationId"]
+    q_ids = gen_data["questionIds"]
+
+    paper_body = {
+        "title": title,
+        "domain": domain,
+        "examFamily": exam_family,
+        "selectedQuestionIds": q_ids,
+        "duration": 60,
+        "totalMarks": 8,
+        "generationId": generation_id,
+    }
+    paper_res = client.post("/v1/faculty/paper-generator/papers", json=paper_body, headers=auth_header(faculty))
+    assert paper_res.status_code == 200, paper_res.text
+    return paper_res.json()["paper"], generation_id
+
+
+def _create_manual_paper(client, faculty, *, title, question_ids):
+    """Helper: create a paper WITHOUT a generationId (simulates non-AI / manual assembly)."""
+    paper_body = {
+        "title": title,
+        "domain": "University",
+        "selectedQuestionIds": question_ids,
+        "duration": 60,
+        "totalMarks": 4,
+        # Deliberately omit generationId — this is the non-AI case
+    }
+    res = client.post("/v1/faculty/paper-generator/papers", json=paper_body, headers=auth_header(faculty))
+    assert res.status_code == 200, res.text
+    return res.json()["paper"]
+
+
+def test_paper_library_shows_only_ai_generated_papers(client, world, db):
+    """Regression: Paper Library (GET /faculty/paper-generator) must return only
+    papers whose blueprint contains a valid generationId.
+
+    - AI-generated paper  → present in library
+    - Manual/non-AI paper → absent from library
+    - Empty AI set        → returns []
+    """
+    from app.models.assessment import Paper, PaperQuestion, QuestionGeneration, QuestionGenerationItem
+    from app.models.assessment import Question as Q
+
+    faculty = world["faculty"]
+
+    # --- Create an AI-generated paper -----------------------------------------
+    ai_paper, generation_id = _generate_and_create_ai_paper(
+        client, faculty, title="AI Paper Library Regression"
+    )
+    ai_paper_id = ai_paper["id"]
+
+    # --- Create a manual paper (no generationId) --------------------------------
+    manual_paper = _create_manual_paper(
+        client, faculty,
+        title="Manual Paper Library Regression",
+        question_ids=["q_uni_1"],
+    )
+    manual_paper_id = manual_paper["id"]
+
+    try:
+        # Fetch Paper Library via the primary endpoint
+        res = client.get("/v1/faculty/paper-generator", headers=auth_header(faculty))
+        assert res.status_code == 200, res.text
+        data = res.json()
+        papers = data.get("generatedPapers") or data.get("items") or []
+        paper_ids = {p["id"] for p in papers}
+
+        # AI paper MUST appear
+        assert ai_paper_id in paper_ids, (
+            f"AI-generated paper {ai_paper_id!r} missing from Paper Library. "
+            f"Library contains: {paper_ids}"
+        )
+
+        # Manual paper MUST NOT appear
+        assert manual_paper_id not in paper_ids, (
+            f"Non-AI manual paper {manual_paper_id!r} incorrectly appeared in Paper Library. "
+            f"Library contains: {paper_ids}"
+        )
+
+        # The AI paper must carry its generationId in the serialized response
+        ai_entry = next(p for p in papers if p["id"] == ai_paper_id)
+        assert ai_entry.get("generationId") == generation_id, (
+            f"generationId not surfaced on Paper Library entry: {ai_entry}"
+        )
+
+        # Also verify via the /papers list endpoint
+        list_res = client.get("/v1/faculty/paper-generator/papers", headers=auth_header(faculty))
+        assert list_res.status_code == 200
+        list_ids = {p["id"] for p in list_res.json().get("generatedPapers", [])}
+        assert ai_paper_id in list_ids
+        assert manual_paper_id not in list_ids
+
+    finally:
+        # Clean up test papers and their AI questions / generation records
+        for paper_id in (ai_paper_id, manual_paper_id):
+            row = db.get(Paper, paper_id)
+            if row:
+                db.query(PaperQuestion).filter(PaperQuestion.paper_id == paper_id).delete()
+                db.delete(row)
+        items = db.query(QuestionGenerationItem).filter(
+            QuestionGenerationItem.generation_id == generation_id
+        ).all()
+        q_ids_cleanup = [i.question_id for i in items]
+        db.query(QuestionGenerationItem).filter(
+            QuestionGenerationItem.generation_id == generation_id
+        ).delete()
+        if q_ids_cleanup:
+            db.query(Q).filter(Q.id.in_(q_ids_cleanup)).delete()
+        gen = db.get(QuestionGeneration, generation_id)
+        if gen:
+            db.delete(gen)
+        db.commit()
+
+
+def test_paper_library_empty_when_no_ai_papers_exist(client, world, db):
+    """Regression: when a faculty has only non-AI papers, Paper Library returns [].
+
+    Uses a fresh institution with no prior state to avoid cross-test pollution.
+    """
+    from app.models.assessment import Paper, PaperQuestion
+    from app.models.identity import Institution, Role, User, UserRole
+    from app.core.security import hash_password
+
+    inst = Institution(id="inst_lib_empty_test", slug="empty-lib", name="Empty Lib University")
+    db.add(inst)
+    db.flush()
+
+    role_row = Role(institution_id=inst.id, code="faculty", name="Faculty")
+    db.add(role_row)
+    db.flush()
+
+    faculty_user = User(
+        id="u_fac_lib_empty",
+        institution_id=inst.id,
+        email="lib_empty@test.edu",
+        password_hash=hash_password("pass123"),
+        full_name="Empty Lib Faculty",
+        status="active",
+        legacy_role="faculty",
+    )
+    db.add(faculty_user)
+    db.flush()
+    db.add(UserRole(user_id=faculty_user.id, role_id=role_row.id, institution_id=inst.id))
+    db.commit()
+
+    from app.models.assessment import Question as Q
+
+    q = Q(
+        id="q_lib_empty_test",
+        institution_id=inst.id,
+        exam_mode="university",
+        stem="Empty test?",
+        options='["A","B"]',
+        correct_answer="0",
+        marks=1,
+        negative_marks=0,
+        difficulty="easy",
+        q_type="mcq",
+        concept="Test",
+        status="approved",
+    )
+    db.add(q)
+    db.commit()
+
+    try:
+        # Create a manual paper (no generationId)
+        manual_paper = _create_manual_paper(
+            client, faculty_user,
+            title="Only Manual Paper",
+            question_ids=["q_lib_empty_test"],
+        )
+        manual_paper_id = manual_paper["id"]
+
+        res = client.get("/v1/faculty/paper-generator", headers=auth_header(faculty_user))
+        assert res.status_code == 200
+        papers = res.json().get("generatedPapers") or []
+        assert papers == [], (
+            f"Expected empty Paper Library but got {[p['id'] for p in papers]}"
+        )
+
+    finally:
+        row = db.get(Paper, manual_paper.get("id") if "id" in manual_paper else "")
+        if row:
+            db.query(PaperQuestion).filter(PaperQuestion.paper_id == row.id).delete()
+            db.delete(row)
+        qi = db.get(Q, "q_lib_empty_test")
+        if qi:
+            db.delete(qi)
+        from app.models.identity import UserRole as UR
+        db.query(UR).filter(UR.user_id == "u_fac_lib_empty").delete()
+        db.query(User).filter(User.id == "u_fac_lib_empty").delete()
+        db.query(Role).filter(Role.institution_id == "inst_lib_empty_test").delete()
+        db.query(Institution).filter(Institution.id == "inst_lib_empty_test").delete()
+        db.commit()
+
+
+def test_ai_paper_blueprint_stores_generation_id(client, world, db):
+    """Regression: creating a paper with generationId persists it in the blueprint JSON."""
+    from app.models.assessment import Paper, PaperQuestion, QuestionGeneration, QuestionGenerationItem
+    from app.models.assessment import Question as Q
+    import json
+
+    faculty = world["faculty"]
+    ai_paper, generation_id = _generate_and_create_ai_paper(
+        client, faculty, title="Blueprint Gen ID Test"
+    )
+    paper_id = ai_paper["id"]
+
+    try:
+        row = db.get(Paper, paper_id)
+        assert row is not None
+        bp = json.loads(row.blueprint)
+        assert bp.get("generationId") == generation_id, (
+            f"blueprint.generationId expected {generation_id!r}, got {bp.get('generationId')!r}"
+        )
+    finally:
+        for paper_id_ in (paper_id,):
+            r = db.get(Paper, paper_id_)
+            if r:
+                db.query(PaperQuestion).filter(PaperQuestion.paper_id == paper_id_).delete()
+                db.delete(r)
+        items = db.query(QuestionGenerationItem).filter(
+            QuestionGenerationItem.generation_id == generation_id
+        ).all()
+        q_ids_cleanup = [i.question_id for i in items]
+        db.query(QuestionGenerationItem).filter(
+            QuestionGenerationItem.generation_id == generation_id
+        ).delete()
+        if q_ids_cleanup:
+            db.query(Q).filter(Q.id.in_(q_ids_cleanup)).delete()
+        gen = db.get(QuestionGeneration, generation_id)
+        if gen:
+            db.delete(gen)
+        db.commit()
+
+
+def test_invalid_generation_id_is_silently_rejected(client, world, db):
+    """Regression: a fabricated / unknown generationId must not be stored —
+    the paper is created successfully but WITHOUT the generationId in blueprint,
+    so it remains excluded from the Paper Library.
+    """
+    from app.models.assessment import Paper, PaperQuestion
+    import json
+
+    faculty = world["faculty"]
+    paper_body = {
+        "title": "Fake Gen ID Paper",
+        "domain": "University",
+        "selectedQuestionIds": ["q_uni_1"],
+        "duration": 60,
+        "totalMarks": 2,
+        "generationId": "00000000-0000-0000-0000-000000000000",  # does not exist
+    }
+    res = client.post("/v1/faculty/paper-generator/papers", json=paper_body, headers=auth_header(faculty))
+    assert res.status_code == 200, res.text
+    paper_id = res.json()["paper"]["id"]
+
+    try:
+        row = db.get(Paper, paper_id)
+        assert row is not None
+        bp = json.loads(row.blueprint)
+        # generationId must be None — the fake ID was rejected
+        assert bp.get("generationId") is None, (
+            f"Fake generationId was stored: {bp.get('generationId')}"
+        )
+
+        # Paper must NOT appear in the Paper Library
+        lib_res = client.get("/v1/faculty/paper-generator", headers=auth_header(faculty))
+        lib_ids = {p["id"] for p in lib_res.json().get("generatedPapers", [])}
+        assert paper_id not in lib_ids, "Paper with fake generationId appeared in Paper Library"
+
+    finally:
+        row = db.get(Paper, paper_id)
+        if row:
+            db.query(PaperQuestion).filter(PaperQuestion.paper_id == paper_id).delete()
+            db.delete(row)
+        db.commit()
