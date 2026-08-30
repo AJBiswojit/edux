@@ -15,6 +15,11 @@ function CourseDetail() {
   if (isLoading) return <DashboardSkeleton cards={2} />
   if (isError || !course) return <ErrorState onRetry={() => refetch()} />
 
+  const stats = course.stats ?? {}
+  const modules = course.modules ?? []
+  const resources = course.resources ?? []
+  const progress = course.progress ?? 0
+
   return (
     <div>
       <Link to="/student/courses" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 transition-colors hover:text-indigo-600 dark:hover:text-indigo-300">
@@ -42,11 +47,11 @@ function CourseDetail() {
                 <circle
                   cx="40" cy="40" r="34" fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round"
                   strokeDasharray={2 * Math.PI * 34}
-                  strokeDashoffset={2 * Math.PI * 34 * (1 - course.progress / 100)}
+                  strokeDashoffset={2 * Math.PI * 34 * (1 - progress / 100)}
                   style={{ transition: 'stroke-dashoffset 1s ease' }}
                 />
               </svg>
-              <span className="absolute font-display text-xl font-bold">{course.progress}%</span>
+              <span className="absolute font-display text-xl font-bold">{progress}%</span>
             </div>
             <p className="text-xs font-semibold text-white/80">Course progress</p>
           </div>
@@ -56,10 +61,10 @@ function CourseDetail() {
       {/* Stats */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: 'Lessons completed', value: course.stats.lessonsCompleted, icon: BookOpen },
-          { label: 'Average score', value: `${course.stats.avgScore}%`, icon: Trophy },
-          { label: 'Hours invested', value: `${course.stats.hoursSpent}h`, icon: Clock },
-          { label: 'AI mastery score', value: `${course.stats.mastery}%`, icon: Sparkles },
+          { label: 'Lessons completed', value: stats.lessonsCompleted ?? 0, icon: BookOpen },
+          { label: 'Average score', value: stats.avgScore != null ? `${stats.avgScore}%` : '—', icon: Trophy },
+          { label: 'Hours invested', value: `${stats.hoursSpent ?? 0}h`, icon: Clock },
+          { label: 'AI mastery score', value: stats.mastery != null ? `${stats.mastery}%` : '—', icon: Sparkles },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
             <s.icon className="h-5 w-5" style={{ color: course.color }} />
@@ -73,9 +78,14 @@ function CourseDetail() {
         {/* Modules */}
         <Card className="min-w-0 p-6">
           <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Course content</h2>
-          <p className="mt-0.5 text-xs text-slate-400">All modules · {course.lessons} lessons</p>
+          <p className="mt-0.5 text-xs text-slate-400">All modules · {course.lessons ?? 0} lessons</p>
           <div className="mt-5 space-y-3">
-            {course.modules.map((m, mi) => (
+            {modules.length === 0 && (
+              <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400 dark:border-slate-700">
+                No lesson modules yet — progress stays at {progress}% until content is published.
+              </p>
+            )}
+            {modules.map((m, mi) => (
               <div key={m.id} className="overflow-hidden rounded-2xl border border-slate-200/70 dark:border-slate-800">
                 <button className="flex w-full items-center justify-between gap-3 bg-slate-50/70 px-4 py-3.5 text-left dark:bg-slate-800/40">
                   <span className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{m.title}</span>

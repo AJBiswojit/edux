@@ -38,6 +38,9 @@ class Assignment(Base):
     body: Mapped[Optional[str]] = mapped_column(Text)
     due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     max_marks: Mapped[Optional[float]]
+    status: Mapped[str] = mapped_column(String(32), default="published")
+    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    archived_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
 
@@ -53,6 +56,8 @@ class AssignmentSubmission(Base):
     marks: Mapped[Optional[float]]
     feedback: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default="pending")
+    graded_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"))
+    graded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class Announcement(Base):

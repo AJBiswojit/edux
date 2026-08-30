@@ -25,7 +25,7 @@ function Research() {
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {data.kpis.map((k, i) => (
+        {(data?.kpis ?? []).map((k, i) => (
           <motion.div key={k.label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
             <p className="font-display text-2xl font-bold text-slate-900 dark:text-white">{k.value}</p>
             <p className="text-[11px] font-medium text-slate-400">{k.label}</p>
@@ -57,7 +57,7 @@ function Research() {
 
       <h2 className="mb-4 mt-8 text-[15px] font-bold text-slate-900 dark:text-white">Flagship projects</h2>
       <div className="grid gap-4 md:grid-cols-3">
-        {data.topProjects.map((p, i) => (
+        {(data?.topProjects ?? []).map((p, i) => (
           <motion.div key={p.title} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="h-full p-5 transition-all hover:-translate-y-0.5 hover:shadow-lift">
               <div className="flex items-center justify-between">

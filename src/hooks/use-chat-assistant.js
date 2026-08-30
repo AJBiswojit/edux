@@ -29,10 +29,12 @@ function useChatAssistant({ ask, fallbackReply = () => '', getThreadId = null, o
       setMessages((m) => [...m, aiMsg])
       onAssistantMessage?.(userMsg, aiMsg)
     } catch {
-      const fallback = fallbackReply(trimmed)
-      const aiMsg = { id: `a_${Date.now()}`, role: 'assistant', text: fallback, time: new Date().toISOString() }
-      setMessages((m) => [...m, aiMsg])
-      onAssistantMessage?.(userMsg, aiMsg)
+      const fallback = fallbackReply?.(trimmed)
+      if (fallback) {
+        const aiMsg = { id: `a_${Date.now()}`, role: 'assistant', text: fallback, time: new Date().toISOString() }
+        setMessages((m) => [...m, aiMsg])
+        onAssistantMessage?.(userMsg, aiMsg)
+      }
       onError?.()
     } finally {
       setLoading(false)

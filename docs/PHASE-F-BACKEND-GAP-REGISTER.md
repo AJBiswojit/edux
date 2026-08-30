@@ -157,7 +157,7 @@ Status key: **STOP** = UI kept, empty/error on miss, no fake success. **CLOSED**
 | **Missing / mismatch** | No `/faculty/micro-assessments/*` or `/student/micro-assessments/*`. |
 | **Frontend impact** | Studio UI kept. Calls fail → empty/error. No mock assessments. |
 | **Required backend change** | Full micro-assessment resource. |
-| **Status** | STOP |
+| **Status** | CLOSED (Phase 4 — SQL create/generate/assign/send/attempt; sqlite verified, not live PostgreSQL) |
 
 ---
 

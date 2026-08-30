@@ -396,6 +396,26 @@ def serialize_paper_faculty(db: Session, paper: Paper, *, include_questions: boo
     if include_questions:
         questions = {row.id: row for row in db.scalars(select(Question).where(Question.id.in_(ids))).all()} if ids else {}
         item["questionList"] = [serialize_delivery_question(link, questions.get(link.question_id), include_answer=False) for link in links]
+    config = blueprint.get("config") if isinstance(blueprint.get("config"), dict) else {}
+    requested = blueprint.get("requestedQuestionCount") or blueprint.get("questionCount") or config.get("count") or config.get("questionCount") or config.get("questions")
+    try:
+        requested_n = int(requested) if requested is not None else None
+    except (TypeError, ValueError):
+        requested_n = None
+    actual = len(links)
+    if paper.status == STATUS_ARCHIVED:
+        generation_status = "FAILED"
+    elif actual == 0:
+        generation_status = None
+    elif requested_n is not None and actual < requested_n:
+        generation_status = "GENERATING"
+    else:
+        generation_status = "READY"
+    item["generationStatus"] = generation_status
+    item["requestedQuestionCount"] = requested_n
+    item["generatedQuestionCount"] = actual
+    item["validQuestionCount"] = actual
+    item["ready"] = generation_status == "READY" and actual > 0
     return item
 
 
@@ -502,6 +522,8 @@ def create_sql_paper(db: Session, user: User, body: dict) -> dict:
                 "coverage": body.get("coverage") or 90,
                 "sets": body.get("sets") or 1,
                 "config": body.get("config"),
+                "questionCount": body.get("questions") or body.get("questionCount") or len(questions),
+                "requestedQuestionCount": body.get("requestedQuestionCount") or body.get("questions") or body.get("questionCount") or len(questions),
             }
         ),
         status=STATUS_DRAFT,
@@ -631,6 +653,18 @@ def publish_sql_paper(db: Session, user: User, paper_id: str) -> dict:
     links = _paper_questions(db, paper.id)
     if not links:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Paper has no questions")
+    blueprint = parse_json(paper.blueprint, {})
+    config = blueprint.get("config") if isinstance(blueprint.get("config"), dict) else {}
+    requested = blueprint.get("requestedQuestionCount") or blueprint.get("questionCount") or config.get("count") or config.get("questionCount")
+    try:
+        requested_n = int(requested) if requested is not None else None
+    except (TypeError, ValueError):
+        requested_n = None
+    if requested_n is not None and len(links) < requested_n:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Paper is incomplete: {len(links)} valid questions, {requested_n} requested",
+        )
     mode = normalize_exam_mode(paper.exam_mode) or "university"
     family = normalize_exam_family(paper.exam_family, mode=mode)
     ids = [link.question_id for link in links]

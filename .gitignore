@@ -3,6 +3,7 @@
 .env.local
 
 backend/.venv
+backend/var/
 backend/test/_exam_core.sqlite
 backend/test/__pycache__/
 backend/scripts/__pycache__/

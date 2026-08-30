@@ -76,7 +76,7 @@ export function buildUniversityIntelligence({ profile, datasets, derived, readin
     monthlyTrend: ds.attendanceAnalytics?.monthlyTrend ?? [],
     weekly: ds.attendance?.weekly ?? [],
     heatmap: ds.attendance?.heatmap ?? [],
-    calendar: buildAttendanceCalendar(),
+    calendar: ds.attendance?.calendar ?? [],
     history: (ds.attendance?.history ?? []).map((h) => ({ date: h.date, subject: h.subject, type: h.type, status: h.status })),
     recent: (ds.attendance?.history ?? []).slice(0, 7).map((h) => ({ date: h.date, subject: h.subject, status: h.status })),
     weeklySummary: ds.attendanceAnalytics?.weeklySummary ?? [],
@@ -113,14 +113,14 @@ export function buildUniversityIntelligence({ profile, datasets, derived, readin
       code: c.code, title: c.title, credits: c.credits, progress: c.progress,
       lessons: c.lessons, completed: c.completed, grade: c.grade, faculty: c.faculty,
       instructor: c.faculty, color: c.color, description: c.description,
-      enrolled: c.enrolled ?? '2026-01-05',
+      enrolled: c.enrolled ?? null,
       modules: ds.courseModules?.[c.code] ?? [],
       resources: resources.filter((r) => r.course === c.code),
       stats: {
         lessonsCompleted: `${c.completed}/${c.lessons}`,
-        avgScore: subject?.internal ?? 70,
+        avgScore: subject?.internal ?? 0,
         hoursSpent: hoursBySubject[c.code] ?? 0,
-        mastery: mastery ?? subject?.internal ?? 70,
+        mastery: mastery ?? subject?.internal ?? 0,
       },
     }
   })
@@ -137,7 +137,7 @@ export function buildUniversityIntelligence({ profile, datasets, derived, readin
   const perf = ds.academicPerformance ?? {}
   const performance = {
     cgpa: p.cgpa ?? perf.currentCGPA ?? null,
-    targetCGPA: perf.targetCGPA ?? 9,
+    targetCGPA: perf.targetCGPA ?? null,
     semesterHistory: perf.semesterHistory ?? [],
     subjectGrades: perf.subjectGrades ?? [],
     rankTrend: perf.rankTrend ?? [],
@@ -149,7 +149,7 @@ export function buildUniversityIntelligence({ profile, datasets, derived, readin
   const progress = {
     overall: courses.length ? Math.round(avg(courses, 'progress')) : 0,
     courses: courses.map((c) => ({ id: c.code, code: c.code, title: c.title, color: c.color, progress: c.progress, lessons: `${c.completed}/${c.lessons}`, credits: c.credits, grade: c.grade })),
-    semesterTarget: perf.progressTarget ?? 65,
+    semesterTarget: perf.progressTarget ?? null,
     subjects: subjects.map((s) => ({ code: s.code, name: s.name, color: s.color, syllabus: s.progress })),
   }
 
@@ -165,7 +165,7 @@ export function buildUniversityIntelligence({ profile, datasets, derived, readin
       reportingTime: e.reportingTime ?? '9:15 AM', mode: e.mode ?? 'Offline',
       syllabus: e.syllabus ?? null, pattern: null, negativeMarking: null, difficulty: null, chapter: null,
       venue: e.venue, room: e.hallNumber ?? null, seat: e.seatNumber ?? null,
-      inPlanner: e.inPlanner ?? false, admitStatus: e.admitCard ?? 'Issued',
+      inPlanner: e.inPlanner ?? false, admitStatus: e.admitCard ?? null,
       resultAvailability: e.resultAvailability ?? null,
       allowedItems: e.allowedItems, notAllowedItems: e.notAllowedItems, instructions: e.instructions,
     }))
@@ -175,7 +175,7 @@ export function buildUniversityIntelligence({ profile, datasets, derived, readin
     .map((e) => ({
       id: e.id, category: 'Competitive', examType: e.examType, shortName: e.shortName,
       title: e.title, subject: e.subject, subjectCode: e.subjectCode,
-      course: e.subject, faculty: e.faculty ?? 'MediXO Test Series', semester: null,
+      course: e.subject, faculty: e.faculty ?? null, semester: null,
       academicYear: null, date: `${e.date}T09:00:00`, duration: e.duration,
       maxMarks: e.maxMarks, status: e.status, priority: e.priority ?? 'Medium',
       reportingTime: e.reportingTime ?? '8:45 AM', mode: e.pattern === 'OMR' ? 'Offline' : 'Online',
@@ -224,7 +224,7 @@ export function buildUniversityIntelligence({ profile, datasets, derived, readin
   return {
     context: 'university',
     identity: {
-      institution: p.institution ?? 'Meridian Institute of Technology',
+      institution: p.institution ?? null,
       institutionCity: p.institutionInfo?.city ?? null,
       degree: p.academicProgram?.name ?? p.program ?? null,
       branch: p.branch ?? null,

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { CalendarClock, CheckCircle2, Clock, FilePlus2, FileText, Sparkles, UploadCloud } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { useStudentIntelligence } from '@/services/intelligence'
+import { useSubmitAssignment } from '@/services'
+import { EmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useToast, Textarea, Field } from '@/components/ui'
@@ -23,7 +25,9 @@ function Assignments() {
   const { data: intel, isLoading, isError, refetch } = useStudentIntelligence()
   const [filter, setFilter] = useState('All')
   const [submitFor, setSubmitFor] = useState(null)
+  const [note, setNote] = useState('')
   const toast = useToast()
+  const submitAssignment = useSubmitAssignment()
   const allItems = intel?.derived?.university?.assignments?.items ?? []
   const items = allItems.filter((a) => filter === 'All' || a.status === filter)
 
@@ -70,6 +74,13 @@ function Assignments() {
           </button>
         ))}
       </div>
+
+      {allItems.length === 0 && (
+        <EmptyState
+          title="No assignments yet"
+          description="When faculty publish work for your enrolled courses, it will appear here."
+        />
+      )}
 
       <div className="grid gap-5 md:grid-cols-2">
         {items.map((a, i) => (
@@ -119,7 +130,7 @@ function Assignments() {
                     <Button size="sm" className="flex-1" onClick={() => setSubmitFor(a)}>
                       <UploadCloud className="h-4 w-4" /> Submit work
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => toast.info('AI drafting…', 'A draft outline will be ready in a moment.')}>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => toast.info('BACKEND GAP', 'AI assignment drafting is not available yet.')}>
                       <Sparkles className="h-4 w-4 text-indigo-500" /> AI draft
                     </Button>
                   </div>
@@ -150,15 +161,29 @@ function Assignments() {
               <p className="mt-1 text-xs text-slate-400">PDF, ZIP, PY, MD or TXT · max 25 MB</p>
             </div>
             <Field label="Note to faculty (optional)">
-              <Textarea rows={2} placeholder="Briefly describe what you've implemented…" />
+              <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Briefly describe what you've implemented…" />
             </Field>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSubmitFor(null)}>Cancel</Button>
-            <Button onClick={() => {
-              toast.success('Submitted ✓', `“${submitFor?.title}” is with your faculty.`)
-              setSubmitFor(null)
+            <Button onClick={async () => {
+              if (!submitFor?.id) return
+              try {
+                await submitAssignment.mutateAsync({
+                  id: submitFor.id,
+                  files: acceptedFiles.map((f) => f.name),
+                  fileName: acceptedFiles[0]?.name,
+                  note,
+                })
+                toast.success('Submitted ✓', `“${submitFor?.title}” is with your faculty.`)
+                setSubmitFor(null)
+                setNote('')
+              } catch (err) {
+                const status = err?.response?.status
+                if (status === 409) toast.error('Already graded', 'Graded submissions cannot be replaced.')
+                else toast.error('Could not submit', 'The assignment was not saved. Try again.')
+              }
             }}>
               <UploadCloud className="h-4 w-4" /> Submit assignment
             </Button>

@@ -41,3 +41,37 @@ class Intervention(Base):
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class InterventionStudent(Base):
+    __tablename__ = "intervention_students"
+
+    id: Mapped[str] = uuid_pk()
+    intervention_id: Mapped[str] = mapped_column(String(36), ForeignKey("interventions.id"), index=True)
+    student_id: Mapped[str] = mapped_column(String(36), ForeignKey("student_profiles.user_id"), index=True)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    status: Mapped[str] = mapped_column(String(32), default="assigned")
+
+
+class InterventionStatusHistory(Base):
+    __tablename__ = "intervention_status_history"
+
+    id: Mapped[str] = uuid_pk()
+    intervention_id: Mapped[str] = mapped_column(String(36), ForeignKey("interventions.id"), index=True)
+    from_status: Mapped[Optional[str]] = mapped_column(String(32))
+    to_status: Mapped[str] = mapped_column(String(32))
+    changed_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"))
+    note: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class InterventionEffectiveness(Base):
+    __tablename__ = "intervention_effectiveness"
+
+    id: Mapped[str] = uuid_pk()
+    intervention_id: Mapped[str] = mapped_column(String(36), ForeignKey("interventions.id"), index=True)
+    metric: Mapped[str] = mapped_column(String(64))
+    baseline: Mapped[Optional[float]]
+    observed: Mapped[Optional[float]]
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)

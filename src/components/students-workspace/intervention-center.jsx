@@ -157,7 +157,7 @@ function InterventionDetailDialog({ id, open, onOpenChange }) {
 
   const act = async (status, action = null) => {
     await setStatus({ groupId: iv.id, status, action })
-    toast.success(status, status === 'Approved' ? 'Approved by Dr. Meera Krishnan — approval recorded.' : status === 'Dismissed' ? 'Dismissed — no action taken.' : `Intervention moved to ${status}.`)
+    toast.success(status, status === 'Approved' ? 'Approval recorded.' : status === 'Dismissed' ? 'Dismissed — no action taken.' : `Intervention moved to ${status}.`)
   }
 
   const saveModify = async () => {
@@ -427,7 +427,7 @@ function InterventionDetailDialog({ id, open, onOpenChange }) {
 
           {/* approvals meta */}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] font-medium text-slate-400">
-            {iv.approvedAt && <span>Approved by {iv.approvedBy ?? 'Dr. Meera Krishnan'} · {formatDate(iv.approvedAt, 'MMM d, h:mm a')}</span>}
+            {iv.approvedAt && <span>Approved by {iv.approvedBy || 'Faculty'} · {formatDate(iv.approvedAt, 'MMM d, h:mm a')}</span>}
             {iv.assignedAt && <span>Assigned {formatDate(iv.assignedAt, 'MMM d')}</span>}
             {iv.completedAt && <span>Practice completed {formatDate(iv.completedAt, 'MMM d')}</span>}
             {iv.evaluatedAt && <span>Evaluated {formatDate(iv.evaluatedAt, 'MMM d')}</span>}

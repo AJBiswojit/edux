@@ -43,8 +43,8 @@ function Portfolio() {
         breadcrumbs={[{ label: 'Student' }, { label: 'Digital Portfolio' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Exporting…', 'Portfolio exported as PDF.')}><Download className="h-4 w-4" /> Export portfolio</Button>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Printing…', 'Portfolio sent to print.')}><Printer className="h-4 w-4" /> Print portfolio</Button>
+            <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Portfolio PDF export is not available yet.')}><Download className="h-4 w-4" /> Export portfolio</Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print portfolio</Button>
             <Button asChild size="sm"><Link to="/student/mentor"><Sparkles className="h-4 w-4" /> Improve with AI</Link></Button>
           </>
         }
@@ -61,8 +61,8 @@ function Portfolio() {
               <h2 className="mt-1 font-display text-xl font-bold">{portfolio.resume.headline}</h2>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-white/85">{portfolio.resume.summary}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <a href={`https://${portfolio.profiles.github}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25 transition-all hover:bg-white/25"><Github className="h-3 w-3" /> GitHub</a>
-                <a href={`https://${portfolio.profiles.linkedin}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25 transition-all hover:bg-white/25"><Linkedin className="h-3 w-3" /> LinkedIn</a>
+                {portfolio.profiles?.github ? <a href={`https://${portfolio.profiles.github}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25 transition-all hover:bg-white/25"><Github className="h-3 w-3" /> GitHub</a> : <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25">GitHub —</span>}
+                {portfolio.profiles?.linkedin ? <a href={`https://${portfolio.profiles.linkedin}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25 transition-all hover:bg-white/25"><Linkedin className="h-3 w-3" /> LinkedIn</a> : <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25">LinkedIn —</span>}
                 <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25"><FileText className="mr-1 inline h-3 w-3" /> Resume {portfolio.resumeScore}/100</span>
               </div>
             </div>
@@ -79,8 +79,8 @@ function Portfolio() {
             <ProgressRing value={career.score} size={92} stroke={9} label={`${career.score}`} sublabel="Ready" color={career.score >= 80 ? '#10b981' : career.score >= 60 ? '#f59e0b' : '#f43f5e'} />
             <div className="space-y-1 text-[11.5px] text-slate-500 dark:text-slate-400">
               <p><span className="font-bold text-slate-700 dark:text-slate-200">{career.trend === 'improving' ? '▲' : '▼'} {career.delta >= 0 ? `+${career.delta}` : career.delta}</span> vs last month</p>
-              <p>Goal: <span className="font-semibold text-slate-600 dark:text-slate-300">{career.careerGoal ?? 'SDE'}</span></p>
-              <p>Target: <span className="font-semibold text-slate-600 dark:text-slate-300">{career.targetTimeline ?? '2026 placements'}</span></p>
+              <p>Goal: <span className="font-semibold text-slate-600 dark:text-slate-300">{career.careerGoal ?? '—'}</span></p>
+              <p>Target: <span className="font-semibold text-slate-600 dark:text-slate-300">{career.targetTimeline ?? '—'}</span></p>
               <p>Drive: <span className="font-semibold text-slate-600 dark:text-slate-300">{career.placementDrive?.date ?? '—'}</span></p>
             </div>
           </div>
@@ -199,7 +199,7 @@ function Portfolio() {
 
       {/* recommended certs + skills + roadmap */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartCard title="Recommended certifications" subtitle="AI-suggested for your SDE-1 goal" actions={<Badge variant="gradient"><Sparkles className="h-3 w-3" /> AI ranked</Badge>}>
+        <ChartCard title="Recommended certifications" subtitle={career.careerGoal ? `AI-suggested for your ${career.careerGoal} goal` : 'AI-suggested when a career goal is set'} actions={<Badge variant="gradient"><Sparkles className="h-3 w-3" /> AI ranked</Badge>}>
           <div className="space-y-2.5">
             {(career.recommendedCertifications ?? []).map((c) => (
               <div key={c.title} className="flex items-start gap-3 rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
@@ -298,11 +298,11 @@ function Portfolio() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => toast.success('Opening resume…', 'Resume PDF preview opened.')}><FileText className="h-3.5 w-3.5" /> View resume</Button>
-          <Button variant="outline" size="sm" onClick={() => toast.success('Exporting…', 'Portfolio exported as PDF.')}><Download className="h-3.5 w-3.5" /> Export</Button>
-          <Button variant="outline" size="sm" onClick={() => toast.success('Printing…', 'Portfolio sent to print.')}><Printer className="h-3.5 w-3.5" /> Print</Button>
-          <a href={`https://${portfolio.profiles.github}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-[11.5px] font-bold text-slate-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300"><Github className="h-3.5 w-3.5" /> GitHub <ExternalLink className="h-3 w-3" /></a>
-          <a href={`https://${portfolio.profiles.linkedin}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-[11.5px] font-bold text-slate-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300"><Linkedin className="h-3.5 w-3.5" /> LinkedIn <ExternalLink className="h-3 w-3" /></a>
+          <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Resume PDF preview is not available yet.')}><FileText className="h-3.5 w-3.5" /> View resume</Button>
+          <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Portfolio PDF export is not available yet.')}><Download className="h-3.5 w-3.5" /> Export</Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /> Print</Button>
+          {portfolio.profiles?.github ? <a href={`https://${portfolio.profiles.github}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-[11.5px] font-bold text-slate-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300"><Github className="h-3.5 w-3.5" /> GitHub <ExternalLink className="h-3 w-3" /></a> : null}
+          {portfolio.profiles?.linkedin ? <a href={`https://${portfolio.profiles.linkedin}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-[11.5px] font-bold text-slate-600 transition-all hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300"><Linkedin className="h-3.5 w-3.5" /> LinkedIn <ExternalLink className="h-3 w-3" /></a> : null}
         </div>
       </Card>
     </div>

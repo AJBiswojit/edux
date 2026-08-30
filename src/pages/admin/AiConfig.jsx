@@ -15,7 +15,7 @@ function AiConfig() {
 
   const toggle = (key) => {
     setGuardrails((prev) => ({ ...(prev ?? data.guardrails), [key]: !(prev ?? data.guardrails)[key] }))
-    toast.success('Guardrail updated', 'Changes apply to new AI requests immediately.')
+    toast.info('Unavailable', 'BACKEND GAP — AI guardrails are not persisted yet.')
   }
 
   if (isLoading) return <DashboardSkeleton cards={2} />
@@ -34,7 +34,7 @@ function AiConfig() {
       {/* Models */}
       <h2 className="mb-4 text-[15px] font-bold text-slate-900 dark:text-white">AI models</h2>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {data.models.map((m, i) => (
+        {(data?.models ?? []).map((m, i) => (
           <motion.div key={m.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="h-full p-5 transition-all hover:-translate-y-0.5 hover:shadow-lift">
               <div className="flex items-center justify-between">
@@ -60,7 +60,7 @@ function AiConfig() {
         {/* Quotas */}
         <ChartCard title="Usage quotas" subtitle="Current period · resets monthly">
           <div className="space-y-4">
-            {data.quotas.map((q) => {
+            {(data?.quotas ?? []).map((q) => {
               const pct = Math.round((q.current / q.limit) * 100)
               return (
                 <div key={q.feature}>
@@ -106,7 +106,7 @@ function AiConfig() {
       {/* Prompt templates */}
       <h2 className="mb-4 mt-8 text-[15px] font-bold text-slate-900 dark:text-white">Prompt templates</h2>
       <div className="grid gap-4 md:grid-cols-3">
-        {data.prompts.map((p, i) => (
+        {(data?.prompts ?? []).map((p, i) => (
           <motion.div key={p.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="h-full p-5 transition-all hover:-translate-y-0.5 hover:shadow-lift">
               <div className="flex items-center justify-between">
@@ -128,11 +128,11 @@ function AiConfig() {
             <Zap className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[14.5px] font-bold">AI budget this period: ₹4.2L of ₹6L used</p>
-            <p className="text-xs text-white/80">Estimated savings from caching + prompt optimisation: ₹38K</p>
+            <p className="text-[14.5px] font-bold">AI budget this period: not tracked</p>
+            <p className="text-xs text-white/80">BACKEND GAP — AI cost reporting is not operational yet.</p>
           </div>
         </div>
-        <Button variant="secondary" className="bg-white text-indigo-700 hover:bg-indigo-50" onClick={() => toast.success('Report generated', 'AI cost report emailed to finance.')}>
+        <Button variant="secondary" className="bg-white text-indigo-700 hover:bg-indigo-50" onClick={() => toast.info('Unavailable', 'BACKEND GAP — AI cost reporting is not operational yet.')}>
           <Gauge className="h-4 w-4" /> Cost report
         </Button>
       </div>

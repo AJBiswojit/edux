@@ -12,7 +12,7 @@ import { ArrowLeft, BookOpen, CheckCircle2, ClipboardList, Clock, Sparkles, Targ
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, useToast } from '@/components/ui'
-import { useMasterStudentProfile } from '@/services/intelligence'
+import { useAuth } from '@/contexts/auth-context'
 import {
   useStudentInterventions, useStudentInterventionPractice, useStudentInterventionRetest,
   useSubmitInterventionAttempt,
@@ -75,8 +75,8 @@ function InterventionCard({ iv, onStartPractice, onStartRetest }) {
 }
 
 function Interventions() {
-  const { data: profile } = useMasterStudentProfile()
-  const studentId = profile?.id ?? 'u_stu_001'
+  const { user } = useAuth()
+  const studentId = user?.id
   const { data, isLoading, isError, refetch } = useStudentInterventions(studentId)
   const toast = useToast()
   const submit = useSubmitInterventionAttempt()

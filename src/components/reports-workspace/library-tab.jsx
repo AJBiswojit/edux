@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react'
 import { FileText } from 'lucide-react'
 import { useFacultyReports } from '@/services'
-import { useDeleteReport, useArchiveReport } from '@/services/extra'
+import { useDeleteReport, useArchiveReport, useDownloadReport } from '@/services/extra'
 import { StatCard } from '@/components/shared/stat-card'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, useToast } from '@/components/ui'
@@ -18,6 +18,7 @@ function ReportsLibraryTab({ data }) {
   const { data: reportsData, isLoading, isError, refetch } = useFacultyReports()
   const { mutateAsync: deleteReport } = useDeleteReport()
   const { mutateAsync: archiveReport } = useArchiveReport()
+  const { mutateAsync: downloadReport } = useDownloadReport()
   const [filter, setFilter] = useState('All')
   const [format, setFormat] = useState('All')
   const [query, setQuery] = useState('')
@@ -123,6 +124,17 @@ function ReportsLibraryTab({ data }) {
             report={r}
             index={i}
             onView={(report) => setPreviewing(previewFor(report))}
+            onDownload={async (report) => {
+              if (report.generationStatus && report.generationStatus !== 'READY') {
+                toast.error('Not ready', 'Download is available only when the report status is READY.')
+                return
+              }
+              try {
+                await downloadReport(report)
+              } catch {
+                toast.error('Could not download', 'The report file is not ready.')
+              }
+            }}
             onArchive={handleArchive}
             onDelete={setDeleteTarget}
           />

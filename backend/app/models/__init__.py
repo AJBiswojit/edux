@@ -1,11 +1,21 @@
 from app.models.ai import AiConversation, AiMessage, AiPromptTemplate, AiTrace
-from app.models.assessment import ContentSource, Paper, PaperQuestion, Question, QuestionGeneration, QuestionGenerationItem, QuestionStudioSession
+from app.models.assessment import ContentChunk, ContentSource, Paper, PaperQuestion, Question, QuestionGeneration, QuestionGenerationItem, QuestionStudioSession, QuestionVersion
 from app.models.catalog import AcademicTerm, Batch, Campus, CalendarEvent, Chapter, Course, Department, Program, Subject, Topic
 from app.models.teaching import Announcement, Assignment, AssignmentSubmission, AttendanceRecord, AttendanceSession
+from app.models.capabilities import (
+    GeneratedReport,
+    LessonPlan,
+    MicroAssessment,
+    MicroAssessmentAttempt,
+    MicroAssessmentQuestion,
+    MicroAssessmentTarget,
+    ResearchPublication,
+    TimetableSlot,
+)
 from app.models.exams import ExamAttempt, ExamQuestionAttempt, ExamSitting
 from app.models.identity import AuthSession, Institution, OtpChallenge, RegistrationDraft, Role, User, UserRole
 from app.models.intelligence import InstitutionHealthSnapshot, StudentDnaSnapshot
-from app.models.interventions import Intervention, IssueGroup
+from app.models.interventions import Intervention, InterventionEffectiveness, InterventionStatusHistory, InterventionStudent, IssueGroup
 from app.models.ops import AppKv, AuditLog, FileObject, NewsletterSubscriber, ContactInquiry, SupportTicket
 from app.models.people import Enrollment, FacultyProfile, Guardian, GuardianStudent, StudentProfile
 
@@ -17,6 +27,7 @@ __all__ = [
     "ContentSource",
     "Paper",
     "PaperQuestion",
+    "PaperShare",
     "Question",
     "QuestionGeneration",
     "QuestionGenerationItem",

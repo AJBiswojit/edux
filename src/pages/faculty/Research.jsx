@@ -1,15 +1,20 @@
 import { motion } from 'framer-motion'
 import { BookOpen, BookMarked, FlaskConical, Handshake, Users, Wallet } from 'lucide-react'
+import { useState } from 'react'
 import { useFacultyResearch } from '@/services'
+import { useCreatePublication } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { ChartCard } from '@/components/shared/chart-card'
 import { AreaTrend } from '@/components/charts'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
-import { Badge, Button, Card, useToast } from '@/components/ui'
+import { Badge, Button, Card, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Field, Input, useToast } from '@/components/ui'
 
 function Research() {
   const { data, isLoading, isError, refetch } = useFacultyResearch()
+  const { mutateAsync: createPublication, isPending: creating } = useCreatePublication()
   const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ title: '', venue: '', year: '' })
 
   if (isLoading) return <DashboardSkeleton cards={2} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
@@ -22,7 +27,7 @@ function Research() {
         description="Publications, citations, grants and collaborations — your research life in one place."
         breadcrumbs={[{ label: 'Faculty' }, { label: 'Research' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('New publication', 'Add a paper, and AI will draft the metadata + abstract.')}>
+          <Button size="sm" onClick={() => setOpen(true)}>
             <FlaskConical className="h-4 w-4" /> Add publication
           </Button>
         }
@@ -91,6 +96,36 @@ function Research() {
           </motion.div>
         ))}
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add publication</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Field label="Title"><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Paper title" /></Field>
+            <Field label="Venue"><Input value={form.venue} onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))} placeholder="Journal or conference" /></Field>
+            <Field label="Year"><Input type="number" value={form.year} onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))} placeholder="2026" /></Field>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button disabled={creating} onClick={async () => {
+              if (!form.title.trim()) { toast.error('Title required', 'Add a publication title.'); return }
+              try {
+                const res = await createPublication({ title: form.title.trim(), venue: form.venue, year: form.year ? Number(form.year) : undefined })
+                if (res?.ok) {
+                  toast.success('Publication saved', res.publication?.title || form.title)
+                  setOpen(false)
+                  setForm({ title: '', venue: '', year: '' })
+                  refetch()
+                }
+              } catch (e) {
+                toast.error('Could not save', e?.response?.data?.detail ?? e?.message ?? 'Backend create failed.')
+              }
+            }}>{creating ? 'Saving…' : 'Save'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <h2 className="mb-4 mt-8 text-[15px] font-bold text-slate-900 dark:text-white">Active grants</h2>
       <div className="grid gap-4 md:grid-cols-3">

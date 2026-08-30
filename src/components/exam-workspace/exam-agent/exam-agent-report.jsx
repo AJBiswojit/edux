@@ -20,7 +20,7 @@ import { AreaTrend, BarCompare, DonutChart } from '@/components/charts'
 import { ProgressRing } from '@/components/shared/progress-ring'
 import { StatCard } from '@/components/shared/stat-card'
 import { formatDate } from '@/utils/format'
-import { formatPace } from '@/intelligence'
+import { formatPace } from '@/intelligence/engine/exam-agent.js'
 import { AgentChip, ExamTypeBadge, LevelBadge, ResultBadge, SectionHeading } from './exam-agent-shared'
 
 const SHORT_SUBJECTS = {
@@ -406,9 +406,9 @@ function ExamAgentReport({ report, mode, onRetake, onBack }) {
 
       {/* Honesty note */}
       <p className="rounded-2xl bg-slate-50 px-4 py-3 text-[11.5px] font-medium leading-relaxed text-slate-400 dark:bg-slate-800/60">
-        <span className="font-bold text-slate-500 dark:text-slate-300">Prototype note:</span> the AI Exam Agent is a frontend-only
-        simulation. This report is generated locally by a deterministic rule-based engine from your attempt interactions —
-        no real AI model or backend is involved. Attempts persist only in this browser.
+        <span className="font-bold text-slate-500 dark:text-slate-300">How this report is built:</span> numbers come from this
+        attempt’s interactions via the exam-agent engine. Scoring and persistence use the student exam APIs. PDF export is
+        not available yet (BACKEND GAP).
       </p>
 
       {/* Actions */}

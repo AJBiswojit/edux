@@ -8,12 +8,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2, FileBarChart, FileText, ListChecks, Sparkles, Wand2 } from 'lucide-react'
-import { useCreateReport } from '@/services/extra'
+import { useCreateReport, useDownloadReport } from '@/services/extra'
 import { Badge, Button, Card, Field, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 import { buildReportPreview } from '@/intelligence/faculty'
 
 function ReportsGenerateTab({ data }) {
   const { mutateAsync: createReport } = useCreateReport()
+  const { mutateAsync: downloadReport } = useDownloadReport()
   const templates = data.derived.reports?.templates ?? []
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '')
   const [format, setFormat] = useState('PDF')
@@ -163,7 +164,17 @@ function ReportsGenerateTab({ data }) {
             <h3 className="mt-2 font-display text-lg font-bold">{created.title}</h3>
             <p className="mt-1 text-[12px] text-white/85">{created.type} · {created.scope} · {created.summary}</p>
             <div className="mt-3 flex gap-2">
-              <Button size="sm" className="bg-white text-emerald-700 hover:bg-emerald-50" onClick={() => toast.success('Downloading…', `${created.title}.${String(created.type).toLowerCase()} is being prepared.`)}>
+              <Button size="sm" className="bg-white text-emerald-700 hover:bg-emerald-50" onClick={async () => {
+                if (created.generationStatus && created.generationStatus !== 'READY') {
+                  toast.error('Not ready', 'Download is available only when the report status is READY.')
+                  return
+                }
+                try {
+                  await downloadReport(created)
+                } catch {
+                  toast.error('Could not download', 'The report file is not ready.')
+                }
+              }}>
                 <FileText className="h-3.5 w-3.5" /> Download
               </Button>
               <Button size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10" onClick={() => toast.success('Added to library', `${created.title} is in your report library.`)}>

@@ -96,7 +96,7 @@ function AIWorkspace() {
       <Card className="mb-6 flex flex-col items-start justify-between gap-4 bg-gradient-to-r from-indigo-600 via-blue-600 to-teal-500 p-6 text-white shadow-xl shadow-indigo-500/20 sm:flex-row sm:items-center">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/70"><BrainCircuit className="mr-1 inline h-3.5 w-3.5" /> Contextual welcome</p>
-          <h2 className="mt-1 font-display text-xl font-bold">{greeting}, Director.</h2>
+          <h2 className="mt-1 font-display text-xl font-bold">{greeting}, {d.profile?.firstName || data.profile?.firstName || 'Admin'}.</h2>
           <p className="mt-1 text-[12.5px] text-white/85">
             Institution Health <span className="font-bold">{health.score}/100</span> · Student Success <span className="font-bold">{health.pillars?.find((p) => p.label === 'Student success')?.value ?? '—'}</span>
             {weakest && <span className="ml-2">· Current Priority: <span className="font-bold">{weakest.label}</span> requires attention.</span>}

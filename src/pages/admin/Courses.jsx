@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BookOpen, Download, Plus, Search, Users } from 'lucide-react'
 import { useAdminCourses } from '@/services'
+import { useCreateAdminCourse } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DataTable } from '@/components/shared/data-table'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -10,7 +11,9 @@ function Courses() {
   const { data, isLoading, isError, refetch } = useAdminCourses()
   const [dept, setDept] = useState('All')
   const toast = useToast()
+  const createCourse = useCreateAdminCourse()
   const courses = (data?.courses ?? []).filter((c) => dept === 'All' || c.dept === dept)
+  const deptCodes = ['All', ...new Set((data?.courses ?? []).map((c) => c.dept).filter(Boolean))]
 
   const columns = useMemo(() => [
     {
@@ -45,7 +48,7 @@ function Courses() {
       key: 'passRate',
       label: 'Pass rate',
       sortable: true,
-      render: (c) => <Badge variant={c.passRate >= 90 ? 'success' : c.passRate >= 85 ? 'warning' : 'danger'}>{c.passRate}%</Badge>,
+      render: (c) => <Badge variant={c.passRate == null ? 'secondary' : c.passRate >= 90 ? 'success' : c.passRate >= 85 ? 'warning' : 'danger'}>{c.passRate == null ? '—' : `${c.passRate}%`}</Badge>,
     },
     { key: 'credits', label: 'Credits', render: (c) => <span className="text-slate-500 dark:text-slate-400">{c.credits}</span> },
     {
@@ -63,14 +66,24 @@ function Courses() {
       <PageHeader
         eyebrow="Management · Courses"
         title="Course catalogue"
-        description="All 214 courses — enrolment, faculty allocation and outcome health per programme."
+        description={`${courses.length} courses — enrolment, faculty allocation and outcome health per programme.`}
         breadcrumbs={[{ label: 'Admin' }, { label: 'Courses' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Export started', 'course_catalogue.xlsx will download shortly.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'BACKEND GAP — catalogue export is not implemented.')}>
               <Download className="h-4 w-4" /> Export
             </Button>
-            <Button size="sm" onClick={() => toast.info('Create course', 'The course wizard opens with curriculum-mapping guidance.')}>
+            <Button size="sm" onClick={async () => {
+              const code = window.prompt('Course code')
+              const name = window.prompt('Course title')
+              if (!code || !name) return
+              try {
+                await createCourse.mutateAsync({ code, name })
+                toast.success('Course created', `${code} saved.`)
+              } catch (err) {
+                toast.error('Create failed', err?.response?.data?.detail || 'Could not create course.')
+              }
+            }}>
               <Plus className="h-4 w-4" /> New course
             </Button>
           </>
@@ -78,7 +91,7 @@ function Courses() {
       />
 
       <div className="mb-5 flex flex-wrap gap-2">
-        {['All', 'CSE', 'ECE', 'ME', 'EE', 'CE', 'MBA', 'DES'].map((d) => (
+        {deptCodes.map((d) => (
           <button
             key={d}
             onClick={() => setDept(d)}

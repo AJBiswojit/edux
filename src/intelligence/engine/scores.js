@@ -137,8 +137,8 @@ export function computeSubjectMastery(subjectCode, { subjects, attendance, quizR
   const quizzes = (quizResults ?? []).filter((q) => q.subjectCode === subjectCode)
   const practice = (practiceSessions ?? []).filter((p) => p.subjectCode === subjectCode)
 
-  const internal = Number(subject?.internal ?? 70)
-  const attPct = Number(att?.pct ?? 90)
+  const internal = Number(subject?.internal ?? 0)
+  const attPct = Number(att?.pct ?? 0)
   const dnaMastery = Number(dna?.mastery)
   const quizAvg = quizzes.length ? avg(quizzes, 'accuracy') : null
   const practiceAvg = practice.length ? avg(practice, 'score') : null

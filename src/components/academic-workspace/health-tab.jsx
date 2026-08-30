@@ -20,12 +20,9 @@ const ICONS = {
 
 function HealthTab({ derived, dna }) {
   const h = derived.academicHealth
-  const breakdown = dna.healthBreakdown
+  const breakdown = dna?.healthBreakdown ?? []
 
-  const trendData = [
-    { month: 'Mar', health: 78 }, { month: 'Apr', health: 80 }, { month: 'May', health: 81 },
-    { month: 'Jun', health: 84 }, { month: 'Jul', health: 87 }, { month: 'Aug', health: 89.4 },
-  ]
+  const trendData = derived.university?.attendance?.monthlyTrend?.map((row) => ({ month: row.month, health: row.pct })) ?? []
 
   return (
     <div className="space-y-6">
@@ -57,7 +54,7 @@ function HealthTab({ derived, dna }) {
           <AreaTrend data={trendData} xKey="month" height={220} series={[{ key: 'health', name: 'Health', color: '#10b981' }]} />
           <div className="mt-3 grid grid-cols-3 gap-2.5">
             {[
-              { label: 'Attendance health', value: breakdown.find((b) => b.key === 'attendance')?.value ?? 92.4, color: '#14b8a6' },
+              { label: 'Attendance health', value: breakdown.find((b) => b.key === 'attendance')?.value ?? 0, color: '#14b8a6' },
               { label: 'Learning health', value: derived.learningBehaviourScore, color: '#8b5cf6' },
               { label: 'Consistency health', value: derived.consistencyScore, color: '#f59e0b' },
             ].map((m) => (
@@ -95,7 +92,7 @@ function HealthTab({ derived, dna }) {
       <div className="flex items-start gap-3 rounded-3xl bg-gradient-to-r from-indigo-600/10 to-teal-500/10 p-5 ring-1 ring-indigo-500/15">
         <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
         <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
-          <span className="font-bold text-indigo-600 dark:text-indigo-300">AI take:</span> your health has grown from 78 to 89.4 over 6 months. The fastest lever now is consistency (70.9) — two more practice sessions per week projects +3.8 health points by month end.
+          <span className="font-bold text-indigo-600 dark:text-indigo-300">AI take:</span> {h.hasEvidence ? `${h.grade} · ${h.trend}.` : 'Academic health will appear after attendance, assignments or exams are recorded.'}
         </p>
       </div>
     </div>

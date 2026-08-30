@@ -76,7 +76,7 @@ export function PaperCard({
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10.5px] font-medium text-slate-400">
           <span>Created {formatDate(paper.created ?? paper.generated, 'MMM d, yyyy')}</span>
           <span>· Modified {formatDate(paper.modified ?? paper.generated, 'MMM d, yyyy')}</span>
-          <span>· {paper.faculty ?? 'Dr. Meera Krishnan'}</span>
+          <span>· {paper.faculty || '—'}</span>
           <span>· {qCount} IDs</span>
         </div>
 
@@ -283,7 +283,7 @@ export function SharePaperDialog({ paper, open, onOpenChange }) {
       if (isBackendDown) {
         toast.error('Connect the EduX backend', 'Sharing requires backend — POST /faculty/paper-generator/papers/:id/share')
       } else {
-        toast.error('Could not share', e?.response?.data?.message ?? 'Please try again.')
+        toast.error('Could not share', e?.response?.data?.detail ?? e?.response?.data?.message ?? 'Please try again.')
       }
     } finally {
       setSharing(false)
@@ -391,13 +391,23 @@ export function PaperPrintPreview({ paper, open, onOpenChange }) {
 
 /* Share history — backend only, no localStorage */
 export function ShareHistoryList({ paperId }) {
-  // Phase 9: No localStorage source of truth. Backend shares would be fetched via GET /faculty/paper-generator/papers/:id/shares if available.
-  // Currently no list endpoint documented, so show empty state with backend guidance.
+  const { data } = usePaperShares()
   if (!paperId) return null
+  const items = (data?.items || []).filter((row) => row.paperId === paperId)
   return (
     <div className="rounded-2xl border border-dashed border-slate-200 p-4 dark:border-slate-700">
       <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400"><Database className="h-3 w-3" /> Share history · Backend</p>
-      <p className="mt-2 text-[11px] text-slate-400">Shares are stored in backend DB via POST /faculty/paper-generator/papers/{paperId}/share. No localStorage fallback. List endpoint not yet documented — will show history when GET /faculty/paper-generator/shares is available.</p>
+      {items.length === 0 ? (
+        <p className="mt-2 text-[11px] text-slate-400">No shares recorded for this paper. Sharing publishes through the examination spine and writes a paper_shares row.</p>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {items.map((row) => (
+            <li key={row.id} className="text-[11px] text-slate-500 dark:text-slate-400">
+              {row.audience || 'batch'} · {row.sharedAt ? String(row.sharedAt).slice(0, 10) : '—'} · {row.sharedBy || 'faculty'}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -31,14 +31,15 @@ function Dashboard() {
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
   const health = data.derived.institutionHealth ?? {}
-  const brief = data.reports?.institution?.headline ?? 'Institution health overview'
+  const brief = data.derived?.reports?.institution?.headline ?? 'Institution health overview'
+  const instName = data.derived?.profile?.name || data.profile?.name || 'your institution'
 
   return (
     <div>
       <PageHeader
         eyebrow="Administrator · Command Center"
         title="Institution Command Center"
-        description="Meridian Institute of Technology — executive health, student risk and management priorities at a glance."
+        description={`${instName} — executive health, student risk and management priorities at a glance.`}
         breadcrumbs={[{ label: 'Admin' }, { label: 'Dashboard' }]}
         actions={
           <>

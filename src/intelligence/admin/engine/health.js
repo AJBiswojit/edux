@@ -14,14 +14,16 @@ import { clamp, round1, avg, weighted } from './scores.js'
 
 /* ---------- Academic health ---------- */
 export function computeAcademicHealth({ adminAnalytics, adminPerformance }) {
-  const retention = adminAnalytics?.retention?.slice(-1)[0]?.overall ?? 90 // 92.1 (2025)
+  const retention = adminAnalytics?.retention?.slice(-1)[0]?.overall ?? 0
   const cgpaAvg = adminAnalytics?.semesterWise?.length
-    ? avg(adminAnalytics.semesterWise, 'cgpa') * 10 // 7.7 → 77
-    : 77
+    ? avg(adminAnalytics.semesterWise, 'cgpa') * 10
+    : 0
   const passRate = adminPerformance?.deptPassRates?.length
     ? avg(adminPerformance.deptPassRates, 'pass')
-    : 89
-  const digitalSatisfaction = (adminAnalytics?.satisfaction?.digital ?? 4.6 / 5) * 20 // 4.6/5 → 92
+    : 0
+  const digitalSatisfaction = adminAnalytics?.satisfaction?.digital != null
+    ? (adminAnalytics.satisfaction.digital) * 20
+    : 0
 
   const score = round1(weighted([
     { value: retention, weight: 0.3 },
@@ -43,7 +45,7 @@ export function computeAcademicHealth({ adminAnalytics, adminPerformance }) {
 
 /* ---------- Attendance health ---------- */
 export function computeAttendanceHealth({ adminAttendanceAnalytics }) {
-  const overall = adminAttendanceAnalytics?.overall ?? 90
+  const overall = adminAttendanceAnalytics?.overall ?? 0
   const trendDelta = (adminAttendanceAnalytics?.trend ?? []).length >= 2
     ? round1(adminAttendanceAnalytics.trend[adminAttendanceAnalytics.trend.length - 1].pct - adminAttendanceAnalytics.trend[0].pct)
     : 0
@@ -64,12 +66,12 @@ export function computeAttendanceHealth({ adminAttendanceAnalytics }) {
 export function computeAssessmentHealth({ adminExamAnalytics, adminAssignmentAnalytics }) {
   const examAvg = adminExamAnalytics?.kpis?.find((k) => k.label === 'Average score')?.value
   const examPass = adminExamAnalytics?.kpis?.find((k) => k.label === 'Pass rate')?.value
-  const examAvgNum = typeof examAvg === 'number' ? examAvg : 71.4
-  const examPassNum = typeof examPass === 'number' ? examPass : 89.7
+  const examAvgNum = typeof examAvg === 'number' ? examAvg : 0
+  const examPassNum = typeof examPass === 'number' ? examPass : 0
   const submission = adminAssignmentAnalytics?.kpis?.find((k) => k.label === 'Submission rate')?.value
-  const submissionNum = typeof submission === 'number' ? submission : 93.2
+  const submissionNum = typeof submission === 'number' ? submission : 0
   const onTime = adminAssignmentAnalytics?.kpis?.find((k) => k.label === 'On-time rate')?.value
-  const onTimeNum = typeof onTime === 'number' ? onTime : 87.6
+  const onTimeNum = typeof onTime === 'number' ? onTime : 0
   const drafts = (adminExamAnalytics?.upcoming ?? []).filter((e) => e.status === 'Drafting').length
   const upcoming = (adminExamAnalytics?.upcoming ?? []).length
 
@@ -78,7 +80,7 @@ export function computeAssessmentHealth({ adminExamAnalytics, adminAssignmentAna
     { value: examPassNum, weight: 0.3 },
     { value: submissionNum, weight: 0.2 },
     { value: onTimeNum, weight: 0.1 },
-    { value: upcoming ? clamp(100 - (drafts / upcoming) * 60) : 80, weight: 0.1 }, // readiness
+    { value: upcoming ? clamp(100 - (drafts / upcoming) * 60) : 0, weight: 0.1 }, // readiness
   ]))
   return {
     score,
@@ -92,17 +94,21 @@ export function computeAssessmentHealth({ adminExamAnalytics, adminAssignmentAna
       { label: 'Exam average', value: round1(examAvgNum) },
       { label: 'Exam pass rate', value: round1(examPassNum) },
       { label: 'Assignment submission', value: round1(submissionNum) },
-      { label: 'Readiness', value: upcoming ? round1(clamp(100 - (drafts / upcoming) * 60)) : 80 },
+      { label: 'Readiness', value: upcoming ? round1(clamp(100 - (drafts / upcoming) * 60)) : 0 },
     ],
   }
 }
 
 /* ---------- Faculty health ---------- */
 export function computeFacultyHealth({ adminAnalytics, adminResearch, profile }) {
-  const teachingSatisfaction = (adminAnalytics?.satisfaction?.teaching ?? 4.3 / 5) * 20 // 4.3/5 → 86
-  const digitalSatisfaction = (adminAnalytics?.satisfaction?.digital ?? 4.6 / 5) * 20
-  const pubs = adminResearch?.kpis?.find((k) => k.label === 'Publications (FY26)')?.value ?? 1240
-  const facultyCount = profile?.totals?.faculty ?? 640
+  const teachingSatisfaction = adminAnalytics?.satisfaction?.teaching != null
+    ? adminAnalytics.satisfaction.teaching * 20
+    : 0
+  const digitalSatisfaction = adminAnalytics?.satisfaction?.digital != null
+    ? adminAnalytics.satisfaction.digital * 20
+    : 0
+  const pubs = adminResearch?.kpis?.find((k) => String(k.label || '').toLowerCase().includes('publication'))?.value ?? 0
+  const facultyCount = profile?.totals?.faculty ?? 0
   const pubsPerFaculty = Math.min(100, (pubs / Math.max(facultyCount, 1)) / 3 * 100) // 1.94/3 → 64.6
 
   const score = round1(weighted([
@@ -125,11 +131,11 @@ export function computeFacultyHealth({ adminAnalytics, adminResearch, profile })
 
 /* ---------- Student success ---------- */
 export function computeStudentSuccess({ adminAnalytics, adminPerformance, adminExamAnalytics, atRiskRate }) {
-  const retention = adminAnalytics?.retention?.slice(-1)[0]?.overall ?? 92
+  const retention = adminAnalytics?.retention?.slice(-1)[0]?.overall ?? 0
   const examPass = adminExamAnalytics?.kpis?.find((k) => k.label === 'Pass rate')?.value
-  const examPassNum = typeof examPass === 'number' ? examPass : 89.7
-  const atRiskInverted = clamp(100 - (atRiskRate ?? 5.9))
-  const placement = adminPerformance?.deptPassRates?.length ? 92.4 : 92.4 // adminPlacements kpi — see outcomes
+  const examPassNum = typeof examPass === 'number' ? examPass : 0
+  const atRiskInverted = typeof atRiskRate === 'number' ? clamp(100 - atRiskRate) : 0
+  const placement = 0
 
   const score = round1(weighted([
     { value: retention, weight: 0.3 },
@@ -154,9 +160,10 @@ export function computeStudentSuccess({ adminAnalytics, adminPerformance, adminE
 /* ---------- Outcomes health (placements + research) ---------- */
 export function computeOutcomesHealth({ adminPlacements, adminResearch }) {
   const placementRate = adminPlacements?.kpis?.find((k) => k.label === 'Placement rate')?.value
-  const placementNum = typeof placementRate === 'number' ? placementRate : 92.4
-  const grants = adminResearch?.grantTrend?.slice(-1)[0]?.amount ?? 52.8
-  const grantsScore = clamp((grants / 60) * 100) // ₹52.8 Cr vs ₹60 Cr benchmark → 88
+  const placementNum = typeof placementRate === 'number' ? placementRate : 0
+  const grants = adminResearch?.grantTrend?.slice(-1)[0]?.amount
+  const grantsNum = typeof grants === 'number' ? grants : 0
+  const grantsScore = grantsNum ? clamp((grantsNum / 60) * 100) : 0
 
   const score = round1(weighted([
     { value: placementNum, weight: 0.6 },
@@ -166,7 +173,7 @@ export function computeOutcomesHealth({ adminPlacements, adminResearch }) {
     score,
     grade: gradeFor(score),
     placementRate: round1(placementNum),
-    grants: round1(grants),
+    grants: round1(grantsNum),
     factors: [
       { label: 'Placement rate', value: round1(placementNum) },
       { label: 'Research funding', value: round1(grantsScore) },
@@ -180,9 +187,9 @@ export function computeDepartmentHealth({ departments, deptPassRates, attendance
   const attMap = Object.fromEntries((attendanceByDept ?? []).map((d) => [d.dept, d.pct]))
 
   const list = (departments ?? []).map((d) => {
-    const pass = passMap[d.code] ?? 85
-    const att = attMap[d.code] ?? 90
-    const placement = d.placement ?? 85
+    const pass = passMap[d.code] ?? 0
+    const att = attMap[d.code] ?? 0
+    const placement = d.placement ?? 0
     const score = round1(weighted([
       { value: pass, weight: 0.4 },
       { value: att, weight: 0.25 },

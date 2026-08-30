@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, uuid_pk
@@ -68,6 +69,18 @@ class PaperQuestion(Base):
     snapshot: Mapped[str] = mapped_column(Text)
 
 
+class PaperShare(Base):
+    """Delivery record for a published paper. Schema already defined in schema.sql."""
+
+    __tablename__ = "paper_shares"
+
+    id: Mapped[str] = uuid_pk()
+    paper_id: Mapped[str] = mapped_column(String(36), ForeignKey("papers.id"), index=True)
+    shared_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"))
+    audience: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
 class ContentSource(Base, TimestampMixin):
     __tablename__ = "content_sources"
 
@@ -80,6 +93,9 @@ class ContentSource(Base, TimestampMixin):
     object_key: Mapped[Optional[str]] = mapped_column(String(512))
     page_count: Mapped[Optional[int]]
     analysis: Mapped[Optional[str]] = mapped_column(Text)
+    extracted_text: Mapped[Optional[str]] = mapped_column(Text)
+    analysis_status: Mapped[str] = mapped_column(String(32), default="PENDING")
+    analysis_error: Mapped[Optional[str]] = mapped_column(Text)
     created_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"))
 
 
@@ -120,3 +136,27 @@ class QuestionGenerationItem(Base):
     generation_id: Mapped[str] = mapped_column(String(36), ForeignKey("question_generations.id"), primary_key=True)
     question_id: Mapped[str] = mapped_column(String(36), ForeignKey("questions.id"), primary_key=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class QuestionVersion(Base, TimestampMixin):
+    __tablename__ = "question_versions"
+
+    id: Mapped[str] = uuid_pk()
+    question_id: Mapped[str] = mapped_column(String(36), ForeignKey("questions.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    stem: Mapped[str] = mapped_column(Text)
+    options: Mapped[Optional[str]] = mapped_column(Text)
+    correct_answer: Mapped[str] = mapped_column(Text)
+    explanation: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(32), default="draft")
+    created_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"))
+
+
+class ContentChunk(Base):
+    __tablename__ = "source_chunks"
+
+    id: Mapped[str] = uuid_pk()
+    source_id: Mapped[str] = mapped_column(String(36), ForeignKey("content_sources.id"), index=True)
+    page_no: Mapped[Optional[int]]
+    chunk_index: Mapped[int] = mapped_column(Integer, default=0)
+    text: Mapped[str] = mapped_column(Text)

@@ -49,273 +49,57 @@ def _dept_counts(db: Session, institution_id: str) -> tuple[dict[str, int], dict
 
 
 def admin_departments(db: Session, institution_id: str) -> list[dict]:
-    depts = db.scalars(select(Department).where(Department.institution_id == institution_id).order_by(Department.code)).all()
-    if not depts:
-        return payload("admin-catalog", db).get("departments") or []
-    student_n, faculty_n = _dept_counts(db, institution_id)
-    programs = db.scalars(select(Program).where(Program.institution_id == institution_id)).all()
-    prog_n = defaultdict(int)
-    for program in programs:
-        if program.department_id:
-            prog_n[program.department_id] += 1
-    users = {u.id: u for u in db.scalars(select(User).where(User.institution_id == institution_id)).all()}
-    fixture = {row.get("code"): row for row in (payload("admin-catalog", db).get("departments") or [])}
-    items = []
-    for dept in depts:
-        hod = users.get(dept.hod_user_id) if dept.hod_user_id else None
-        base = fixture.get(dept.code) or {}
-        items.append(
-            {
-                "id": dept.id,
-                "name": dept.name,
-                "code": dept.code,
-                "students": student_n.get(dept.id, base.get("students") or 0),
-                "faculty": faculty_n.get(dept.id, base.get("faculty") or 0),
-                "programs": prog_n.get(dept.id, base.get("programs") or 0),
-                "hod": hod.full_name if hod else base.get("hod"),
-                "placement": base.get("placement"),
-            }
-        )
-    return items
+    from app.services.admin_runtime import list_departments
+
+    return list_departments(db, institution_id)
 
 
 def admin_courses(db: Session, institution_id: str) -> list[dict]:
-    courses = db.scalars(select(Course).where(Course.institution_id == institution_id).order_by(Course.code)).all()
-    if not courses:
-        return payload("admin-catalog", db).get("courses") or []
-    depts = {d.id: d for d in db.scalars(select(Department).where(Department.institution_id == institution_id)).all()}
-    subjects = {s.id: s for s in db.scalars(select(Subject).where(Subject.institution_id == institution_id)).all()}
-    faculty = {p.user_id: p for p in db.scalars(select(FacultyProfile).where(FacultyProfile.institution_id == institution_id)).all()}
-    users = {u.id: u for u in db.scalars(select(User).where(User.institution_id == institution_id)).all()}
-    enrolled = dict(
-        db.execute(
-            select(Enrollment.course_id, func.count()).group_by(Enrollment.course_id)
-        ).all()
-    )
-    fixture = {row.get("code"): row for row in (payload("admin-catalog", db).get("courses") or [])}
-    items = []
-    for course in courses:
-        subject = subjects.get(course.subject_id)
-        dept = depts.get(subject.department_id) if subject else None
-        faculty_name = None
-        for profile in faculty.values():
-            if dept and profile.department_id == dept.id:
-                faculty_name = users.get(profile.user_id).full_name if users.get(profile.user_id) else None
-                break
-        base = fixture.get(course.code) or {}
-        items.append(
-            {
-                "id": course.id,
-                "code": course.code,
-                "title": course.name,
-                "dept": dept.code if dept else base.get("dept"),
-                "credits": course.credits or base.get("credits"),
-                "enrolled": int(enrolled.get(course.id) or base.get("enrolled") or 0),
-                "faculty": base.get("faculty") or faculty_name,
-                "semester": f"Sem {course.semester_no}" if course.semester_no else base.get("semester"),
-                "passRate": base.get("passRate"),
-                "status": "Active",
-            }
-        )
-    return items
+    from app.services.admin_runtime import list_courses
+
+    return list_courses(db, institution_id)
 
 
 def admin_programs(db: Session, institution_id: str) -> list[dict]:
-    rows = db.scalars(select(Program).where(Program.institution_id == institution_id).order_by(Program.code)).all()
-    if not rows:
-        return payload("admin-catalog", db).get("programs") or []
-    depts = {d.id: d for d in db.scalars(select(Department).where(Department.institution_id == institution_id)).all()}
-    students = defaultdict(int)
-    for profile in db.scalars(select(StudentProfile).where(StudentProfile.institution_id == institution_id)).all():
-        if profile.program_id:
-            students[profile.program_id] += 1
-    fixture = {row.get("name"): row for row in (payload("admin-catalog", db).get("programs") or [])}
-    items = []
-    for program in rows:
-        dept = depts.get(program.department_id)
-        base = fixture.get(program.name) or {}
-        items.append(
-            {
-                "id": program.id,
-                "name": program.name,
-                "dept": dept.code if dept else base.get("dept"),
-                "duration": f"{program.duration_years} yrs" if program.duration_years else base.get("duration"),
-                "students": students.get(program.id, base.get("students") or 0),
-                "intake": base.get("intake"),
-                "fee": base.get("fee"),
-                "accreditations": base.get("accreditations") or [],
-                "placements": base.get("placements"),
-                "status": "Active",
-            }
-        )
-    return items
+    from app.services.admin_runtime import list_programs
+
+    return list_programs(db, institution_id)
 
 
 def admin_subjects(db: Session, institution_id: str) -> list[dict]:
-    rows = db.scalars(select(Subject).where(Subject.institution_id == institution_id).order_by(Subject.code)).all()
-    if not rows:
-        return payload("admin-catalog", db).get("subjects") or []
-    fixture = {row.get("code"): row for row in (payload("admin-catalog", db).get("subjects") or [])}
-    items = []
-    for subject in rows:
-        base = fixture.get(subject.code) or {}
-        items.append(
-            {
-                "id": subject.id,
-                "code": subject.code,
-                "name": subject.name,
-                "program": base.get("program"),
-                "semester": base.get("semester"),
-                "credits": base.get("credits"),
-                "courses": base.get("courses") or 1,
-                "faculty": base.get("faculty"),
-                "passRate": base.get("passRate"),
-                "status": "Active",
-            }
-        )
-    return items
+    from app.services.admin_runtime import list_subjects
+
+    return list_subjects(db, institution_id)
 
 
 def admin_batches(db: Session, institution_id: str) -> list[dict]:
-    rows = db.scalars(select(Batch).where(Batch.institution_id == institution_id).order_by(Batch.code)).all()
-    if not rows:
-        return payload("admin-catalog", db).get("batches") or []
-    students = defaultdict(int)
-    cgpa_sum = defaultdict(float)
-    cgpa_n = defaultdict(int)
-    for profile in db.scalars(select(StudentProfile).where(StudentProfile.institution_id == institution_id)).all():
-        if not profile.batch_id:
-            continue
-        students[profile.batch_id] += 1
-        if profile.cgpa is not None:
-            cgpa_sum[profile.batch_id] += profile.cgpa
-            cgpa_n[profile.batch_id] += 1
-    programs = {p.id: p for p in db.scalars(select(Program).where(Program.institution_id == institution_id)).all()}
-    items = []
-    for batch in rows:
-        program = programs.get(batch.program_id)
-        n = cgpa_n.get(batch.id) or 0
-        items.append(
-            {
-                "id": batch.id,
-                "name": batch.name or batch.code,
-                "program": program.name if program else None,
-                "intake": students.get(batch.id, 0),
-                "students": students.get(batch.id, 0),
-                "coordinator": None,
-                "semester": batch.section,
-                "avgCgpa": round(cgpa_sum[batch.id] / n, 1) if n else None,
-                "status": "Active",
-            }
-        )
-    return items
+    from app.services.admin_runtime import list_batches
+
+    return list_batches(db, institution_id)
 
 
 def admin_users(db: Session, institution_id: str) -> list[dict]:
-    users = db.scalars(select(User).where(User.institution_id == institution_id).order_by(User.full_name)).all()
-    if not users:
-        return payload("admin-catalog", db).get("users") or []
-    students = {p.user_id: p for p in db.scalars(select(StudentProfile).where(StudentProfile.institution_id == institution_id)).all()}
-    faculty = {p.user_id: p for p in db.scalars(select(FacultyProfile).where(FacultyProfile.institution_id == institution_id)).all()}
-    depts = {d.id: d for d in db.scalars(select(Department).where(Department.institution_id == institution_id)).all()}
-    items = []
-    for user in users:
-        codes = [link.role.code for link in (user.role_links or []) if link.role]
-        role = codes[0] if codes else "student"
-        for preferred in ("admin", "faculty", "student", "parent"):
-            if preferred in codes:
-                role = preferred
-                break
-        dept = None
-        if user.id in students:
-            dept = depts.get(students[user.id].department_id)
-        elif user.id in faculty:
-            dept = depts.get(faculty[user.id].department_id)
-        items.append(
-            {
-                "id": user.id,
-                "name": user.full_name,
-                "email": user.email,
-                "role": role.title(),
-                "dept": dept.code if dept else ("Administration" if role == "admin" else "—"),
-                "status": (user.status or "active").title(),
-                "lastActive": _iso(user.last_login_at) or "—",
-            }
-        )
-    return items
+    from app.services.admin_runtime import list_users
+
+    return list_users(db, institution_id)
 
 
 def admin_calendar(db: Session, institution_id: str) -> list[dict]:
-    rows = db.scalars(select(CalendarEvent).where(CalendarEvent.institution_id == institution_id).order_by(CalendarEvent.starts_at)).all()
-    if not rows:
-        return payload("admin-catalog", db).get("calendar") or []
-    kind_map = {
-        "deadline": "Deadline",
-        "event": "Event",
-        "exam": "Exam",
-        "academic": "Academic",
-        "placement": "Placement",
-        "finance": "Finance",
-        "research": "Research",
-    }
-    return [
-        {
-            "id": row.id,
-            "date": row.starts_at.date().isoformat() if row.starts_at else None,
-            "title": row.title,
-            "type": kind_map.get((row.kind or "").lower(), (row.kind or "Academic").title()),
-            "scope": "All",
-        }
-        for row in rows
-    ]
+    from app.services.admin_runtime import list_calendar
+
+    return list_calendar(db, institution_id)
 
 
 def admin_dashboard(db: Session, institution_id: str) -> dict:
-    snap = payload("admin-catalog", db)["dashboard"]
-    student_n = db.scalar(select(func.count()).select_from(StudentProfile).where(StudentProfile.institution_id == institution_id)) or 0
-    faculty_n = db.scalar(select(func.count()).select_from(FacultyProfile).where(FacultyProfile.institution_id == institution_id)) or 0
-    course_n = db.scalar(select(func.count()).select_from(Course).where(Course.institution_id == institution_id)) or 0
-    kpis = list(snap.get("kpis") or [])
-    if kpis:
-        kpis[0] = {**kpis[0], "value": int(student_n) or kpis[0].get("value")}
-    if len(kpis) > 1:
-        kpis[1] = {**kpis[1], "value": int(faculty_n) or kpis[1].get("value")}
-    if len(kpis) > 2:
-        kpis[2] = {**kpis[2], "value": int(course_n) or kpis[2].get("value")}
-    return {**snap, "kpis": kpis}
+    from app.services.admin_runtime import dashboard_payload
+
+    return dashboard_payload(db, institution_id)
 
 
 def student_assignments(db: Session, user: User) -> list[dict]:
-    rows = db.scalars(select(Assignment).where(Assignment.institution_id == user.institution_id).order_by(Assignment.due_at)).all()
-    if not rows:
-        return payload("student-portal", db).get("assignments") or []
-    courses = {c.id: c for c in db.scalars(select(Course).where(Course.institution_id == user.institution_id)).all()}
-    subs = {
-        s.assignment_id: s
-        for s in db.scalars(select(AssignmentSubmission).where(AssignmentSubmission.student_id == user.id)).all()
-    }
-    items = []
-    for row in rows:
-        course = courses.get(row.course_id)
-        sub = subs.get(row.id)
-        status = (sub.status if sub else "pending") or "pending"
-        items.append(
-            {
-                "id": row.id,
-                "title": row.title,
-                "course": course.code if course else row.course_id,
-                "courseTitle": course.name if course else None,
-                "due": _iso(row.due_at),
-                "dueDate": _iso(row.due_at),
-                "maxScore": row.max_marks,
-                "max": row.max_marks,
-                "body": row.body,
-                "status": status.title() if status != "pending" else "Pending",
-                "score": sub.marks if sub else None,
-                "feedback": sub.feedback if sub else None,
-            }
-        )
-    return items
+    from app.services.student_runtime import list_student_assignments
+
+    return list_student_assignments(db, user)
 
 
 def faculty_assignments(db: Session, institution_id: str) -> list[dict]:
@@ -338,16 +122,18 @@ def faculty_assignments(db: Session, institution_id: str) -> list[dict]:
         graded = sum(1 for row in rows if row.marks is not None or row.status == "graded")
         scores = [float(row.marks) for row in rows if row.marks is not None]
         total = len(enrolled_by_course.get(assignment.course_id, set()))
+        lifecycle = (assignment.status or "published").lower()
         items.append({
             "id": assignment.id,
             "title": assignment.title,
             "course": course.code if course else assignment.course_id,
             "due": _iso(assignment.due_at),
-            "published": _iso(assignment.created_at),
+            "published": _iso(assignment.published_at or assignment.created_at),
             "submissions": submitted,
             "total": total,
             "graded": graded,
             "status": "Graded" if submitted and graded == submitted else "Open",
+            "lifecycleStatus": lifecycle,
             "maxScore": assignment.max_marks,
             "avgScore": round(sum(scores) / len(scores), 1) if scores else None,
         })
@@ -408,51 +194,21 @@ def faculty_attendance(db: Session, institution_id: str) -> dict:
 
 
 def student_courses(db: Session, user: User) -> list[dict]:
-    enrollments = db.scalars(select(Enrollment).where(Enrollment.student_id == user.id)).all()
-    if not enrollments:
-        return payload("student-portal", db).get("courses") or []
-    fixture = {row.get("id") or row.get("code"): row for row in (payload("student-portal", db).get("courses") or [])}
-    items = []
-    for enrollment in enrollments:
-        course = db.get(Course, enrollment.course_id)
-        if not course:
-            continue
-        base = fixture.get(course.id) or fixture.get(course.code) or {}
-        items.append(
-            {
-                **base,
-                "id": course.id,
-                "code": course.code,
-                "title": course.name,
-                "name": course.name,
-                "credits": course.credits,
-                "semester": course.semester_no,
-                "status": enrollment.status,
-            }
-        )
-    return items or payload("student-portal", db).get("courses") or []
+    from app.services.student_runtime import list_student_courses
+
+    return list_student_courses(db, user)
 
 
 def student_events(db: Session, user: User) -> list[dict]:
-    rows = db.scalars(select(CalendarEvent).where(CalendarEvent.institution_id == user.institution_id).order_by(CalendarEvent.starts_at)).all()
-    if not rows:
-        return payload("student-portal", db).get("events") or []
-    return [
-        {
-            "id": row.id,
-            "date": row.starts_at.date().isoformat() if row.starts_at else None,
-            "title": row.title,
-            "kind": row.kind,
-            "type": row.kind,
-        }
-        for row in rows
-    ]
+    from app.services.student_runtime import list_student_events
+
+    return list_student_events(db, user)
 
 
 def faculty_announcements(db: Session, institution_id: str) -> list[dict]:
     rows = db.scalars(select(Announcement).where(Announcement.institution_id == institution_id).order_by(Announcement.created_at.desc())).all()
     if not rows:
-        return payload("faculty-workspace", db).get("announcements") or []
+        return []
     return [
         {
             "id": row.id,
@@ -470,7 +226,7 @@ def faculty_announcements(db: Session, institution_id: str) -> list[dict]:
 def faculty_question_bank(db: Session, institution_id: str) -> dict:
     questions = db.scalars(select(Question).where(Question.institution_id == institution_id).order_by(Question.created_at.desc())).all()
     if not questions:
-        return payload("faculty-workspace", db).get("questionBank") or {"summary": {}, "questions": []}
+        return {"summary": {"total": 0, "bySubject": {}}, "questions": []}
     subjects = {s.id: s for s in db.scalars(select(Subject).where(Subject.institution_id == institution_id)).all()}
     items = []
     by_subject: dict[str, int] = defaultdict(int)
@@ -501,9 +257,8 @@ def faculty_question_bank(db: Session, institution_id: str) -> dict:
                 "tags": [],
             }
         )
-    summary = payload("faculty-workspace", db).get("questionBank", {}).get("summary") or {}
     return {
-        "summary": {**summary, "total": len(items), "bySubject": dict(by_subject)},
+        "summary": {"total": len(items), "bySubject": dict(by_subject)},
         "questions": items,
     }
 

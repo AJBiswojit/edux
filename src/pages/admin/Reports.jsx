@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { FileBarChart, LayoutDashboard, Library, ListPlus, Users } from 'lucide-react'
 import { useAdminIntelligence } from '@/services/admin-intelligence'
+import { useAdminReports, useCreateAdminReport, useDownloadAdminReport } from '@/services/extra'
 import { REPORT_TYPES, buildReportPreviewDoc } from '@/intelligence/admin'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -22,8 +23,6 @@ import {
   ReportCenterTab, ReportGenerateTab, ReportPreviewTab,
   DepartmentCompareTab, ReportLibraryTab,
 } from '@/components/admin-reports'
-import { LIBRARY_KEY } from '@/components/admin-reports/library-tab'
-
 const TAB_META = [
   { id: 'center', label: 'Report Center', icon: LayoutDashboard },
   { id: 'generate', label: 'Generate', icon: ListPlus },
@@ -34,6 +33,9 @@ const TAB_META = [
 
 function Reports() {
   const { data, isLoading, isError, refetch } = useAdminIntelligence()
+  const { data: libraryData } = useAdminReports()
+  const createReport = useCreateAdminReport()
+  const downloadReport = useDownloadAdminReport()
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState('center')
   const [doc, setDoc] = useState(null)
@@ -58,31 +60,40 @@ function Reports() {
     return docOut
   }
 
-  const handleExport = (fmt, item) => {
-    toast.info(`Export ${fmt.toUpperCase()} (simulated)`, `Frontend prototype — ${item?.name ?? doc?.title ?? 'report'} would be exported as ${fmt.toUpperCase()}. No backend involved.`)
+  const handleExport = async (fmt, item) => {
+    const report = item?.id ? item : null
+    if (report?.downloadable || report?.generationStatus === 'READY') {
+      try {
+        await downloadReport.mutateAsync(report)
+        toast.success('Download started', report.title || report.name)
+        return
+      } catch (err) {
+        toast.error('Download failed', err?.message || 'Report is not ready.')
+        return
+      }
+    }
+    toast.info('Export unavailable', 'Save the report first — only READY PDF files can be downloaded.')
   }
 
   const handlePrint = () => {
-    toast.info('Print (simulated)', 'Frontend prototype — the report would be sent to the printer.')
     window.print()
   }
 
-  const handleSave = (docToSave = doc) => {
+  const handleSave = async (docToSave = doc) => {
     if (!docToSave) return
-    const entry = {
-      id: `r_${Date.now()}`,
-      name: docToSave.title,
-      type: docFilters.type ?? 'institution',
-      period: docToSave.meta?.period ?? 'Term 5 · 2026-27',
-      generatedAt: docToSave.meta?.generatedAt ?? new Date().toISOString(),
-      generatedBy: 'Director (prototype)',
-      favorite: false,
-    }
     try {
-      const lib = JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]')
-      localStorage.setItem(LIBRARY_KEY, JSON.stringify([entry, ...lib]))
-    } catch { /* noop */ }
-    toast.success('Report saved 💾', `"${docToSave.title}" added to the library.`)
+      const res = await createReport.mutateAsync({
+        title: docToSave.title,
+        format: 'PDF',
+        category: 'Executive',
+        period: docToSave.meta?.period,
+        summary: data.derived?.reports?.institution?.body,
+      })
+      if (res.ok) toast.success('Report saved', `"${docToSave.title}" is ready to download.`)
+      else toast.error('Report failed', res.error || 'Could not generate PDF.')
+    } catch (err) {
+      toast.error('Report failed', err?.response?.data?.detail || 'Could not persist report.')
+    }
   }
 
   const handleView = (item) => {
@@ -145,7 +156,7 @@ function Reports() {
         </TabsContent>
 
         <TabsContent value="library">
-          <ReportLibraryTab onView={handleView} onExport={handleExport} onPrint={handlePrint} />
+          <ReportLibraryTab items={libraryData?.items ?? []} onView={handleView} onExport={handleExport} onPrint={handlePrint} />
         </TabsContent>
       </Tabs>
     </div>

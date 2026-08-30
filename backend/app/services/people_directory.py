@@ -4,9 +4,9 @@ from collections import defaultdict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.catalog import Batch, Department
+from app.models.catalog import Batch, Department, Program
 from app.models.exams import ExamAttempt
-from app.models.identity import User
+from app.models.identity import Institution, User
 from app.models.people import FacultyProfile, StudentProfile
 
 
@@ -28,6 +28,9 @@ def _label_to_faculty_status(label: str | None) -> str:
 
 
 def faculty_students_directory(db: Session, institution_id: str) -> dict:
+    inst = db.get(Institution, institution_id) if institution_id else None
+    academic_year = inst.academic_year if inst else None
+    programs = {p.id: p for p in db.scalars(select(Program).where(Program.institution_id == institution_id)).all()}
     batches = db.scalars(select(Batch).where(Batch.institution_id == institution_id)).all()
     profiles = db.scalars(select(StudentProfile).where(StudentProfile.institution_id == institution_id)).all()
     user_ids = [p.user_id for p in profiles]
@@ -105,7 +108,7 @@ def faculty_students_directory(db: Session, institution_id: str) -> dict:
                 "courseCode": None,
                 "semester": extra.get("semester") or (batch.section if batch else None),
                 "section": profile.section or (batch.section if batch else None),
-                "academicSession": "2026–27",
+                "academicSession": academic_year,
                 "examsCompleted": exams_completed,
                 "latestAccuracy": latest_accuracy,
                 "accuracy": latest_accuracy,
@@ -136,14 +139,15 @@ def faculty_students_directory(db: Session, institution_id: str) -> dict:
         accuracies = [s["latestAccuracy"] for s in members if s["latestAccuracy"] is not None]
         domain = "Competitive" if b.exam_mode == "competitive" else "University"
         family = b.exam_family.upper() if b.exam_family in {"jee", "neet"} else b.exam_family
+        program = programs.get(b.program_id)
         batch_rows.append(
             {
                 "id": b.id,
                 "name": b.name,
                 "domain": domain,
                 "examFamily": family,
-                "academicSession": "2026–27",
-                "program": "B.Tech — CSE",
+                "academicSession": academic_year,
+                "program": program.name if program else None,
                 "section": b.section,
                 "status": "Active",
                 "studentCount": len(members),
@@ -178,9 +182,9 @@ def admin_students_payload(db: Session, institution_id: str) -> dict:
                 "cgpa": profile.cgpa,
                 "attendance": extra.get("attendance"),
                 "internalMarks": extra.get("internalMarks"),
-                "status": extra.get("academicLabel") or "Good",
-                "dept": dept.code if dept else "CSE",
-                "program": extra.get("program") or "B.Tech CSE",
+                "status": profile.academic_status or extra.get("academicLabel"),
+                "dept": dept.code if dept else None,
+                "program": extra.get("program"),
                 "accountStatus": user.status,
             }
         )

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Award, BookOpen, GraduationCap, IndianRupee, Plus, Users } from 'lucide-react'
-import { useAdminPrograms } from '@/services/extra'
+import { useAdminPrograms, useCreateAdminProgram } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, useToast } from '@/components/ui'
@@ -9,6 +9,8 @@ import { useState } from 'react'
 function Programs() {
   const { data, isLoading, isError, refetch } = useAdminPrograms()
   const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ name: '', duration: '4', code: '' })
+  const createProgram = useCreateAdminProgram()
   const toast = useToast()
   const programs = data?.programs ?? []
 
@@ -43,24 +45,24 @@ function Programs() {
               <p className="mt-1 text-[11px] font-medium text-slate-400">{p.dept} · {p.duration}</p>
               <div className="mt-4 grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
-                  <p className="flex items-center justify-center gap-1 text-sm font-bold text-slate-800 dark:text-white"><Users className="h-3 w-3 text-indigo-500" /> {p.students.toLocaleString()}</p>
+                  <p className="flex items-center justify-center gap-1 text-sm font-bold text-slate-800 dark:text-white"><Users className="h-3 w-3 text-indigo-500" /> {(p.students ?? 0).toLocaleString()}</p>
                   <p className="text-[9px] font-medium text-slate-400">Students</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
-                  <p className="text-sm font-bold text-slate-800 dark:text-white">{p.intake}</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-white">{p.intake ?? '—'}</p>
                   <p className="text-[9px] font-medium text-slate-400">Intake/yr</p>
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-300">
-                  <IndianRupeeIcon /> {p.fee}
+                  <IndianRupeeIcon /> {p.fee ?? '—'}
                 </span>
                 <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                  <Award className="h-3 w-3" /> {p.placements}% placed
+                  <Award className="h-3 w-3" /> {p.placements != null ? `${p.placements}% placed` : '—'}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3 dark:border-slate-800">
-                {p.accreditations.map((a) => <Badge key={a} variant="outline" size="sm">{a}</Badge>)}
+                {(p.accreditations || []).map((a) => <Badge key={a} variant="outline" size="sm">{a}</Badge>)}
               </div>
             </Card>
           </motion.div>
@@ -74,7 +76,7 @@ function Programs() {
             <DialogDescription>Programs are approved by the Academic Council before activation.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Field label="Program name" required><Input placeholder="e.g. B.Tech — Artificial Intelligence" /></Field>
+            <Field label="Program name" required><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. B.Tech — Artificial Intelligence" /></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Department">
                 <select className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100">
@@ -92,7 +94,16 @@ function Programs() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.success('Program created', 'Forwarded to the Academic Council for approval.') }}>Create program</Button>
+            <Button onClick={async () => {
+              try {
+                await createProgram.mutateAsync({ name: form.name, durationYears: form.duration })
+                setOpen(false)
+                setForm({ name: '', duration: '4', code: '' })
+                toast.success('Program created', 'Saved to the institution catalogue.')
+              } catch (err) {
+                toast.error('Create failed', err?.response?.data?.detail || 'Could not create program.')
+              }
+            }}>Create program</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

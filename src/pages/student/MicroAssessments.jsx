@@ -27,7 +27,7 @@ function CompletedNotice({ assessment, onBack }) {
 
 function MicroAssessments() {
   const { user } = useAuth()
-  const studentId = user?.id ?? 'u_stu_001'
+  const studentId = user?.id
   const { assessmentId } = useParams()
   const navigate = useNavigate()
   const toast = useToast()

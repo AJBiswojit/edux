@@ -23,7 +23,7 @@ function ApiConfig() {
         description="Endpoints, webhooks and API keys — the integration surface for ERP, LMS and partner systems."
         breadcrumbs={[{ label: 'Admin' }, { label: 'API Configuration' }]}
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — API keys are not operational yet.')}>
             <KeyRound className="h-4 w-4" /> Generate API key
           </Button>
         }
@@ -46,7 +46,7 @@ function ApiConfig() {
               </tr>
             </thead>
             <tbody>
-              {data.endpoints.map((e, i) => (
+              {(data?.endpoints ?? []).map((e, i) => (
                 <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="border-b border-slate-100 last:border-0 hover:bg-indigo-50/40 dark:border-slate-800/60 dark:hover:bg-slate-800/40">
                   <td className="px-5 py-3.5 font-semibold text-slate-800 dark:text-slate-100">{e.name}</td>
                   <td className="px-5 py-3.5"><Badge variant="secondary" size="sm">{e.method}</Badge></td>
@@ -71,7 +71,7 @@ function ApiConfig() {
             <Webhook className="h-4 w-4 text-indigo-500" /> Webhooks
           </p>
           <div className="mt-4 space-y-3">
-            {data.webhooks.map((w, i) => (
+            {(data?.webhooks ?? []).map((w, i) => (
               <motion.div key={w.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <p className="text-[13.5px] font-bold text-slate-800 dark:text-slate-100">{w.name}</p>
@@ -80,7 +80,7 @@ function ApiConfig() {
                 <p className="mt-1 truncate font-mono text-[11px] text-slate-400">{w.url}</p>
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex flex-wrap gap-1">
-                    {w.events.map((ev) => <Badge key={ev} variant="outline" size="sm">{ev}</Badge>)}
+                    {(w.events || []).map((ev) => <Badge key={ev} variant="outline" size="sm">{ev}</Badge>)}
                   </div>
                   <span className="text-[10px] font-medium text-slate-400">{w.lastDelivery !== '—' ? `last delivery ${w.lastDelivery}` : 'never delivered'}</span>
                 </div>
@@ -98,7 +98,7 @@ function ApiConfig() {
             <KeyRound className="h-4 w-4 text-emerald-500" /> API keys
           </p>
           <div className="mt-4 space-y-3">
-            {data.keys.map((k, i) => (
+            {(data?.keys ?? []).map((k, i) => (
               <motion.div key={k.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="rounded-2xl border border-slate-100 p-4 dark:border-slate-800">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-[13.5px] font-bold text-slate-800 dark:text-slate-100">{k.name}</p>
@@ -112,7 +112,7 @@ function ApiConfig() {
                   {reveal[k.id] ? k.key.replaceAll('•', '') : k.key}
                 </button>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {k.scopes.map((s) => <Badge key={s} variant="outline" size="sm">{s}</Badge>)}
+                  {(k.scopes || []).map((s) => <Badge key={s} variant="outline" size="sm">{s}</Badge>)}
                 </div>
                 <p className="mt-2 text-[10px] font-medium text-slate-400">Created {k.created} · last used {k.lastUsed}</p>
               </motion.div>
@@ -146,7 +146,7 @@ function ApiConfig() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.success('Key generated 🔑', 'Copy it now — it will not be shown again.') }}>
+            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'BACKEND GAP — API keys are not operational yet.') }}>
               <RefreshCw className="h-4 w-4" /> Generate
             </Button>
           </DialogFooter>

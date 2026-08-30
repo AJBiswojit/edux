@@ -25,7 +25,7 @@ function Cms() {
         description="Website pages, portal banners and institutional announcements — one publishing console."
         breadcrumbs={[{ label: 'Admin' }, { label: 'CMS' }]}
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — CMS pages are not persisted yet.')}>
             <Plus className="h-4 w-4" /> New page
           </Button>
         }
@@ -40,7 +40,7 @@ function Cms() {
 
         <TabsContent value="pages">
           <div className="space-y-3">
-            {data.pages.map((p, i) => (
+            {(data?.pages ?? []).map((p, i) => (
               <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className="flex items-center gap-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-lift">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/10 to-teal-500/10 text-indigo-600 ring-1 ring-indigo-500/15 dark:text-indigo-300">
@@ -63,7 +63,7 @@ function Cms() {
 
         <TabsContent value="banners">
           <div className="grid gap-4 md:grid-cols-3">
-            {data.banners.map((b, i) => (
+            {(data?.banners ?? []).map((b, i) => (
               <motion.div key={b.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className="h-full p-5 transition-all hover:-translate-y-0.5 hover:shadow-lift">
                   <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ function Cms() {
 
         <TabsContent value="announcements">
           <div className="space-y-3">
-            {data.announcements.map((a, i) => (
+            {(data?.announcements ?? []).map((a, i) => (
               <motion.div key={a.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className="flex items-center gap-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-lift">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-300">
@@ -120,7 +120,7 @@ function Cms() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Save draft</Button>
-            <Button onClick={() => { setOpen(false); toast.success('Page published 🌐', 'Live on the public website.') }}>
+            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'BACKEND GAP — CMS pages are not persisted yet.') }}>
               <CheckCircle2 className="h-4 w-4" /> Publish
             </Button>
           </DialogFooter>

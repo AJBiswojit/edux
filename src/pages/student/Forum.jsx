@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowUpRight, CheckCircle2, Eye, Heart, MessageCircle, MessageSquarePlus, Pin, Search } from 'lucide-react'
 import { useForum } from '@/services/extra'
+import { EmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Avatar, Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Textarea, useToast } from '@/components/ui'
@@ -29,15 +30,12 @@ function Forum() {
   if (isLoading) return <DashboardSkeleton cards={2} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
-  const like = (id) => {
-    setLocalTopics(topics.map((t) => (t.id === id ? { ...t, likes: t.likes + 1 } : t)))
+  const like = () => {
+    toast.error('Forum unavailable', 'BACKEND GAP — likes are not persisted yet.')
   }
 
   const postTopic = () => {
-    setNewOpen(false)
-    const t = { id: `ft_${Date.now()}`, title: 'New discussion', forum: category === 'All' ? 'Campus Life' : category, author: 'Aarav Sharma', replies: 0, views: 1, likes: 0, lastActivity: new Date().toISOString(), solved: false, tags: ['new'], snippet: '…' }
-    setLocalTopics([t, ...topics])
-    toast.success('Topic posted 🎉', 'Your discussion is live in the forum.')
+    toast.error('Forum unavailable', 'BACKEND GAP — discussion posts are not persisted yet.')
   }
 
   return (
@@ -70,6 +68,9 @@ function Forum() {
         </div>
       </div>
 
+      {filtered.length === 0 && (
+        <EmptyState title="No discussions yet" description="The campus forum is empty. Posting is not available until the forum backend is wired." />
+      )}
       <div className="space-y-3">
         {filtered.map((t, i) => (
           <motion.div key={t.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
@@ -127,10 +128,7 @@ function Forum() {
               {openTopic?.snippet}
               <p className="mt-3 text-[11px] font-semibold text-slate-400">This is a preview of the discussion thread. Replies and the full conversation appear in the complete thread view.</p>
             </div>
-            {[
-              { name: 'Ishita Gupta', text: 'Great question — I struggled with this too. Here\'s how I finally got it…', when: '2h ago' },
-              { name: 'Dr. Meera Krishnan', text: 'Faculty note: this connects directly to CO2. See the worked example in module 3.', when: '1h ago' },
-            ].map((r, i) => (
+            {(openTopic?.repliesList ?? []).map((r, i) => (
               <div key={i} className="flex items-start gap-3">
                 <Avatar name={r.name} size="sm" />
                 <div className="flex-1 rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
@@ -145,7 +143,7 @@ function Forum() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenTopic(null)}>Close</Button>
-            <Button onClick={() => { toast.success('Reply posted ✓', 'Your reply is live.'); setOpenTopic(null) }}>
+            <Button onClick={() => { toast.error('Forum unavailable', 'BACKEND GAP — replies are not persisted yet.') }}>
               <ArrowUpRight className="h-4 w-4" /> Post reply
             </Button>
           </DialogFooter>

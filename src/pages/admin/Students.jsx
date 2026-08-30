@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BookOpen, Download, Mail, ShieldCheck, UserPlus } from 'lucide-react'
-import { useAdminStudents } from '@/services/extra'
+import { useAdminStudents, useCreateAdminStudent } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DataTable } from '@/components/shared/data-table'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -10,6 +10,8 @@ function Students() {
   const { data, isLoading, isError, refetch } = useAdminStudents()
   const [batch, setBatch] = useState('All')
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [form, setForm] = useState({ name: '', roll: '', email: '' })
+  const createStudent = useCreateAdminStudent()
   const toast = useToast()
 
   const roster = (data?.students ?? []).filter((s) => batch === 'All' || s.status === batch)
@@ -39,7 +41,7 @@ function Students() {
       sortable: true,
       render: (s) => (
         <span className={`font-semibold ${s.attendance >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s.attendance >= 75 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-500'}`}>
-          {s.attendance}%
+          {s.attendance == null ? '—' : `${s.attendance}%`}
         </span>
       ),
     },
@@ -79,7 +81,7 @@ function Students() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'Students' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Export started', 'student_directory.csv will download shortly.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'BACKEND GAP — directory export is not implemented.')}>
               <Download className="h-4 w-4" /> Export
             </Button>
             <Button size="sm" onClick={() => setInviteOpen(true)}>
@@ -113,10 +115,10 @@ function Students() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Full name" required><Input placeholder="First Last" /></Field>
-              <Field label="Roll number" required><Input placeholder="21CS117" /></Field>
+              <Field label="Full name" required><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="First Last" /></Field>
+              <Field label="Roll number" required><Input value={form.roll} onChange={(e) => setForm((f) => ({ ...f, roll: e.target.value }))} placeholder="21CS117" /></Field>
             </div>
-            <Field label="Email" required><Input type="email" placeholder="student@medixoedux.edu" /></Field>
+            <Field label="Email" required><Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="student@institution.edu" /></Field>
             <Field label="Program">
               <Select defaultValue="B.Tech — Computer Science">
                 <SelectItem value="B.Tech — Computer Science">B.Tech — Computer Science</SelectItem>
@@ -127,7 +129,16 @@ function Students() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setInviteOpen(false); toast.success('Student added ✓', 'Account created with onboarding email.') }}>
+            <Button onClick={async () => {
+              try {
+                await createStudent.mutateAsync({ fullName: form.name, roll: form.roll, email: form.email })
+                setInviteOpen(false)
+                setForm({ name: '', roll: '', email: '' })
+                toast.success('Student added', 'Account persisted for this institution.')
+              } catch (err) {
+                toast.error('Create failed', err?.response?.data?.detail || 'Could not create student.')
+              }
+            }}>
               <UserPlus className="h-4 w-4" /> Add student
             </Button>
           </DialogFooter>

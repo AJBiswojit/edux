@@ -53,7 +53,7 @@ export function buildFacultySummary({ facultyHealth, profile, people }) {
   })
   return {
     headline: `${profile?.totals?.faculty ?? '—'} faculty · health ${facultyHealth?.score ?? '—'}/100`,
-    body: `Teaching satisfaction ${facultyHealth?.teachingSatisfaction ?? '—'}/100 · publications per faculty ${facultyHealth?.publicationsPerFaculty ?? '—'}. ${roster.length} faculty in the sample roster across ${Object.keys(byDept).length} departments.`,
+    body: `Teaching satisfaction ${facultyHealth?.teachingSatisfaction ?? '—'}/100 · publications per faculty ${facultyHealth?.publicationsPerFaculty ?? '—'}. ${roster.length} faculty in the roster across ${Object.keys(byDept).length} departments.`,
     byDept: Object.entries(byDept).map(([code, list]) => ({ code, count: list.length })),
   }
 }
@@ -140,7 +140,7 @@ export function buildReportPreviewDoc({ type, derived, datasets, filters = {} })
 
   const base = {
     title,
-    meta: { generatedAt, period, institution: d.masterProfile?.name ?? 'Meridian Institute of Technology' },
+    meta: { generatedAt, period, institution: d.profile?.name || d.masterProfile?.name || 'Institution' },
     sections: [],
   }
 
@@ -199,7 +199,7 @@ export function buildReportPreviewDoc({ type, derived, datasets, filters = {} })
           { label: 'Publications / faculty', value: String(d.faculty?.health?.publicationsPerFaculty ?? '—') },
         ]),
         bars('Faculty health factors', 'Component scores', (d.faculty?.health?.factors ?? []).map((f) => ({ label: f.label, value: f.value })), 'value', 'Score', '#f59e0b'),
-        bars('Faculty by department', 'Sample roster', (d.faculty?.byDept ?? []).map((x) => ({ label: x.code, value: x.count })), 'value', 'Faculty', '#6366f1'),
+        bars('Faculty by department', 'Faculty roster', (d.faculty?.byDept ?? []).map((x) => ({ label: x.code, value: x.count })), 'value', 'Faculty', '#6366f1'),
       ]
       break
     }

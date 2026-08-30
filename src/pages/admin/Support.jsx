@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { BookOpen, CheckCircle2, Headphones, HelpCircle, LifeBuoy, MessageSquare, Rocket, Wrench } from 'lucide-react'
+import { useCreateAdminSupportTicket } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, Select, SelectItem, Textarea, useToast } from '@/components/ui'
 
@@ -29,10 +30,20 @@ function Support() {
   const toast = useToast()
   const [open, setOpen] = useState(null) // 'issue' | 'feature' | null
   const [category, setCategory] = useState('Technical')
+  const [title, setTitle] = useState('')
+  const [details, setDetails] = useState('')
+  const createTicket = useCreateAdminSupportTicket()
 
-  const submit = (kind) => {
-    setOpen(null)
-    toast.success(kind === 'issue' ? 'Issue reported ✓' : 'Feature requested ✓', 'Frontend prototype — your request was captured locally.')
+  const submit = async (kind) => {
+    try {
+      await createTicket.mutateAsync({ title: title || (kind === 'issue' ? 'Issue' : 'Feature request'), body: details, category })
+      setOpen(null)
+      setTitle('')
+      setDetails('')
+      toast.success(kind === 'issue' ? 'Issue reported' : 'Feature requested', 'Saved as a support ticket.')
+    } catch (err) {
+      toast.error('Submit failed', err?.response?.data?.detail || 'Could not create ticket.')
+    }
   }
 
   return (
@@ -104,10 +115,10 @@ function Support() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{open === 'issue' ? 'Report an issue' : 'Request a feature'}</DialogTitle>
-            <DialogDescription>Frontend prototype — captured locally, no backend ticket created.</DialogDescription>
+            <DialogDescription>Creates a support ticket for this institution.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Field label="Title" required><Input placeholder={open === 'issue' ? 'e.g. Department comparison chart looks wrong' : 'e.g. Add export to weekly review email'} /></Field>
+            <Field label="Title" required><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={open === 'issue' ? 'e.g. Department comparison chart looks wrong' : 'e.g. Add export to weekly review email'} /></Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Category">
                 <Select value={category} onValueChange={setCategory}>
@@ -127,7 +138,7 @@ function Support() {
               </Field>
             </div>
             <Field label="Details">
-              <Textarea rows={4} placeholder="Describe the issue or feature…" />
+              <Textarea rows={4} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Describe the issue or feature…" />
             </Field>
           </div>
           <DialogFooter>

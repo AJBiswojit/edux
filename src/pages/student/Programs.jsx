@@ -1,5 +1,6 @@
 import { Award, BookOpen, CalendarRange, CheckCircle2, Circle, GraduationCap, Layers, Target } from 'lucide-react'
 import { useStudentPrograms } from '@/services/extra'
+import { EmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Card, Progress } from '@/components/ui'
@@ -11,6 +12,20 @@ function Programs() {
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
   const prog = data.current
+
+  if (!prog) {
+    return (
+      <div>
+        <PageHeader
+          eyebrow="Academic · Programs"
+          title="My program"
+          description="Degree structure, credit requirements and specialization tracks — your roadmap to graduation."
+          breadcrumbs={[{ label: 'Student' }, { label: 'Programs' }]}
+        />
+        <EmptyState title="No program enrolled" description="Your program appears here once your institution assigns one to your profile." />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -46,7 +61,7 @@ function Programs() {
                 <p className="text-[11px] font-semibold text-white/75">Current CGPA</p>
               </div>
               <div>
-                <p className="font-display text-2xl font-bold">{Math.round((prog.earnedCredits / prog.totalCredits) * 100)}%</p>
+                <p className="font-display text-2xl font-bold">{prog.totalCredits ? Math.round((prog.earnedCredits / prog.totalCredits) * 100) : 0}%</p>
                 <p className="text-[11px] font-semibold text-white/75">Degree progress</p>
               </div>
             </div>
@@ -56,10 +71,10 @@ function Programs() {
               <svg className="h-36 w-36 -rotate-90">
                 <circle cx="72" cy="72" r="60" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="10" />
                 <circle cx="72" cy="72" r="60" fill="none" stroke="#fff" strokeWidth="10" strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 60} strokeDashoffset={2 * Math.PI * 60 * (1 - prog.earnedCredits / prog.totalCredits)} />
+                  strokeDasharray={2 * Math.PI * 60} strokeDashoffset={2 * Math.PI * 60 * (1 - (prog.totalCredits ? prog.earnedCredits / prog.totalCredits : 0))} />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="font-display text-2xl font-bold">{Math.round((prog.earnedCredits / prog.totalCredits) * 100)}%</span>
+                <span className="font-display text-2xl font-bold">{prog.totalCredits ? Math.round((prog.earnedCredits / prog.totalCredits) * 100) : 0}%</span>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-white/75">Complete</span>
               </div>
             </div>
@@ -101,7 +116,7 @@ function Programs() {
               <Award className="h-4 w-4 text-amber-500" /> Degree requirements
             </p>
             <div className="mt-4 space-y-4">
-              {prog.requirements.map((r) => (
+              {(prog.requirements ?? []).map((r) => (
                 <div key={r.item}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
@@ -141,7 +156,7 @@ function Programs() {
       {/* Other programs */}
       <h2 className="mb-4 mt-8 text-[15px] font-bold text-slate-900 dark:text-white">Additional programs</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        {data.others.map((o) => (
+        {(data.others ?? []).map((o) => (
           <Card key={o.name} className="flex items-center gap-4 p-5 transition-all hover:-translate-y-0.5 hover:shadow-lift">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 text-violet-600 ring-1 ring-violet-500/20 dark:text-violet-300">
               <BookOpen className="h-5 w-5" />

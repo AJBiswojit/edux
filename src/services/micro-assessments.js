@@ -85,15 +85,15 @@ export function useCreateMicroAssessmentIntervention() {
   })
 }
 
-export const useStudentMicroAssessments = (studentId = 'u_stu_001') => useQuery({
+export const useStudentMicroAssessments = (studentId) => useQuery({
   queryKey: ['student', 'micro-assessments', studentId],
-  queryFn: () => request({ url: '/student/micro-assessments', params: { studentId } }).then((response) => response.data),
+  queryFn: () => request({ url: '/student/micro-assessments' }).then((response) => response.data),
   enabled: !!studentId,
 })
 
-export const useStudentMicroAssessment = (id, studentId = 'u_stu_001') => useQuery({
+export const useStudentMicroAssessment = (id, studentId) => useQuery({
   queryKey: ['student', 'micro-assessment', id, studentId],
-  queryFn: () => request({ url: `/student/micro-assessments/${id}`, params: { studentId } }).then((response) => response.data),
+  queryFn: () => request({ url: `/student/micro-assessments/${id}` }).then((response) => response.data),
   enabled: !!id && !!studentId,
 })
 

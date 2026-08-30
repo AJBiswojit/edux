@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { GraduationCap, Plus, Users } from 'lucide-react'
-import { useAdminBatches } from '@/services/extra'
+import { useAdminBatches, useCreateAdminBatch } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, useToast } from '@/components/ui'
@@ -9,6 +9,8 @@ import { useState } from 'react'
 function Batches() {
   const { data, isLoading, isError, refetch } = useAdminBatches()
   const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ name: '' })
+  const createBatch = useCreateAdminBatch()
   const toast = useToast()
   const batches = data?.batches ?? []
 
@@ -43,16 +45,16 @@ function Batches() {
               <p className="text-[11.5px] font-medium text-slate-400">{b.program} · {b.semester}</p>
               <div className="mt-4 grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
-                  <p className="flex items-center justify-center gap-1 text-sm font-bold text-slate-800 dark:text-white"><Users className="h-3 w-3 text-indigo-500" /> {b.students}<span className="text-[9px] text-slate-400">/{b.intake}</span></p>
+                  <p className="flex items-center justify-center gap-1 text-sm font-bold text-slate-800 dark:text-white"><Users className="h-3 w-3 text-indigo-500" /> {b.students ?? 0}<span className="text-[9px] text-slate-400">/{b.intake ?? '—'}</span></p>
                   <p className="text-[9px] font-medium text-slate-400">Strength</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
-                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{b.avgCgpa}</p>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{b.avgCgpa ?? '—'}</p>
                   <p className="text-[9px] font-medium text-slate-400">Avg CGPA</p>
                 </div>
               </div>
               <p className="mt-3.5 truncate border-t border-slate-100 pt-3 text-[11.5px] font-medium text-slate-400 dark:border-slate-800">
-                Coordinator: <span className="font-bold text-slate-600 dark:text-slate-300">{b.coordinator}</span>
+                Coordinator: <span className="font-bold text-slate-600 dark:text-slate-300">{b.coordinator ?? '—'}</span>
               </p>
             </Card>
           </motion.div>
@@ -66,7 +68,7 @@ function Batches() {
             <DialogDescription>New cohorts start with the admissions intake upload.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Field label="Batch name" required><Input placeholder="e.g. CSE-2026" /></Field>
+            <Field label="Batch name" required><Input value={form.name} onChange={(e) => setForm({ name: e.target.value })} placeholder="e.g. CSE-2026" /></Field>
             <Field label="Program">
               <select className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100">
                 <option>B.Tech CSE</option><option>B.Tech ECE</option><option>MBA</option>
@@ -76,14 +78,23 @@ function Batches() {
               <Field label="Sanctioned intake" required><Input type="number" placeholder="240" /></Field>
               <Field label="Coordinator">
                 <select className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100">
-                  <option>Dr. Meera Krishnan</option><option>Dr. Arvind Kulkarni</option><option>Dr. Priya Nair</option>
+                  <option value="">Unassigned</option>
                 </select>
               </Field>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.success('Batch created 🎓', 'Admissions upload template generated.') }}>Create batch</Button>
+            <Button onClick={async () => {
+              try {
+                await createBatch.mutateAsync({ name: form.name, code: form.name })
+                setOpen(false)
+                setForm({ name: '' })
+                toast.success('Batch created', 'Saved to the catalogue.')
+              } catch (err) {
+                toast.error('Create failed', err?.response?.data?.detail || 'Could not create batch.')
+              }
+            }}>Create batch</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

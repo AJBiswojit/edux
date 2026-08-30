@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Bell, BellRing, Download, Languages, Lock, Moon, Palette, ShieldCheck, Trash2, User, Zap } from 'lucide-react'
 import { useStudentSettings, useUpdateStudentSettings } from '@/services'
+import { useMasterStudentProfile } from '@/services/intelligence'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Button, Card, Select, SelectItem, Switch, useToast } from '@/components/ui'
@@ -10,6 +11,7 @@ import { useTheme } from '@/contexts/theme-context'
 
 function Settings() {
   const { data, isLoading, isError, refetch } = useStudentSettings()
+  const { data: profile } = useMasterStudentProfile()
   const { mutateAsync: update } = useUpdateStudentSettings()
   const { theme, setLight, setDark, reducedMotion, toggleReducedMotion } = useTheme()
   const systemPrefersReduced = useReducedMotion()
@@ -20,15 +22,23 @@ function Settings() {
   const togglePref = async (key, value) => {
     const next = { ...prefs, [key]: value }
     setPrefs(next)
-    await update({ preferences: next }).catch(() => toast.error('Could not save'))
-    toast.success('Preference saved', 'Applied instantly.')
+    try {
+      await update({ preferences: next })
+      toast.success('Preference saved', 'Applied instantly.')
+    } catch {
+      toast.error('Could not save')
+    }
   }
 
   const togglePrivacy = async (key, value) => {
     const next = { ...privacy, [key]: value }
     setPrivacy(next)
-    await update({ privacy: next }).catch(() => toast.error('Could not save'))
-    toast.success('Privacy setting updated')
+    try {
+      await update({ privacy: next })
+      toast.success('Privacy setting updated')
+    } catch {
+      toast.error('Could not save')
+    }
   }
 
   if (isLoading) return <DashboardSkeleton cards={2} />
@@ -48,16 +58,16 @@ function Settings() {
 
       {/* Profile card */}
       <SettingsProfileCard
-        name="Aarav Sharma"
+        name={profile?.fullName || 'Student'}
         badge={{ label: 'Verified student', variant: 'success' }}
-        subtitle="21CS114 · B.Tech CSE · Semester 5 · Meridian Institute of Technology"
-        contact={`${data.profile.email} · ${data.profile.phone}`}
+        subtitle={[profile?.rollNo, profile?.program, profile?.semester, profile?.institution].filter(Boolean).join(' · ') || 'Profile'}
+        contact={`${data.profile?.email || ''} · ${data.profile?.phone || ''}`}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.info('Edit profile', 'Profile editing is available in the full editor.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Profile editing is not available yet.')}>
               <User className="h-4 w-4" /> Edit
             </Button>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Exporting…', 'Your data export is being prepared.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Data export is not available yet — no export endpoint.')}>
               <Download className="h-4 w-4" /> Export data
             </Button>
           </>

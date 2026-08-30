@@ -11,7 +11,8 @@ function Scholarships() {
   const [open, setOpen] = useState(false)
   const toast = useToast()
   const items = data?.items ?? []
-  const totalBudget = items.reduce((a, s) => a + s.budget, 0)
+  const totalBudget = items.reduce((a, s) => a + (s.budget || 0), 0)
+  const gap = data?.unavailable
 
   if (isLoading) return <DashboardSkeleton cards={3} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
@@ -21,10 +22,10 @@ function Scholarships() {
       <PageHeader
         eyebrow="Management · Scholarships"
         title="Scholarships & financial aid"
-        description={`${items.length} active schemes · ₹${(totalBudget / 10000000).toFixed(1)} Cr annual budget · 1,240 students supported`}
+        description={gap ? 'BACKEND GAP — scholarships are not operational yet.' : `${items.length} active schemes · ₹${(totalBudget / 10000000).toFixed(1)} Cr annual budget`}
         breadcrumbs={[{ label: 'Admin' }, { label: 'Scholarships' }]}
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — scholarship schemes are not persisted yet.')}>
             <Plus className="h-4 w-4" /> New scheme
           </Button>
         }
@@ -83,7 +84,7 @@ function Scholarships() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.success('Scheme created 🎓', 'Sent to the Financial Aid Committee for approval.') }}>
+            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'BACKEND GAP — scholarship schemes are not persisted yet.') }}>
               <Award className="h-4 w-4" /> Create scheme
             </Button>
           </DialogFooter>
