@@ -57,6 +57,18 @@ export function normalizeAxiosError(error) {
   else if (!error.response) {
     error.message = error.message || 'Network error — please check your connection and try again'
   }
+  // Development diagnostics: keep the safe backend error detail visible in
+  // the console so real API failures can be diagnosed from the browser.
+  // Never logs headers/tokens/body; production builds stay silent — the UI
+  // shows the generic ErrorState instead.
+  try {
+    if (import.meta.env?.DEV && (error.response || error.isBackendOkFalse) && typeof console !== 'undefined') {
+      const method = (error.config?.method || 'get').toUpperCase()
+      const url = error.config?.url || '(unknown url)'
+      const status = error.response?.status ?? 'ok:false'
+      console.error(`[edux-api] ${method} ${url} -> ${status}: ${error.message}`)
+    }
+  } catch { /* diagnostics must never break the app */ }
   return error
 }
 

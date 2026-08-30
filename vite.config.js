@@ -28,5 +28,14 @@ export default defineConfig({
     open: false,
     host: true,
     allowedHosts: true,
+    // Dev/preview: with VITE_API_BASE_URL=/v1 the browser talks to this dev
+    // server only; API calls are proxied to the FastAPI backend. No
+    // cross-origin browser calls, no localhost references from the page.
+    proxy: {
+      '/v1': {
+        target: process.env.VITE_DEV_API_TARGET || 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
   },
 })

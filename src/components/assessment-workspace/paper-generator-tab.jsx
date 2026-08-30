@@ -17,7 +17,7 @@ import {
   CheckCircle2, FileText, Printer, Save, Send, SlidersHorizontal, ChevronDown, Wand2, AlertTriangle, Database,
   Sparkles, Loader2, RefreshCw,
 } from 'lucide-react'
-import { usePaperGeneratorCatalog, usePaperCreateBackend, useGenerateDemoPaper, generateAiPaper, fetchAiPaperStatus, fetchAiPaper, fetchAiActive } from '@/services/faculty-papers'
+import { usePaperGeneratorBackend, usePaperCreateBackend, generateAiPaper, fetchAiPaperStatus, fetchAiPaper, fetchAiActive } from '@/services/faculty-papers'
 import { useFacultyQuestions } from '@/services/faculty-questions'
 import { useQuestionGeneration, useGenerationStatus, useGenerationQuestions, GENERATION_STATUS, isTerminalStatus } from '@/services/faculty-question-generation'
 import { Badge, Button, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
@@ -59,9 +59,8 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const toast = useToast()
 
   // Catalog config for the generator. The Paper Library lives in its own tab now.
-  const { data: catalogData, isLoading: catalogLoading, isError: catalogError, refetch: refetchCatalog } = usePaperGeneratorCatalog()
+  const { data: paperData, isLoading: catalogLoading, isError: catalogError, refetch: refetchCatalog } = usePaperGeneratorBackend()
   const { mutateAsync: createPaper } = usePaperCreateBackend()
-  const { mutateAsync: generateDemo } = useGenerateDemoPaper()
 
   // Form state — domain isolation explicit
   const [domain, setDomain] = useState(() => (searchParams.get('mode') === 'Competitive' ? 'Competitive' : 'University'))
@@ -442,7 +441,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     }
     return true
   }, [isGenerationRunning, isGenerationFailed, selectedIds.length, isGenerationReady, generatedCountForDisplay, requestedCountForDisplay])
->>>>>>> Stashed changes
 
   const handleCreate = async () => {
     if (!title.trim()) {
@@ -534,6 +532,9 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
           </p>
           <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">Design, generate and publish question papers</h2>
         </div>
+        <Badge variant={isGenerationReady ? 'success' : isGenerationFailed ? 'danger' : isGenerationRunning ? 'warning' : 'secondary'} className="px-3 py-1">
+          Generation: {generationStatusLabel}
+        </Badge>
       </div>
 
       {/* Section 1 */}
@@ -595,11 +596,11 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                 ariaLabel="Course"
                 onValueChange={(v) => { applyScope({ course: v, subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }); setPage(1); setSelectedIds([]) }}
                 group="paper-generator"
-                disabled={!libLoading && courseOptions.length === 0}
-                loading={libLoading}
+                disabled={!catalogLoading && courseOptions.length === 0}
+                loading={catalogLoading}
                 emptyText="No courses available"
-                placeholder={libLoading ? 'Loading courses…' : courseOptions.length === 0 ? 'No courses available' : 'Select course…'}
-                helper={!libLoading && courseOptions.length === 0 ? 'No courses available' : undefined}
+                placeholder={catalogLoading ? 'Loading courses…' : courseOptions.length === 0 ? 'No courses available' : 'Select course…'}
+                helper={!catalogLoading && courseOptions.length === 0 ? 'No courses available' : undefined}
               >
                 {courseOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </Select>
@@ -865,6 +866,27 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         </div>
       </Section>
 
+      {/* Section 6: review the live bank selection and save the paper */}
+      <Section
+        n={6}
+        title="Question Bank"
+        subtitle="Select questions from the live bank, review them, then save the paper to the Paper Library"
+      >
+        {qLoading ? (
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-10 text-[12.5px] text-slate-400 dark:border-slate-800 dark:bg-slate-800/30">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading question bank…
+          </div>
+        ) : qError ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6 text-center dark:border-rose-500/30 dark:bg-rose-500/5">
+            <AlertTriangle className="mx-auto h-7 w-7 text-rose-500" />
+            <p className="mt-2 text-sm font-bold text-rose-700 dark:text-rose-200">Question bank unavailable.</p>
+            <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-300/80">{qErr?.message || 'Could not load the question bank from the backend.'}</p>
+            <Button size="sm" variant="outline" className="mt-3 border-rose-300 text-rose-700" onClick={() => refetchQuestions()}>
+              <RefreshCw className="h-3.5 w-3.5" /> Retry
+            </Button>
+          </div>
+        ) : (
+          <>
             {availableQuestions.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
                 <Database className="mx-auto h-8 w-8 text-slate-300" />
@@ -936,7 +958,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
 
       {/* Dialogs — print preview is used by the Section 6 Preview button. */}
       <PaperPrintPreview paper={{ title, totalMarks: Number(marks) || 50, duration: Number(duration) || 120, questions: selectedIds.length, questionList: availableQuestions.filter((q) => selectedIds.includes(q.id ?? q._id)) }} open={printOpen} onOpenChange={setPrintOpen} />
->>>>>>> Stashed changes
     </div>
   )
 }

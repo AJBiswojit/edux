@@ -166,13 +166,13 @@ def main() -> int:
                 text(
                     """
                     SELECT t.relname AS table_name, c.conname,
-                           (SELECT array_agg(x.attname ORDER BY x.attnum)
-                              FROM unnest(c.conkey) k
-                              JOIN pg_attribute x ON x.attrelid = c.conrelid AND x.attnum = k) AS cols,
+                           (SELECT array_agg(x.attname ORDER BY k.ord)
+                              FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                              JOIN pg_attribute x ON x.attrelid = c.conrelid AND x.attnum = k.attnum) AS cols,
                            c.confrelid::regclass::text AS ref_table,
-                           (SELECT array_agg(x.attname ORDER BY x.attnum)
-                              FROM unnest(c.confkey) k
-                              JOIN pg_attribute x ON x.attrelid = c.confrelid AND x.attnum = k) AS ref_cols
+                           (SELECT array_agg(x.attname ORDER BY k.ord)
+                              FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, ord)
+                              JOIN pg_attribute x ON x.attrelid = c.confrelid AND x.attnum = k.attnum) AS ref_cols
                     FROM pg_constraint c
                     JOIN pg_class t ON t.oid = c.conrelid
                     JOIN pg_namespace n ON n.oid = t.relnamespace
@@ -198,9 +198,9 @@ def main() -> int:
                 """
                 SELECT t.relname AS table_name, i.indexrelid::regclass::text AS index_name,
                        indisunique,
-                       (SELECT array_agg(x.attname ORDER BY x.attnum)
-                          FROM unnest(i.indkey::smallint[]) k
-                          JOIN pg_attribute x ON x.attrelid = t.oid AND x.attnum = k) AS cols
+                       (SELECT array_agg(x.attname ORDER BY k.ord)
+                          FROM unnest(i.indkey::smallint[]) WITH ORDINALITY AS k(attnum, ord)
+                          JOIN pg_attribute x ON x.attrelid = t.oid AND x.attnum = k.attnum) AS cols
                 FROM pg_index i
                 JOIN pg_class t ON t.oid = i.indrelid
                 JOIN pg_namespace n ON n.oid = t.relnamespace
