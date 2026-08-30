@@ -82,23 +82,49 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [qTypes, setQTypes] = useState(['MCQ', 'Short Answer', 'Long Answer'])
   const [difficulty, setDifficulty] = useState(() => searchParams.get('difficulty') ?? 'Mixed')
   const [questionTypeFilter, setQuestionTypeFilter] = useState('All')
-  const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
 
-  // Cascade — backend-oriented, uses config only, not question pools
+  // Cascade — backend-oriented, uses only the real catalog from the live API.
+  // No hardcoded course/subject/chapter/topic fallbacks.
   const cfg = paperData?.config ?? null
+  const courseCatalog = useMemo(() => cfg?.courseCatalog ?? [], [cfg])
+  const subjectCatalog = useMemo(() => cfg?.subjectCatalog ?? [], [cfg])
+  const courseLabel = (row) => (row ? `${row.code} — ${row.name}` : '')
+  const courseOptions = courseCatalog.map(courseLabel)
+  const courseByLabel = useMemo(() => new Map(courseCatalog.map((c) => [courseLabel(c), c])), [courseCatalog])
+  const subjectByLabel = useMemo(() => new Map(subjectCatalog.map((s) => [s.name, s])), [subjectCatalog])
+  const normalizeCourseValue = (value) => {
+    if (!value) return ''
+    const row = courseCatalog.find((c) => courseLabel(c) === value || c.code === value || c.name === value)
+    return row ? courseLabel(row) : value
+  }
+
   const cascadeConfig = useMemo(() => ({
-    ...buildPaperGeneratorCascade({ mode: domain, exam: examFamily, cfg, bankQuestions: [], compQuestions: [] }),
+    ...buildPaperGeneratorCascade({ mode: domain, exam: examFamily, cfg }),
     initialValues: {
-      course: 'CS501 — DSA',
+      course: normalizeCourseValue(searchParams.get('course') ?? ''),
       subject: searchParams.get('subject') ?? 'All subjects',
       chapter: searchParams.get('chapter') ?? 'All chapters',
       topic: searchParams.get('topic') ?? 'All topics',
     },
-  }), [domain, examFamily, cfg, searchParams])
+  }), [domain, examFamily, cfg, searchParams, courseCatalog])
 
   const { values: scopeValues, options: scopeOptions, apply: applyScope } = useFilterCascade(cascadeConfig)
   const { course, subject, chapter, topic } = scopeValues
+
+  /* Display helpers: parent validity + honest empty-state labels (no
+     backend/PostgreSQL/API wording leaks to the end user). */
+  const courseEmpty = !course
+  const subjectOptions = scopeOptions.subject ?? []
+  const chapterOptions = scopeOptions.chapter ?? []
+  const topicOptions = scopeOptions.topic ?? []
+  const subjectSelected = !!subject && subject !== 'All subjects'
+  const chapterSelected = !!chapter && chapter !== 'All chapters'
+
+  const selectedCourse = courseByLabel.get(course)
+  const selectedSubject = subjectByLabel.get(subject)
+  const queryCourse = selectedCourse?.code
+  const querySubject = subjectSelected ? (selectedSubject?.code ?? subject) : undefined
 
   const [bloomPreset, setBloomPreset] = useState('Balanced')
   const [weightagePreset, setWeightagePreset] = useState('Balanced chapters')
@@ -266,15 +292,15 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const questionFilters = useMemo(() => ({
     domain,
     examFamily: domain === 'Competitive' ? examFamily : undefined,
-    subject: subject !== 'All subjects' ? subject : undefined,
+    course: domain === 'University' ? queryCourse : undefined,
+    subject: querySubject,
     chapter: chapter !== 'All chapters' ? chapter : undefined,
     topic: topic !== 'All topics' ? topic : undefined,
     difficulty: difficulty !== 'Mixed' ? difficulty : undefined,
     questionType: questionTypeFilter !== 'All' ? questionTypeFilter : undefined,
-    search: searchQuery || undefined,
     page,
     limit: 50,
-  }), [domain, examFamily, subject, chapter, topic, difficulty, questionTypeFilter, searchQuery, page])
+  }), [domain, examFamily, queryCourse, querySubject, subject, chapter, topic, difficulty, questionTypeFilter, page])
 
   const { data: questionData, isLoading: qLoading, isError: qError, error: qErr, refetch: refetchQuestions } = useFacultyQuestions(questionFilters)
 
@@ -330,8 +356,12 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       setTitle(editPaper.title ?? '')
       setDomain(editPaper.domain ?? editPaper.mode ?? 'University')
       setPaperType(editPaper.paperType ?? editPaper.examType ?? 'Mid Semester')
+      const editCourse = editPaper.course ?? ''
+      const matchingCourse = courseCatalog.find(
+        (row) => row.code === editCourse || row.name === editCourse || courseLabel(row) === editCourse,
+      )
       applyScope({
-        course: editPaper.course ? `${editPaper.course} — ${editPaper.subject ?? ''}`.trim() : 'CS501 — DSA',
+        course: matchingCourse ? courseLabel(matchingCourse) : '',
         subject: editPaper.subject ?? 'All subjects',
         chapter: editPaper.chapter ?? 'All chapters',
         topic: editPaper.topic ?? 'All topics',
@@ -507,7 +537,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
               {['University', 'Competitive'].map((m) => (
                 <button
                   key={m}
-                  onClick={() => { setDomain(m); setPaperType(m === 'University' ? 'Mid Semester' : 'Full Mock Test'); setSelectedIds([]) }}
+                  onClick={() => { setDomain(m); setPaperType(m === 'University' ? 'Mid Semester' : 'Full Mock Test'); setSelectedIds([]); applyScope({ course: '', subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }) }}
                   className={`flex-1 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${domain === m ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/25' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
                 >
                   {m === 'University' ? '🏛️' : '🎯'} {m}
@@ -526,7 +556,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                 {['JEE', 'NEET'].map((e) => (
                   <button
                     key={e}
-                    onClick={() => { setExamFamily(e); setSelectedIds([]); setPage(1) }}
+                    onClick={() => { setExamFamily(e); setSelectedIds([]); setPage(1); applyScope({ subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }) }}
                     className={`flex-1 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${examFamily === e ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
                   >
                     {e}
@@ -545,36 +575,70 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         </div>
       </Section>
 
-      {/* Section 2 — Syllabus filters backend-oriented */}
+      {/* Section 2 — Syllabus filters backend-oriented. No standalone search field. */}
       <Section n={2} title="Syllabus / content" subtitle={domain === 'Competitive' ? 'Domain + Exam Family → Subject → Chapter → Topic.' : 'Domain → Course → Subject → Chapter → Topic.'}>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className={`grid grid-cols-2 gap-4 ${domain === 'University' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {domain === 'University' && (
             <Field label="Course">
-              <Select value={course} onValueChange={(v) => { applyScope({ course: v, subject: v.split(' ')[0] ?? 'All subjects' }); setPage(1); setSelectedIds([]) }} group="paper-generator">
-                {scopeOptions.course.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              <Select
+                value={course}
+                ariaLabel="Course"
+                onValueChange={(v) => { applyScope({ course: v, subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }); setPage(1); setSelectedIds([]) }}
+                group="paper-generator"
+                disabled={!libLoading && courseOptions.length === 0}
+                loading={libLoading}
+                emptyText="No courses available"
+                placeholder={libLoading ? 'Loading courses…' : courseOptions.length === 0 ? 'No courses available' : 'Select course…'}
+                helper={!libLoading && courseOptions.length === 0 ? 'No courses available' : undefined}
+              >
+                {courseOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </Select>
             </Field>
           )}
           <Field label="Subject">
-            <Select value={subject} onValueChange={(v) => { applyScope({ subject: v }); setPage(1); setSelectedIds([]) }} group="paper-generator" disabled={domain === 'University' && !course} helper={domain === 'University' && !course ? 'Select a course first' : undefined}>
-              <SelectItem value="All subjects">All subjects</SelectItem>
-              {scopeOptions.subject.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            <Select
+              value={subjectOptions.length > 0 ? subject : ''}
+              ariaLabel="Subject"
+              onValueChange={(v) => { applyScope({ subject: v, chapter: 'All chapters', topic: 'All topics' }); setPage(1); setSelectedIds([]) }}
+              group="paper-generator"
+              disabled={domain === 'University' ? courseEmpty && subjectOptions.length === 0 : false}
+              emptyText="No subjects available"
+              placeholder={domain === 'University' && courseEmpty ? 'Select a course first' : subjectOptions.length === 0 ? 'No subjects available' : 'Select subject…'}
+              helper={domain === 'University' && courseEmpty ? 'Select a course first' : subjectOptions.length === 0 ? 'No subjects available' : undefined}
+            >
+              {subjectOptions.length > 0 && <SelectItem value="All subjects">All subjects</SelectItem>}
+              {subjectOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Chapter">
-            <Select value={chapter} onValueChange={(v) => { applyScope({ chapter: v }); setPage(1); setSelectedIds([]) }} group="paper-generator" disabled={!subject || subject === 'All subjects'} helper={!subject || subject === 'All subjects' ? 'Select a subject first' : undefined}>
-              <SelectItem value="All chapters">All chapters</SelectItem>
-              {scopeOptions.chapter.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            <Select
+              value={chapterOptions.length > 0 ? chapter : ''}
+              ariaLabel="Chapter"
+              onValueChange={(v) => { applyScope({ chapter: v, topic: 'All topics' }); setPage(1); setSelectedIds([]) }}
+              group="paper-generator"
+              disabled={!subjectSelected && chapterOptions.length === 0}
+              emptyText="No chapters available"
+              placeholder={!subjectSelected ? 'Select a subject first' : chapterOptions.length === 0 ? 'No chapters available' : 'Select chapter…'}
+              helper={!subjectSelected ? 'Select a subject first' : chapterOptions.length === 0 ? 'No chapters available' : undefined}
+            >
+              {chapterOptions.length > 0 && <SelectItem value="All chapters">All chapters</SelectItem>}
+              {chapterOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Topic">
-            <Select value={topic} onValueChange={(v) => { applyScope({ topic: v }); setPage(1); setSelectedIds([]) }} group="paper-generator" disabled={!chapter || chapter === 'All chapters'} helper={!chapter || chapter === 'All chapters' ? 'Select a chapter first' : undefined}>
-              <SelectItem value="All topics">All topics</SelectItem>
-              {scopeOptions.topic.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            <Select
+              value={topicOptions.length > 0 ? topic : ''}
+              ariaLabel="Topic"
+              onValueChange={(v) => { applyScope({ topic: v }); setPage(1); setSelectedIds([]) }}
+              group="paper-generator"
+              disabled={!chapterSelected && topicOptions.length === 0}
+              emptyText="No topics available"
+              placeholder={!chapterSelected ? 'Select a chapter first' : topicOptions.length === 0 ? 'No topics available' : 'Select topic…'}
+              helper={!chapterSelected ? 'Select a chapter first' : topicOptions.length === 0 ? 'No topics available' : undefined}
+            >
+              {topicOptions.length > 0 && <SelectItem value="All topics">All topics</SelectItem>}
+              {topicOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </Select>
-          </Field>
-          <Field label="Search">
-            <Input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }} placeholder="Search questions…" />
           </Field>
         </div>
       </Section>
@@ -792,7 +856,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       </Section>
 
       {/* Question Bank — Backend only, now with generation distinction */}
-      <Section n={6} title="Question Bank" subtitle={`Domain: ${domain} ${domain === 'Competitive' ? `· Exam Family: ${examFamily}` : ''} · Filters: subject, chapter, topic, difficulty, question type, search, page · Generation: ${generationStatusLabel}`}>
+      <Section n={6} title="Question Bank" subtitle={`Domain: ${domain} ${domain === 'Competitive' ? `· Exam Family: ${examFamily}` : ''} · Filters: course, subject, chapter, topic, difficulty, question type, page · Generation: ${generationStatusLabel}`}>
         {qLoading && !isGenerationRunning && <DashboardSkeleton cards={2} />}
         {qError && !isGenerationRunning && !isGenerationReady && (
           <div className="rounded-3xl border border-dashed border-amber-300/70 bg-amber-50/50 p-8 text-center dark:border-amber-500/30 dark:bg-amber-500/5">

@@ -14,7 +14,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.assessment import Paper, PaperQuestion, Question
-from app.models.catalog import Chapter, Subject, Topic
+from app.models.catalog import Chapter, Course, Subject, Topic
 from app.models.exams import ExamAttempt, ExamQuestionAttempt, ExamSitting
 from app.models.identity import User
 from app.models.people import StudentProfile
@@ -215,6 +215,7 @@ def list_question_bank(
     *,
     domain: str | None = None,
     exam_family: str | None = None,
+    course: str | None = None,
     subject: str | None = None,
     chapter: str | None = None,
     topic: str | None = None,
@@ -230,6 +231,24 @@ def list_question_bank(
     limit = min(200, max(1, int(limit or 50)))
 
     query = select(Question).where(Question.institution_id == user.institution_id)
+    if course and course not in {"All", "All courses"}:
+        course_rows = db.scalars(
+            select(Course).where(
+                Course.institution_id == user.institution_id,
+                or_(Course.code == course, Course.name == course),
+            )
+        ).all()
+        course_ids = [row.id for row in course_rows]
+        subject_ids = [row.subject_id for row in course_rows if row.subject_id]
+        chapter_ids = (
+            [row.id for row in db.scalars(select(Chapter).where(Chapter.course_id.in_(course_ids))).all()]
+            if course_ids
+            else []
+        )
+        if subject_ids or chapter_ids:
+            query = query.where(or_(Question.subject_id.in_(subject_ids), Question.chapter_id.in_(chapter_ids)))
+        else:
+            query = query.where(Question.id == "__none__")
     mode = normalize_exam_mode(domain)
     family = normalize_exam_family(exam_family, mode=mode)
     if mode:
