@@ -42,6 +42,15 @@ vi.mock('../../src/services/faculty-papers', () => {
     usePaperArchiveBackend: noop,
     usePaperPublishBackend: noop,
     usePaperShareBackend: noop,
+    useAiPaperLibrary: () => ({
+      data: { generatedPapers: [
+        {
+          id: 'paper-1', title: 'Mid Semester — DSA — Paper A', status: 'Ready', domain: 'University',
+          totalMarks: 50, duration: 120, selectedQuestionIds: ['q-1', 'q-2'], created: '2026-01-05',
+        },
+      ], versionHistory: {} },
+      isLoading: false, isError: false, error: null, refetch: () => {},
+    }),
   }
 })
 

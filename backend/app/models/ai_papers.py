@@ -20,6 +20,7 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -27,6 +28,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+
+# PostgreSQL keeps the deployed JSONB columns exactly as-is; other dialects
+# (SQLite, used by the unit-test suite) compile the generic JSON so
+# Base.metadata.create_all() works there too. On PostgreSQL this renders as
+# JSONB — byte-for-byte the same DDL as before.
+JSONB = JSON().with_variant(JSONB, "postgresql")
 
 from app.db.base import Base, uuid_pk
 
