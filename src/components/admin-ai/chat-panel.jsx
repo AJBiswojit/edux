@@ -11,7 +11,8 @@ import {
   ArrowUp, BrainCircuit, Check, ClipboardCopy, Copy, Save, Sparkles,
 } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
-import { EXEC_QUICK_PROMPTS, generateExecResponse } from '@/intelligence/admin/ai'
+import { EXEC_QUICK_PROMPTS } from '@/intelligence/admin/ai'
+import { useExecutiveAsk, useExecutiveThreads } from '@/services/extra'
 import { cn } from '@/utils/cn'
 
 const HISTORY_KEY = 'EduX_admin_ai_history'
@@ -85,13 +86,23 @@ function ChatPanel({ derived, onSaveInsight, onNavigate }) {
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
+  const [threadId, setThreadId] = useState(null)
   const scrollRef = useRef(null)
+  const ask = useExecutiveAsk()
+  const { data: threadsData } = useExecutiveThreads()
 
   useEffect(() => {
-    try {
-      setMessages(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'))
-    } catch { /* noop */ }
-  }, [])
+    const threads = threadsData?.threads || threadsData?.history || []
+    const latest = threads[0]
+    if (!latest) return
+    setThreadId(latest.id)
+    setMessages((latest.messages || []).map((m) => ({
+      id: m.id,
+      role: m.role === 'assistant' ? 'ai' : m.role,
+      text: m.text,
+      time: m.createdAt || new Date().toISOString(),
+    })))
+  }, [threadsData])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -99,22 +110,30 @@ function ChatPanel({ derived, onSaveInsight, onNavigate }) {
 
   const persist = (next) => {
     setMessages(next)
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next.slice(-30))) } catch { /* noop */ }
   }
 
-  const respond = (question) => {
+  const respond = async (question) => {
     const q = question.trim()
     if (!q || typing) return
     const userMsg = { id: `u_${Date.now()}`, role: 'user', text: q, time: new Date().toISOString() }
     persist([...messages, userMsg])
     setInput('')
     setTyping(true)
-    setTimeout(() => {
-      const response = generateExecResponse(q, derived)
-      const aiMsg = { id: `a_${Date.now()}`, role: 'ai', text: q, response, time: new Date().toISOString() }
+    try {
+      const res = await ask.mutateAsync({ message: q, conversationId: threadId })
+      if (res.conversationId || res.threadId) setThreadId(res.conversationId || res.threadId)
+      const aiMsg = {
+        id: `a_${Date.now()}`,
+        role: 'ai',
+        text: res.reply || 'No reply.',
+        time: new Date().toISOString(),
+      }
       persist([...messages, userMsg, aiMsg])
+    } catch {
+      persist([...messages, userMsg, { id: `a_${Date.now()}`, role: 'ai', text: 'Executive AI could not answer. Try again.', time: new Date().toISOString() }])
+    } finally {
       setTyping(false)
-    }, 700)
+    }
   }
 
   const copyMessage = (msg) => {

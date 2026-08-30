@@ -18,7 +18,7 @@ import {
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui'
 import {
   buildDemoSimulationPlan, computeLiveExamStats, demoTimeScale, formatClock, formatPace,
-} from '@/intelligence'
+} from '@/intelligence/engine/exam-agent.js'
 import { cn } from '@/utils/cn'
 import { QUESTION_OPTION_LABELS } from '@/constants/ui'
 import { AgentChip, ExamTypeBadge, PacePill } from './exam-agent-shared'

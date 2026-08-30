@@ -21,7 +21,7 @@ function Roles() {
         description="Role-based access across the institution — least privilege by default, escalation when needed."
         breadcrumbs={[{ label: 'Admin' }, { label: 'Roles' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('New role', 'Create a custom role with granular permissions.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — custom roles are not created from this screen yet.')}>
             <ShieldCheck className="h-4 w-4" /> Create role
           </Button>
         }
@@ -52,7 +52,7 @@ function Roles() {
       <div className="mt-6 flex items-start gap-3 rounded-3xl bg-gradient-to-r from-indigo-600/10 to-teal-500/10 p-5 ring-1 ring-indigo-500/15">
         <UserPlus className="mt-0.5 h-5 w-5 shrink-0 text-indigo-500" />
         <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
-          <span className="font-bold text-slate-800 dark:text-slate-100">Best practice:</span> 94% of your accounts use the standard Student / Faculty / Parent roles. Custom roles (HOD, Placement Officer, Auditor) cover the remaining 6% — all changes are logged in the audit trail.
+          <span className="font-bold text-slate-800 dark:text-slate-100">Note:</span> Member counts come from live user_roles for this institution. Custom role creation is not operational yet.
         </p>
       </div>
     </div>

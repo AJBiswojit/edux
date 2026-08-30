@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Award, CheckCircle2, Circle, Flag, GitBranch, Route as RouteIcon, Sparkles, Target } from 'lucide-react'
 import { useLearningPath } from '@/services'
+import { EmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { ChartCard } from '@/components/shared/chart-card'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -43,9 +44,8 @@ function LearningPath() {
               {data.overall}% of your roadmap is complete
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/85">
-              The path engine re-balances weekly from 40+ mastery signals. Right now it's prioritising{' '}
-              <span className="font-bold text-white">Network flows</span> and{' '}
-              <span className="font-bold text-white">TCP congestion control</span> — both gate the midsem syllabus.
+              {data.nextSteps?.[0]?.reason
+                || 'Your learning path fills in from enrolled courses, practice and exam attempts. Nothing is queued yet.'}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {data.milestones.slice(0, 3).map((m) => (
@@ -75,8 +75,15 @@ function LearningPath() {
       <h2 className="mb-4 flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-white">
         <Target className="h-4 w-4 text-indigo-500" /> Recommended next steps
       </h2>
+      {!(data.nextSteps ?? []).length && (
+        <EmptyState
+          className="mb-6"
+          title="No next steps yet"
+          description="Complete a class, assignment or exam attempt and the path engine will recommend what to do next."
+        />
+      )}
       <div className="grid gap-4 md:grid-cols-2">
-        {data.nextSteps.map((step, i) => (
+        {(data.nextSteps ?? []).map((step, i) => (
           <motion.div key={step.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="group h-full p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift">
               <div className="flex items-start justify-between gap-3">
@@ -90,7 +97,7 @@ function LearningPath() {
               <div className="mt-3.5 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3.5 text-[11px] font-semibold text-slate-400 dark:border-slate-800">
                 <span className="flex items-center gap-1"><Sparkles className="h-3 w-3 text-indigo-500" /> {step.effort}</span>
                 <Badge variant={IMPACT_STYLES[step.impact]} size="sm">{step.impact} impact</Badge>
-                <Button size="sm" variant="ghost" className="ml-auto" onClick={() => toast.success('Added to planner', `${step.title} — sessions scheduled this week.`)}>
+                <Button size="sm" variant="ghost" className="ml-auto" onClick={() => toast.info('BACKEND GAP', 'Planner writes are not available yet — no planner mutation exists.')}>
                   Add to planner
                 </Button>
               </div>
@@ -103,7 +110,7 @@ function LearningPath() {
         {/* Milestones */}
         <ChartCard title="Milestones" subtitle="Tracked by the path engine">
           <div className="space-y-4">
-            {data.milestones.map((m, i) => (
+            {(data.milestones ?? []).map((m, i) => (
               <motion.div key={m.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
@@ -120,7 +127,7 @@ function LearningPath() {
         {/* History */}
         <ChartCard title="Path activity" subtitle="How the roadmap evolved">
           <div className="space-y-1">
-            {data.history.map((h, i) => (
+            {(data.history ?? []).map((h, i) => (
               <motion.div key={i} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex items-start gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40">
                 <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-teal-500/10 text-indigo-600 ring-1 ring-indigo-500/15 dark:text-indigo-300">
                   {h.action.includes('re-routed') || h.action.includes('adjusted') ? <GitBranch className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}

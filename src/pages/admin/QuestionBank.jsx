@@ -26,7 +26,7 @@ function QuestionBank() {
   if (isLoading) return <DashboardSkeleton cards={2} />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
-  const s = data.summary
+  const s = data?.summary ?? { total: 0, aiGenerated: 0, approved: 0, flagged: 0, byType: {} }
 
   return (
     <div>
@@ -36,7 +36,7 @@ function QuestionBank() {
         description={`${s.total.toLocaleString()} questions across all subjects — ${s.aiGenerated.toLocaleString()} AI-generated, ${s.flagged} flagged.`}
         breadcrumbs={[{ label: 'Admin' }, { label: 'Question Bank' }]}
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'Add questions from the faculty question bank — this catalogue is read-only.')}>
             <Plus className="h-4 w-4" /> Add question
           </Button>
         }
@@ -134,7 +134,7 @@ function QuestionBank() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.success('Question submitted', 'Queued for validation and approval.') }}>
+            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'Admin question create is not implemented — use the faculty question bank.') }}>
               <Plus className="h-4 w-4" /> Submit question
             </Button>
           </DialogFooter>

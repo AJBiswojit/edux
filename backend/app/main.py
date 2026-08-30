@@ -19,6 +19,7 @@ from app.models import intelligence as _intelligence  # noqa: F401
 from app.models import ai as _ai  # noqa: F401
 from app.models import teaching as _teaching  # noqa: F401
 from app.models import ops as _ops  # noqa: F401
+from app.models import capabilities as _capabilities  # noqa: F401
 from app.middleware import RequestLogMiddleware
 from app.services.seed import seed_if_empty
 

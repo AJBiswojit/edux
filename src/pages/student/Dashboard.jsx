@@ -29,7 +29,7 @@ import {
 function buildDashboardKpis({ profile, derived, datasets }) {
   const history = datasets.academicPerformance?.semesterHistory ?? []
   const lastSem = [...history].reverse().find((h) => h.gpa != null) ?? { gpa: 0 }
-  const cgpa = profile.cgpa ?? 0
+  const cgpa = profile.cgpa
   const att = datasets.attendance?.overall ?? 0
   const attStart = datasets.attendanceAnalytics?.monthlyTrend?.[0]?.pct ?? att
   const pending = (datasets.assignments ?? []).filter((a) => a.status === 'Pending').length
@@ -38,7 +38,7 @@ function buildDashboardKpis({ profile, derived, datasets }) {
   const cgpaDelta = +(cgpa - (lastSem.gpa ?? cgpa)).toFixed(2)
   const attDelta = +(att - attStart).toFixed(1)
   return [
-    { id: 'cgpa', label: 'CGPA', value: String(cgpa), delta: `${cgpaDelta >= 0 ? '+' : ''}${cgpaDelta}`, up: cgpaDelta >= 0, sub: 'vs last semester', icon: 'GraduationCap', gradient: 'from-indigo-500 to-blue-500' },
+    { id: 'cgpa', label: 'CGPA', value: cgpa == null ? '—' : String(cgpa), delta: cgpa == null ? '—' : `${cgpaDelta >= 0 ? '+' : ''}${cgpaDelta}`, up: cgpaDelta >= 0, sub: 'vs last semester', icon: 'GraduationCap', gradient: 'from-indigo-500 to-blue-500' },
     { id: 'attendance', label: 'Attendance', value: `${att}%`, delta: `${attDelta >= 0 ? '+' : ''}${attDelta}%`, up: attDelta >= 0, sub: 'vs semester start', icon: 'CalendarCheck2', gradient: 'from-emerald-500 to-teal-500' },
     { id: 'assignments', label: 'Assignments', value: String(pending), delta: `${pending} due`, up: false, sub: `${onTime} submitted on time`, icon: 'FileText', gradient: 'from-amber-500 to-orange-500' },
     { id: 'streak', label: 'Study streak', value: String(streak), delta: '🔥', up: true, sub: 'days — keep it up!', icon: 'Flame', gradient: 'from-rose-500 to-fuchsia-500' },
@@ -94,7 +94,7 @@ function Dashboard() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Student · Command Center"
-        title={`Welcome back, ${profile?.firstName ?? 'Aarav'} 👋`}
+        title={`Welcome back, ${profile?.firstName ?? 'Student'} 👋`}
         description="Your academic command center — health, readiness, interventions and today's plan, all in one place."
         actions={
           <>
@@ -223,15 +223,15 @@ function Dashboard() {
           />
           <div className="mt-4 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
             <div className="text-center">
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{datasets.studyStatistics.weeklyHours}h</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{datasets.studyStatistics?.weeklyHours ?? 0}h</p>
               <p className="text-[11px] font-medium text-slate-400">This week</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{datasets.studyStatistics.avgFocus}%</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{datasets.studyStatistics?.avgFocus ?? 0}%</p>
               <p className="text-[11px] font-medium text-slate-400">Avg focus</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{datasets.studyStatistics.streakDays}d</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{datasets.studyStatistics?.streakDays ?? 0}d</p>
               <p className="text-[11px] font-medium text-slate-400">Streak</p>
             </div>
           </div>
@@ -296,7 +296,10 @@ function Dashboard() {
             </div>
             <div className="mt-4 rounded-2xl bg-gradient-to-r from-indigo-600/10 to-teal-500/10 p-3.5 ring-1 ring-indigo-500/15">
               <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">
-                <span className="font-bold text-indigo-600 dark:text-indigo-300">AI:</span> ML ({coursesTop.find((c) => c.code === 'CS505')?.progress ?? 71}%) is your most active course — 2 lessons this week keeps you on track for an A.
+                <span className="font-bold text-indigo-600 dark:text-indigo-300">AI:</span>{' '}
+                {coursesTop[0]
+                  ? `${coursesTop[0].title} is at ${coursesTop[0].progress ?? 0}% — progress updates from your enrollments.`
+                  : 'Enroll in a course to see progress here.'}
               </p>
             </div>
           </CardContent>

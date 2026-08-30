@@ -1,16 +1,12 @@
-"""Deterministic similar-issue groups + intervention records matching the SPA contract."""
+"""Intervention display helpers matching the SPA contract.
+
+Similar-issue grouping is computed in similar_issues_runtime from SQL evidence.
+This module only formats persisted/derived records and status transitions.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
-
-CHAPTERS = [
-    ("University", None, "Data Structures & Algorithms", "Graph Algorithms", "Low Accuracy"),
-    ("University", None, "Operating Systems", "Deadlocks", "Performance Gap"),
-    ("Competitive", "JEE", "Physics", "Kinematics", "Persistent Weakness"),
-    ("Competitive", "NEET", "Biology", "Genetics", "Declining Performance"),
-]
 
 
 def _iso() -> str:
@@ -18,115 +14,14 @@ def _iso() -> str:
 
 
 def build_similar_issues(students: list[dict]) -> dict:
-    groups: list[dict] = []
-    individuals: list[dict] = []
-    for idx, (domain, family, subject, chapter, issue_type) in enumerate(CHAPTERS, start=1):
-        pool = [
-            s
-            for s in students
-            if (s.get("domain") or "University") == domain
-            and (family is None or (s.get("examFamily") or "").upper() == family)
-        ]
-        members = pool[:8] if len(pool) >= 2 else pool
-        if len(members) < 2:
-            if members:
-                s = members[0]
-                individuals.append(_fingerprint(s, domain, family, subject, chapter, issue_type))
-            continue
-        avg_acc = round(sum((s.get("latestAccuracy") or s.get("accuracy") or 58) for s in members) / len(members), 1)
-        student_rows = [
-            {
-                "studentId": s["id"],
-                "roll": s.get("roll"),
-                "name": s.get("name"),
-                "batchId": s.get("batchId"),
-                "accuracy": s.get("latestAccuracy") or s.get("accuracy") or 58,
-            }
-            for s in members
-        ]
-        gid = f"sig-{idx:02d}-{chapter.lower().replace(' ', '-')}"
-        groups.append(
-            {
-                "id": gid,
-                "groupId": gid,
-                "domain": domain,
-                "examFamily": family,
-                "examMode": domain,
-                "subject": subject,
-                "chapter": chapter,
-                "issueType": issue_type,
-                "severity": "High" if issue_type in {"Persistent Weakness", "Low Accuracy"} else "Medium",
-                "similarityScore": 0.91,
-                "studentCount": len(members),
-                "students": student_rows,
-                "studentIds": [s["id"] for s in members],
-                "batchIds": sorted({s.get("batchId") for s in members if s.get("batchId")}),
-                "batches": sorted({s.get("batchName") or s.get("batchId") for s in members}),
-                "avgAccuracy": avg_acc,
-                "avgTime": 118,
-                "totalIncorrect": 14,
-                "totalSkipped": 6,
-                "totalQuestions": 40,
-                "affectedExams": 3,
-                "maxPersistence": 3,
-                "trend": "Persistent" if "Persistent" in issue_type else "Stable",
-                "priority": "High" if len(members) >= 5 else "Medium",
-                "evidence": {
-                    "students": len(members),
-                    "subject": subject,
-                    "chapter": chapter,
-                    "issueType": issue_type,
-                    "avgAccuracy": avg_acc,
-                    "avgTime": 118,
-                    "questions": 40,
-                    "incorrect": 14,
-                    "skipped": 6,
-                    "affectedExams": 3,
-                    "persistence": 3,
-                    "trend": "persistent" if "Persistent" in issue_type else "stable",
-                },
-                "whyDetected": (
-                    f"{len(members)} students showed {avg_acc}% average accuracy in {chapter} ({subject}), "
-                    "across at least 2 assessments."
-                ),
-                "recommendation": {
-                    "title": "Concept revision + targeted practice",
-                    "detail": f"{issue_type} in {chapter} — {avg_acc}% average accuracy.",
-                    "actions": [
-                        {"label": "Concept revision", "detail": f"Revisit {chapter} fundamentals with worked examples ({subject})."},
-                        {"label": "Targeted practice", "detail": f"15–20 {chapter} questions from the question bank."},
-                    ],
-                },
-                "note": "AI Similarity Score — prototype grouping, not a validated measure.",
-            }
-        )
+    """Directory-only grouping is retired. Empty unless SQL evidence is used."""
     return {
-        "groups": groups,
-        "individuals": individuals,
-        "count": len(groups),
-        "individualCount": len(individuals),
+        "groups": [],
+        "individuals": [],
+        "count": 0,
+        "individualCount": 0,
         "demoExcluded": True,
-        "note": "AI Similarity Score — prototype grouping, not a validated measure.",
-    }
-
-
-def _fingerprint(s: dict, domain: str, family: str | None, subject: str, chapter: str, issue_type: str) -> dict:
-    return {
-        "studentId": s["id"],
-        "roll": s.get("roll"),
-        "name": s.get("name"),
-        "batchId": s.get("batchId"),
-        "domain": domain,
-        "examFamily": family,
-        "subject": subject,
-        "chapter": chapter,
-        "issueType": issue_type,
-        "severity": "Medium",
-        "accuracy": s.get("latestAccuracy") or 60,
-        "avgTime": 110,
-        "trend": "stable",
-        "evidence": {"attempts": 1, "questions": 8, "accuracy": s.get("latestAccuracy") or 60, "avgTime": 110, "incorrect": 3, "skipped": 1},
-        "lastExam": s.get("lastExam"),
+        "note": "Derived from exam attempts and DNA. Empty when there is no weak-chapter evidence.",
     }
 
 
@@ -174,6 +69,8 @@ def intervention_from_group(group: dict, override: dict | None = None) -> dict:
         "completedAt": override.get("completedAt"),
         "updatedAt": override.get("updatedAt") or _iso(),
         "createdAt": override.get("createdAt") or _iso(),
+        "persisted": False,
+        "source": "derived",
     }
 
 

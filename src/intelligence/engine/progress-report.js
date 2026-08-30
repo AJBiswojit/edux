@@ -190,7 +190,7 @@ export function buildProgressReport({ derived, profile, datasets, period = 'seme
       branch: profile?.branch ?? profile?.department ?? '—',
       semester: derived.university?.identity?.semester ?? profile?.semester ?? '—',
       academicYear: derived.university?.identity?.academicYear ?? '—',
-      institution: profile?.institution ?? 'Meridian Institute of Technology',
+      institution: profile?.institution ?? '—',
       generatedAt: new Date().toISOString(),
       periodLabel: REPORT_PERIODS.find((p) => p.id === period)?.label ?? 'Current Semester',
     },

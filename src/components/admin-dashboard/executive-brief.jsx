@@ -22,8 +22,11 @@ export function buildExecutiveBrief(derived) {
   const strongest = sorted[0]
   const weakest = sorted[sorted.length - 1]
 
-  const greeting = `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, Director.`
-  const overall = `Overall institutional health is ${health.score ? `${health.score}/100 (${health.grade})` : 'strong'}. ${strongest ? `${strongest.label} is currently the strongest pillar at ${strongest.value}/100.` : ''}`
+  const first = derived.profile?.firstName || derived.masterProfile?.firstName || 'Admin'
+  const greeting = `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, ${first}.`
+  const overall = health.score == null
+    ? 'Overall institutional health has not been calculated yet.'
+    : `Overall institutional health is ${health.score}/100 (${health.grade || 'Building'}). ${strongest ? `${strongest.label} is currently the strongest pillar at ${strongest.value}/100.` : ''}`
   const priority = weakest
     ? `${weakest.label} requires attention at ${weakest.value}/100.`
     : 'All pillars are healthy.'

@@ -38,7 +38,7 @@ function Academics() {
   const courses = university.courses ?? []
   const subjects = university.subjects ?? []
   const resources = university.resources ?? []
-  const progress = university.progress ?? { overall: 0, courses: [], semesterTarget: 65, subjects: [] }
+  const progress = university.progress ?? { overall: 0, courses: [], semesterTarget: null, subjects: [] }
   /* Attendance derives from the university intelligence slice (Phase 27.2). */
   const attendanceOverall = university.attendance?.overall ?? null
   const totalCredits = subjects.reduce((a, s) => a + s.credits, 0)
@@ -59,7 +59,7 @@ function Academics() {
         title="Academics"
         description="Your courses, subjects, study resources and syllabus progress — unified in one workspace."
         breadcrumbs={[{ label: 'Student' }, { label: 'Academics' }]}
-        actions={<Badge variant="gradient" className="px-3 py-1"><Sparkles className="h-3 w-3" /> Sem 5 · 6 courses</Badge>}
+        actions={<Badge variant="gradient" className="px-3 py-1"><Sparkles className="h-3 w-3" /> {university.identity?.semester || 'Semester'} · {courses.length} courses</Badge>}
       />
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -145,7 +145,14 @@ function Academics() {
               <div className="flex items-start gap-3 rounded-3xl bg-gradient-to-r from-indigo-600/10 to-teal-500/10 p-5 ring-1 ring-indigo-500/15">
                 <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
                 <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
-                  <span className="font-bold text-indigo-600 dark:text-indigo-300">MediXO Mentor:</span> you are 6% behind your semester target — two focused DSA lessons this week will close the gap before midsems.
+                  <span className="font-bold text-indigo-600 dark:text-indigo-300">MediXO Mentor:</span>{' '}
+                  {progress.semesterTarget != null && avgProgress < progress.semesterTarget
+                    ? `you are ${progress.semesterTarget - avgProgress}% behind your semester target based on enrolled course progress.`
+                    : courses.length === 0
+                      ? 'enroll in courses to see semester pacing from live progress.'
+                      : progress.semesterTarget != null
+                        ? `your enrolled course progress is on track versus the ${progress.semesterTarget}% target.`
+                        : 'keep working through your enrolled courses — no semester target is set yet.'}
                 </p>
               </div>
             </div>
@@ -192,7 +199,7 @@ function Academics() {
                         <Badge variant="secondary" size="sm">{r.type}</Badge>
                         <span>{r.size}</span>·<span>{r.updated}</span>
                       </div>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => toast.success('Downloading…', `${r.title} saved.`)} aria-label={`Download ${r.title}`}>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => toast.info('BACKEND GAP', 'Resource files are not downloadable yet — no file endpoint.')} aria-label={`Download ${r.title}`}>
                         <Download className="h-4 w-4" />
                       </Button>
                     </div>
@@ -229,7 +236,7 @@ function Academics() {
                 <div className="flex flex-col items-center pt-2">
                   <ProgressRing value={progress.overall} size={150} stroke={12} label={`${progress.overall}%`} sublabel="Overall" />
                   <p className="mt-4 text-center text-[11.5px] leading-relaxed text-slate-400">
-                    You are <span className="font-bold text-amber-600 dark:text-amber-400">{progress.semesterTarget - progress.overall}%</span> behind the AI-modelled target pace. Extra DSA + Networks effort this week is recommended.
+                    {progress.semesterTarget != null ? <>Target pace {progress.semesterTarget}% · current {progress.overall}%.</> : 'No semester target is set yet.'}
                   </p>
                 </div>
               </ChartCard>

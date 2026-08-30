@@ -26,11 +26,7 @@ function DataTools() {
       toast.error('No file selected', 'Drop a CSV, XLSX or JSON file first.')
       return
     }
-    setUploading(true)
-    setTimeout(() => {
-      setUploading(false)
-      toast.success('Import started 🔄', `Processing ${acceptedFiles[0].name} — validation report will follow.`)
-    }, 1400)
+    toast.info('Unavailable', 'BACKEND GAP — data import is not operational yet.')
   }
 
   const statusMeta = { Ready: ['success', CheckCircle2], Queued: ['secondary', RefreshCw], Processing: ['info', RefreshCw], Completed: ['success', CheckCircle2], Failed: ['danger', XCircle] }
@@ -53,7 +49,7 @@ function DataTools() {
 
         <TabsContent value="export">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {data.exports.map((e, i) => {
+            {(data?.exports ?? []).map((e, i) => {
               const meta = statusMeta[e.status] ?? statusMeta.Queued
               const [variant, Icon] = meta
               return (
@@ -105,7 +101,7 @@ function DataTools() {
             <div>
               <p className="mb-3 text-[15px] font-bold text-slate-900 dark:text-white">Recent imports</p>
               <div className="space-y-3">
-                {data.imports.map((im, i) => {
+                {(data?.imports ?? []).map((im, i) => {
                   const meta = statusMeta[im.status] ?? statusMeta.Queued
                   const [variant, Icon] = meta
                   return (
@@ -135,7 +131,7 @@ function DataTools() {
 
         <TabsContent value="templates">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {data.templates.map((t, i) => (
+            {(data?.templates ?? []).map((t, i) => (
               <motion.div key={t.name} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className="h-full p-5 transition-all hover:-translate-y-0.5 hover:shadow-lift">
                   <div className="flex items-center justify-between">
@@ -144,7 +140,7 @@ function DataTools() {
                   </div>
                   <h3 className="mt-3 font-mono text-[13px] font-bold text-slate-900 dark:text-white">{t.name}</h3>
                   <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">{t.desc}</p>
-                  <Button size="sm" variant="outline" className="mt-3.5 w-full" onClick={() => toast.success('Template downloaded', `${t.name} saved to your downloads.`)}>
+                  <Button size="sm" variant="outline" className="mt-3.5 w-full" onClick={() => toast.info('Unavailable', 'BACKEND GAP — import templates are not operational yet.')}>
                     <Download className="h-3.5 w-3.5" /> Download template
                   </Button>
                 </Card>

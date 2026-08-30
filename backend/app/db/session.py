@@ -23,7 +23,10 @@ def _postgres_schema() -> str | None:
 
 _schema = _postgres_schema()
 connect_args: dict = {}
-if _schema:
+if settings.database_url.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+    connect_args["timeout"] = 30
+elif _schema:
     connect_args["options"] = f"-csearch_path={_schema}"
 
 engine = create_engine(settings.database_url, pool_pre_ping=True, connect_args=connect_args)
@@ -31,7 +34,13 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expi
 
 
 @event.listens_for(engine, "connect")
-def _set_search_path(dbapi_connection, _connection_record) -> None:
+def _on_connect(dbapi_connection, _connection_record) -> None:
+    if engine.dialect.name == "sqlite":
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.close()
+        return
     if not _schema:
         return
     cursor = dbapi_connection.cursor()

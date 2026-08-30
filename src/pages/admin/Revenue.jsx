@@ -32,14 +32,14 @@ function Revenue() {
         description="Institution finances — collections, outstanding invoices and revenue streams."
         breadcrumbs={[{ label: 'Admin' }, { label: 'Revenue' }]}
         actions={
-          <Button size="sm" onClick={() => toast.success('Export started', 'revenue_fy2627.xlsx will download shortly.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — invoices are not operational yet.')}>
             <Receipt className="h-4 w-4" /> Export ledger
           </Button>
         }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {data.kpis.map((k, i) => (
+        {(data?.kpis ?? []).map((k, i) => (
           <motion.div key={k.label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-teal-500 p-5 text-white shadow-lg">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">{k.label}</p>
             <p className="mt-1 font-display text-2xl font-bold">{k.value}</p>
@@ -63,7 +63,7 @@ function Revenue() {
         </ChartCard>
 
         <ChartCard title="Revenue by source" subtitle="Share of total collections">
-          <DonutChart data={data.bySource ?? []} height={250} centerLabel="₹86.4Cr" centerSub="FY target" />
+          <DonutChart data={data.bySource ?? []} height={250} centerLabel="—" centerSub="no invoices" />
         </ChartCard>
       </div>
 

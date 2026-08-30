@@ -6,8 +6,6 @@
  * "8.6/10", "71,000 sessions") with computed values from the same data.
  */
 
-import {  } from './scores.js'
-
 export function computeAssessmentIntelligence({
   adminExamAnalytics, adminAssignmentAnalytics, adminQuestionBank, adminAttendanceAnalytics,
 }) {
@@ -26,9 +24,9 @@ export function computeAssessmentIntelligence({
 
   return {
     exams: {
-      total: examKpis['Exams this term'] ?? 42,
-      averageScore: typeof examKpis['Average score'] === 'number' ? examKpis['Average score'] : 71.4,
-      passRate: typeof examKpis['Pass rate'] === 'number' ? examKpis['Pass rate'] : 89.7,
+      total: examKpis['Exams this term'] ?? 0,
+      averageScore: typeof examKpis['Average score'] === 'number' ? examKpis['Average score'] : 0,
+      passRate: typeof examKpis['Pass rate'] === 'number' ? examKpis['Pass rate'] : 0,
       malpractice: examKpis['Malpractice cases'] ?? 0,
       scoreDistribution,
       bySubject,
@@ -36,10 +34,10 @@ export function computeAssessmentIntelligence({
       readiness,
     },
     assignments: {
-      total: assignmentKpis['Assignments this term'] ?? 184,
-      submissionRate: assignmentKpis['Submission rate'] ?? 93.2,
-      onTimeRate: assignmentKpis['On-time rate'] ?? 87.6,
-      aiGradedShare: assignmentKpis['AI-graded share'] ?? 64,
+      total: assignmentKpis['Assignments this term'] ?? 0,
+      submissionRate: assignmentKpis['Submission rate'] ?? 0,
+      onTimeRate: assignmentKpis['On-time rate'] ?? 0,
+      aiGradedShare: assignmentKpis['AI-graded share'] ?? 0,
       byDept: (adminAssignmentAnalytics?.byDept ?? []).map((d) => ({ ...d })),
       monthly: (adminAssignmentAnalytics?.monthly ?? []).map((m) => ({ ...m })),
       plagiarism: { ...(adminAssignmentAnalytics?.plagiarismFlags ?? {}) },

@@ -17,13 +17,13 @@ export function computeAcademicHealth({
   masterStudentProfile, attendance, academicHealthInputs, academicPerformance,
   consistencyScore, learningBehaviourScore,
 }) {
-  const attendanceScore = clamp((attendance?.overall ?? 90) / (attendance?.required ?? 75) * 75)
-  const cgpa = masterStudentProfile?.cgpa ?? academicPerformance?.currentCGPA ?? 8
-  const target = academicPerformance?.targetCGPA ?? 9
-  const performanceScore = clamp((cgpa / target) * 100)
+  const attendanceScore = clamp((attendance?.overall ?? 0) / (attendance?.required ?? 75) * 75)
+  const cgpa = masterStudentProfile?.cgpa ?? academicPerformance?.currentCGPA ?? null
+  const target = academicPerformance?.targetCGPA ?? null
+  const performanceScore = (cgpa != null && target) ? clamp((cgpa / target) * 100) : (cgpa != null ? clamp((cgpa / 10) * 100) : 0)
 
-  const balance = Number(academicHealthInputs?.workloadBalance ?? 78)
-  const timeliness = Number(academicHealthInputs?.submissionTimeliness ?? 92)
+  const balance = Number(academicHealthInputs?.workloadBalance ?? 0)
+  const timeliness = Number(academicHealthInputs?.submissionTimeliness ?? 0)
   const workloadScore = clamp(balance * 0.5 + timeliness * 0.5)
 
   const score = round1(weighted([
@@ -33,17 +33,18 @@ export function computeAcademicHealth({
     { value: workloadScore, weight: Number(academicHealthInputs?.workloadWeight ?? 0.1) },
   ]))
 
-  const previous = Number(academicHealthInputs?.previousHealth ?? 80)
+  const previous = academicHealthInputs?.previousHealth != null ? Number(academicHealthInputs.previousHealth) : score
   const delta = round1(score - previous)
+  const hasEvidence = Boolean((attendance?.overall ?? 0) || cgpa != null || timeliness)
 
   return {
-    score,
-    grade: score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 55 ? 'At Risk' : 'Critical',
-    delta,
+    score: hasEvidence ? score : 0,
+    grade: hasEvidence ? (score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 55 ? 'At Risk' : 'Critical') : 'Building',
+    delta: hasEvidence ? delta : 0,
     trend: delta >= 0 ? 'improving' : 'declining',
     factors: [
-      { label: 'Attendance health', value: round1(attendanceScore), weight: Number(academicHealthInputs?.attendanceWeight ?? 0.25), note: `${attendance?.overall ?? 90}% vs ${attendance?.required ?? 75}% required` },
-      { label: 'Academic performance', value: round1(performanceScore), weight: Number(academicHealthInputs?.performanceWeight ?? 0.45), note: `CGPA ${cgpa} vs target ${target}` },
+      { label: 'Attendance health', value: round1(attendanceScore), weight: Number(academicHealthInputs?.attendanceWeight ?? 0.25), note: `${attendance?.overall ?? 0}% vs ${attendance?.required ?? 75}% required` },
+      { label: 'Academic performance', value: round1(performanceScore), weight: Number(academicHealthInputs?.performanceWeight ?? 0.45), note: cgpa != null ? `CGPA ${cgpa}${target ? ` vs target ${target}` : ''}` : 'No graded records yet' },
       { label: 'Consistency', value: round1(consistencyScore), weight: Number(academicHealthInputs?.consistencyWeight ?? 0.2), note: 'Attendance + study regularity' },
       { label: 'Workload balance', value: round1(workloadScore), weight: Number(academicHealthInputs?.workloadWeight ?? 0.1), note: `${timeliness}% submissions on time` },
     ],
@@ -83,7 +84,7 @@ export function computeAcademicDna({
     subject: m.subject,
     mastery: computeSubjectMastery(m.subjectCode, { subjects, attendance, quizResults, practiceSessions, academicDnaInputs }),
     trend: m.trend ?? '0',
-    consistency: m.consistency ?? 70,
+    consistency: m.consistency ?? 0,
     level: computeSubjectMastery(m.subjectCode, { subjects, attendance, quizResults, practiceSessions, academicDnaInputs }) >= 80
       ? 'Strong'
       : computeSubjectMastery(m.subjectCode, { subjects, attendance, quizResults, practiceSessions, academicDnaInputs }) >= 65
@@ -105,14 +106,16 @@ export function computeAcademicDna({
     mastery,
     strongConcepts: strongConcepts.slice(0, 5).map((c) => `${c.subjectCode} — ${c.concept}`),
     weakConcepts: weakConcepts.slice(0, 6).map((c) => `${c.subjectCode} — ${c.concept}`),
-    learningStyle: academicDnaInputs?.learningStyle ?? 'Visual + problem-driven',
+    learningStyle: academicDnaInputs?.learningStyle ?? null,
     retentionCurve: academicDnaInputs?.retentionCurve ?? [],
     errorPatterns: academicDnaInputs?.errorPatterns ?? [],
     /* Exam-attempt evidence pools (Phase 2) — strengths/weaknesses with
        traceable evidence and longitudinal trends. Empty object when no
        manual attempts exist yet. */
     examEvidence,
-    summary: `Learning style: ${academicDnaInputs?.learningStyle ?? 'problem-driven'}. Weakest concepts cluster in ${weakConcepts[0]?.subjectCode ?? 'ToC'} (${weakConcepts[0]?.concept ?? 'pumping lemma proofs'}).`,
+    summary: weakConcepts[0]
+      ? `Learning style: ${academicDnaInputs?.learningStyle ?? 'Building'}. Weakest concepts cluster in ${weakConcepts[0].subjectCode} (${weakConcepts[0].concept}).`
+      : 'Building your profile',
   }
 }
 
@@ -159,8 +162,9 @@ export function evaluateInterventions({
     ...a,
   })
 
-  // rule1: subject attendance < 88% (gap < 10 → advisory, else warning)
-  bySubject.filter((s) => s.pct < 88).forEach((s) => {
+  // rule1: subject attendance below the institution threshold (skip when no records)
+  const requiredAtt = attendance?.required ?? 75
+  bySubject.filter((s) => s.total > 0 && s.pct < requiredAtt).forEach((s) => {
     const gap = Math.round(s.pct - (attendance?.required ?? 75))
     push({
       id: `int_att_${s.subjectCode}`, ruleId: 'rule1', type: 'attendance',
@@ -190,10 +194,10 @@ export function evaluateInterventions({
     }
   })
 
-  // rule5: CGPA gap to target > 0.3
-  const cgpa = academicPerformance?.currentCGPA ?? 8
-  const target = academicPerformance?.targetCGPA ?? 9
-  if (target - cgpa > 0.3) {
+  // rule5: CGPA gap to target > 0.3 — skip when either value is missing
+  const cgpa = academicPerformance?.currentCGPA
+  const target = academicPerformance?.targetCGPA
+  if (cgpa != null && target != null && target - cgpa > 0.3) {
     push({
       id: 'int_cgpa', ruleId: 'rule5', type: 'cgpa', severity: 'warning',
       title: `CGPA gap — ${(target - cgpa).toFixed(2)} to target`, reason: `Current ${cgpa} vs target ${target}.`,
@@ -441,7 +445,7 @@ export function computeCareerReadiness({ careerProfile, digitalPortfolio, academ
   const gaps = cp.skillGaps ?? []
   const gapPenalty = gaps.reduce((acc, g) => acc + (100 - (g.gap ?? 0)) * 0.05, 0)
   const prepScore = clamp((cp.preparation?.dsaProblemsSolved ?? 0) / 200 * 60 + (cp.preparation?.mockInterviews ?? 0) / 5 * 40)
-  const resumeScore = Number(portfolio.resumeScore ?? 60)
+  const resumeScore = Number(portfolio.resumeScore ?? 0)
 
   const score = round1(weighted([
     { value: skillBase, weight: 0.4 },
@@ -450,7 +454,7 @@ export function computeCareerReadiness({ careerProfile, digitalPortfolio, academ
     { value: clamp(gapPenalty * 100 / Math.max(gaps.length, 1)), weight: 0.1 },
   ]))
 
-  const previous = Number(cp.previousScore ?? 60)
+  const previous = cp.previousScore != null ? Number(cp.previousScore) : score
   const delta = round1(score - previous)
 
   return {
@@ -460,16 +464,10 @@ export function computeCareerReadiness({ careerProfile, digitalPortfolio, academ
     level: score >= 80 ? 'Placement Ready' : score >= 60 ? 'On Track' : score >= 40 ? 'Building' : 'Early Stage',
     skillBase: round1(skillBase),
     gaps: gaps.map((g) => ({ ...g, resolved: 100 - g.gap })),
-    nextActions: cp.careerSuggestions ?? [
-      'Complete System Design crash course (highest gap: 45).',
-      'Solve 20 more DSA problems under timed conditions.',
-      'Book 2 mock interviews before the placement drive.',
-    ],
+    nextActions: cp.careerSuggestions ?? [],
     applications: cp.applications ?? {},
     placementDrive: cp.placementDrive ?? null,
-    dimensions: cp.dimensions ?? {
-      technicalSkills: skillBase, communication: 78, problemSolving: 80, projects: 70, leadership: 65, certifications: 70,
-    },
+    dimensions: cp.dimensions ?? {},
     profileStrength: cp.profileStrength ?? round1(weighted([
       { value: skillBase, weight: 0.5 }, { value: resumeScore, weight: 0.3 },
       { value: Number(portfolio.certifications?.length ?? 0) * 8, weight: 0.2 },
@@ -502,7 +500,7 @@ export function computeAchievementProgress({ achievements }) {
 /* ---------- Portfolio completion ---------- */
 export function buildPortfolioCompletion({ digitalPortfolio, achievements, careerReadiness }) {
   const p = digitalPortfolio ?? {}
-  const resume = Number(p.resumeScore ?? 60)
+  const resume = Number(p.resumeScore ?? 0)
   const certs = Math.min(100, (p.certifications?.length ?? 0) * 25)
   const projects = Math.min(100, (p.projects?.length ?? 0) * 18)
   const skills = (p.skills ?? []).length ? Math.round((p.skills.reduce((a, s) => a + s.level, 0) / p.skills.length) * 0.8) : 0

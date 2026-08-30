@@ -13,29 +13,34 @@ import { ChartCard } from '@/components/shared/chart-card'
 import { ProgressRing } from '@/components/shared/progress-ring'
 import { BarCompare } from '@/components/charts'
 import { Badge, Button } from '@/components/ui'
-import { DashboardSkeleton } from '@/components/shared/loading'
 import { KpiStrip, WorkspaceSection } from './shared'
 
 function FacultyTab({ data }) {
-  const admin = data.derived
+  const admin = data?.derived ?? {}
   const faculty = admin.faculty ?? {}
   const health = faculty.health ?? {}
+  const totals = admin.totals ?? {}
 
-  /* Reuse the existing faculty intelligence service — no duplicate engine. */
+  /* Optional faculty-level roll-up. Institution counts come from the Admin assembler. */
   const { data: facultyData } = useFacultyIntelligence()
-  const f = useMemo(() => facultyData?.derived ?? null, [facultyData])
-
-  if (!f) return <DashboardSkeleton cards={3} />
+  const f = useMemo(() => facultyData?.derived ?? {}, [facultyData])
 
   const byDept = faculty.byDept ?? []
   const deptCodes = byDept.map((x) => x.code)
+  const facultyCount = totals.faculty ?? faculty.totals ?? faculty.rosterCount ?? 0
+  const deptCount = totals.departments ?? byDept.length
+  const rosterCount = byDept.reduce((n, row) => n + (row.count || 0), 0)
+  const facultyLabel = Number(facultyCount).toLocaleString('en-IN')
+  const rosterSubtitle = facultyCount
+    ? `${rosterCount.toLocaleString('en-IN')} of ${facultyLabel} faculty`
+    : 'No faculty records'
 
   return (
     <div>
       <KpiStrip
         cols={4}
         items={[
-          { label: 'Faculty', value: (admin.totals?.faculty ?? 0).toLocaleString('en-IN'), sub: 'institution-wide' },
+          { label: 'Faculty', value: facultyLabel, sub: 'institution-wide' },
           { label: 'Faculty health', value: `${health.score ?? '—'}/100`, sub: health.grade ?? '—' },
           { label: 'Teaching satisfaction', value: `${health.teachingSatisfaction ?? '—'}/100`, sub: 'student surveys' },
           { label: 'Publications / faculty', value: (health.publicationsPerFaculty ?? '—').toFixed ? health.publicationsPerFaculty?.toFixed(1) ?? '—' : '—', sub: 'research output' },
@@ -106,9 +111,9 @@ function FacultyTab({ data }) {
         </ChartCard>
       </div>
 
-      <WorkspaceSection title="Department-level faculty distribution" subtitle="Sample roster across departments">
+      <WorkspaceSection title="Department-level faculty distribution" subtitle={`${deptCount} department${deptCount === 1 ? '' : 's'}`}>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <ChartCard title="Faculty by department" subtitle="Sample roster (10 of 640)" className="min-w-0">
+          <ChartCard title="Faculty by department" subtitle={rosterSubtitle} className="min-w-0">
             <BarCompare
               data={byDept.map((x) => ({ label: x.code, count: x.count }))}
               xKey="label"
@@ -126,7 +131,7 @@ function FacultyTab({ data }) {
             <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-indigo-50/60 p-3.5 dark:bg-indigo-500/5">
               <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
               <p className="text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-300">
-                Faculty health (institution) is driven by teaching satisfaction ({health.teachingSatisfaction ?? '—'}/100) and research output ({health.publicationsPerFaculty ?? '—'} pubs/faculty). The sample roster covers all 8 departments.
+                Faculty health (institution) is driven by teaching satisfaction ({health.teachingSatisfaction ?? '—'}/100) and research output ({health.publicationsPerFaculty ?? '—'} pubs/faculty). Roster covers {deptCount} department{deptCount === 1 ? '' : 's'}.
               </p>
             </div>
           </ChartCard>

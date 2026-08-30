@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BookOpen, Plus, Users } from 'lucide-react'
-import { useAdminSubjects } from '@/services/extra'
+import { useAdminSubjects, useCreateAdminSubject } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DataTable } from '@/components/shared/data-table'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -11,7 +11,9 @@ function Subjects() {
   const [dept, setDept] = useState('All')
   const [open, setOpen] = useState(false)
   const toast = useToast()
-  const subjects = (data?.subjects ?? []).filter((s) => dept === 'All' || s.program.includes(dept))
+  const createSubject = useCreateAdminSubject()
+  const [form, setForm] = useState({ code: '', name: '' })
+  const subjects = (data?.subjects ?? []).filter((s) => dept === 'All' || (s.program || s.dept || '').includes(dept))
 
   const columns = useMemo(() => [
     {
@@ -30,9 +32,9 @@ function Subjects() {
         </div>
       ),
     },
-    { key: 'program', label: 'Program', render: (s) => <Badge variant="secondary" size="sm">{s.program}</Badge> },
-    { key: 'semester', label: 'Semester', render: (s) => <span className="text-slate-500 dark:text-slate-400">{s.semester}</span> },
-    { key: 'credits', label: 'Credits', render: (s) => <span className="font-semibold text-slate-700 dark:text-slate-200">{s.credits}</span> },
+    { key: 'program', label: 'Program', render: (s) => <Badge variant="secondary" size="sm">{s.program || s.dept || '—'}</Badge> },
+    { key: 'semester', label: 'Semester', render: (s) => <span className="text-slate-500 dark:text-slate-400">{s.semester ?? '—'}</span> },
+    { key: 'credits', label: 'Credits', render: (s) => <span className="font-semibold text-slate-700 dark:text-slate-200">{s.credits ?? '—'}</span> },
     {
       key: 'courses',
       label: 'Sections',
@@ -42,12 +44,12 @@ function Subjects() {
         </span>
       ),
     },
-    { key: 'faculty', label: 'Faculty', render: (s) => <span className="text-slate-500 dark:text-slate-400">{s.faculty}</span> },
+    { key: 'faculty', label: 'Faculty', render: (s) => <span className="text-slate-500 dark:text-slate-400">{s.faculty ?? '—'}</span> },
     {
       key: 'passRate',
       label: 'Pass rate',
       sortable: true,
-      render: (s) => <Badge variant={s.passRate >= 90 ? 'success' : s.passRate >= 85 ? 'warning' : 'danger'}>{s.passRate}%</Badge>,
+      render: (s) => <Badge variant={s.passRate == null ? 'secondary' : s.passRate >= 90 ? 'success' : s.passRate >= 85 ? 'warning' : 'danger'}>{s.passRate == null ? '—' : `${s.passRate}%`}</Badge>,
     },
     {
       key: 'status',
@@ -97,10 +99,10 @@ function Subjects() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Subject code" required><Input placeholder="CS507" /></Field>
+              <Field label="Subject code" required><Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder="CS507" /></Field>
               <Field label="Credits" required><Input type="number" placeholder="3" /></Field>
             </div>
-            <Field label="Subject name" required><Input placeholder="e.g. Cloud Computing" /></Field>
+            <Field label="Subject name" required><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Cloud Computing" /></Field>
             <Field label="Program">
               <select className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100">
                 <option>B.Tech CSE</option><option>B.Tech ECE</option><option>MBA</option>

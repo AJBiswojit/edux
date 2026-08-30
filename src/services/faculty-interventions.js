@@ -126,7 +126,8 @@ export const useRelatedResources = (params) =>
 export const useStudentInterventions = (studentId) =>
   useQuery({
     queryKey: ['student', 'interventions', studentId],
-    queryFn: () => request({ url: '/student/interventions', params: { studentId } }).then((r) => r.data),
+    queryFn: () => request({ url: '/student/interventions' }).then((r) => r.data),
+    enabled: !!studentId,
   })
 
 export const useStudentInterventionPractice = (id) =>

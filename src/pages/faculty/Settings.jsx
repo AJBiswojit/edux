@@ -35,14 +35,16 @@ function Settings() {
       />
 
       <SettingsProfileCard
-        name="Dr. Meera Krishnan"
+        name={data.profile?.name || 'Faculty'}
         badge={{ label: 'Verified faculty', variant: 'success' }}
-        subtitle={`${data.profile.designation} · ${data.profile.department}`}
-        contact={`${data.profile.email} · ${data.profile.phone}`}
+        subtitle={[data.profile?.designation, data.profile?.department].filter(Boolean).join(' · ') || 'Faculty account'}
+        contact={[data.profile?.email, data.profile?.phone].filter(Boolean).join(' · ') || '—'}
         extra={
+          (data.profile?.officeHours || data.profile?.room) ? (
           <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
-            <Clock className="h-3 w-3" /> Office hours: {data.profile.officeHours} · {data.profile.room}
+            <Clock className="h-3 w-3" /> Office hours: {data.profile.officeHours || '—'} · {data.profile.room || '—'}
           </p>
+          ) : null
         }
         actions={
           <Button variant="outline" size="sm" onClick={() => toast.info('Edit profile', 'Profile editing opens the registrar-approved editor.')}>

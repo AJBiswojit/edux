@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle, BrainCircuit, CheckCircle2, Download, FileText, ListChecks, MessageSquare,
@@ -626,8 +627,10 @@ export function AnalysisDashboard({ data, subject }) {
             <p className="text-xs text-white/80">Why did my accuracy drop in Mathematics? Explain my weakest chapter. Build a JEE revision plan.</p>
           </div>
         </div>
-        <Button variant="secondary" className="bg-white text-indigo-700 hover:bg-indigo-50" onClick={() => toast.info('MediXO Mentor', 'Opening the AI Tutor with this test analysis context…')}>
-          <Sparkles className="h-4 w-4" /> Ask MediXO Mentor
+        <Button asChild variant="secondary" className="bg-white text-indigo-700 hover:bg-indigo-50">
+          <Link to="/student/mentor">
+            <Sparkles className="h-4 w-4" /> Ask MediXO Mentor
+          </Link>
         </Button>
       </div>
     </div>
@@ -640,7 +643,6 @@ export function AnalysisDashboard({ data, subject }) {
 function ExamAnalysis() {
   const { data: optionsData, isLoading, isError, refetch } = useExamAnalysisOptions()
   const [generated, setGenerated] = useState(false)
-  const [generating, setGenerating] = useState(false)
   const toast = useToast()
 
   const options = optionsData?.items ?? []
@@ -656,7 +658,7 @@ function ExamAnalysis() {
   const { values, set } = useFilterCascade(cascadeConfig)
   const { context, family, examId, subject } = values
 
-  const { data: analysisData, isLoading: analysisLoading, isFetching: analysisFetching } = useExamAnalysisById(generated ? examId : null)
+  const { data: analysisData, isLoading: analysisLoading, isFetching: analysisFetching, isError: analysisError, refetch: refetchAnalysis } = useExamAnalysisById(generated ? examId : null)
   const availableFamilies = useMemo(() => competitiveExamFamilies(options), [options])
   const visibleOptions = useMemo(() => visibleExamOptions(options, context, family), [options, context, family])
 
@@ -682,16 +684,11 @@ function ExamAnalysis() {
   const handleGenerate = () => {
     if (!examId || !subject) return
     setGenerated(true)
-    setGenerating(true)
-    // brief "analysing" state so the workflow feels real
-    setTimeout(() => {
-      setGenerating(false)
-      toast.success('Analysis ready', `${selectedExam?.shortName ?? 'Exam'} · ${subject} — intelligence generated.`)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 650)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const showAnalysis = generated && !generating
+  const generating = Boolean(generated && (analysisLoading || analysisFetching) && !analysisData)
+  const showAnalysis = generated && !generating && !!analysisData
 
   return (
     <div className="space-y-8">
@@ -703,17 +700,19 @@ function ExamAnalysis() {
         actions={
           showAnalysis && analysisData ? (
             <>
-              <Button variant="outline" size="sm" onClick={() => toast.success('Downloading…', 'Exam analysis report saved as PDF.')}>
+              <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'PDF export is not available yet — no report-file endpoint.')}>
                 <Download className="h-4 w-4" /> PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={() => toast.success('Printing…', 'Report sent to print.')}>
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Printer className="h-4 w-4" /> Print
               </Button>
-              <Button variant="outline" size="sm" onClick={() => toast.success('Link copied', 'Shareable report link copied.')}>
+              <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Shareable report links are not available yet.')}>
                 <Share2 className="h-4 w-4" /> Share
               </Button>
-              <Button size="sm" onClick={() => toast.info('MediXO Mentor', 'Generating your personalized revision plan…')}>
-                <Sparkles className="h-4 w-4" /> Revision plan
+              <Button asChild size="sm">
+                <Link to="/student/mentor">
+                  <Sparkles className="h-4 w-4" /> Revision plan
+                </Link>
               </Button>
             </>
           ) : undefined
@@ -736,7 +735,8 @@ function ExamAnalysis() {
         hasGenerated={generated}
       />
 
-      {showAnalysis && !analysisData && <DashboardSkeleton cards={4} />}
+      {generated && generating && <DashboardSkeleton cards={4} />}
+      {generated && analysisError && !generating && <ErrorState title="Analysis unavailable" onRetry={() => refetchAnalysis()} />}
       {showAnalysis && analysisData && (
         <>
           {/* selection summary bar */}

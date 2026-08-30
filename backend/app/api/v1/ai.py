@@ -10,8 +10,6 @@ from app.core.config import get_settings
 from app.core.deps import DbDep, UserDep
 from app.models.ai import AiConversation, AiMessage, AiTrace
 from app.schemas.auth import MentorChatRequest
-from app.services.spa_payloads import payload
-
 router = APIRouter(tags=["ai"])
 
 
@@ -64,10 +62,20 @@ def assistant_respond(body: dict, db: DbDep, user: UserDep):
 def executive_ask(body: MentorChatRequest, db: DbDep, user: UserDep):
     if user.primary_role != "admin":
         raise HTTPException(403, "Admin only")
-    gw = AiGateway(get_settings())
-    result = gw.complete(feature="executive", system=EXECUTIVE_SYSTEM, user=body.message, json_mode=gw.live)
-    _trace(db, user, "executive", {"message": body.message}, result)
-    return {"reply": result["text"], "prototype": result.get("prototype", True)}
+    from app.services.admin_runtime import executive_context
+
+    ctx = executive_context(db, user)
+    system = EXECUTIVE_SYSTEM + "\nInstitution context (SQL-derived):\n" + json.dumps(ctx)
+    return _reply(db, user, channel="executive", feature="executive", system=system, text=body.message, thread_id=body.conversationId)
+
+
+@router.get("/ai/executive/threads")
+def executive_threads(db: DbDep, user: UserDep):
+    if user.primary_role != "admin":
+        raise HTTPException(403, "Admin only")
+    from app.services.admin_runtime import executive_history
+
+    return executive_history(db, user)
 
 
 @router.post("/ai/question-studio/generate")
@@ -96,80 +104,113 @@ def tutor_threads(db: DbDep, user: UserDep):
         .where(AiConversation.user_id == user.id, AiConversation.channel == "mentor")
         .order_by(AiConversation.created_at.desc())
     ).all()
-    if convos:
-        threads = []
-        for conv in convos:
-            messages = db.scalars(select(AiMessage).where(AiMessage.conversation_id == conv.id).order_by(AiMessage.created_at)).all()
-            threads.append(
-                {
-                    "id": conv.id,
-                    "title": conv.title,
-                    "messages": [{"id": m.id, "role": m.role, "text": m.content} for m in messages],
-                }
-            )
-        data = payload("ai", db)
-        return {"threads": threads, "quickPrompts": data.get("quickPrompts") or []}
-    data = payload("ai", db)
-    return {"threads": data.get("tutorThreads") or [], "quickPrompts": data.get("quickPrompts") or []}
+    threads = []
+    for conv in convos:
+        messages = db.scalars(select(AiMessage).where(AiMessage.conversation_id == conv.id).order_by(AiMessage.created_at)).all()
+        threads.append(
+            {
+                "id": conv.id,
+                "title": conv.title,
+                "updated": conv.created_at.isoformat() if conv.created_at else None,
+                "subject": "General",
+                "messages": [{"id": m.id, "role": m.role, "text": m.content} for m in messages],
+            }
+        )
+    return {"threads": threads, "quickPrompts": []}
 
 
 @router.get("/ai/tutor/threads/{thread_id}")
-def tutor_thread(thread_id: str, user: UserDep):
-    threads = payload("ai")["tutorThreads"]
-    thread = next((t for t in threads if t.get("id") == thread_id), threads[0] if threads else None)
-    return {"thread": thread}
+def tutor_thread(thread_id: str, db: DbDep, user: UserDep):
+    from app.models.ai import AiConversation, AiMessage
+
+    conv = db.get(AiConversation, thread_id)
+    if not conv or conv.user_id != user.id:
+        raise HTTPException(404, "Thread not found")
+    messages = db.scalars(select(AiMessage).where(AiMessage.conversation_id == conv.id).order_by(AiMessage.created_at)).all()
+    return {
+        "thread": {
+            "id": conv.id,
+            "title": conv.title,
+            "messages": [{"id": m.id, "role": m.role, "text": m.content} for m in messages],
+        }
+    }
 
 
 @router.get("/ai/copilot/suggestions")
 def copilot_suggestions(user: UserDep, path: str | None = None):
-    suggestions = payload("ai")["copilotSuggestions"]
-    picked = suggestions.get(path) if isinstance(suggestions, dict) else None
-    if picked is None and isinstance(suggestions, dict):
-        picked = suggestions.get("/student") or next(iter(suggestions.values()), [])
-    return {"suggestions": picked}
+    return {"suggestions": []}
 
 
 @router.get("/ai/learning-path")
 def learning_path(user: UserDep):
-    return payload("ai")["learningPath"]
+    from app.services.student_runtime import empty_learning_path
+
+    return empty_learning_path()
 
 
 @router.get("/ai/recommendations")
 def recommendations(user: UserDep):
-    return payload("ai")["recommendations"]
+    return {"items": []}
 
 
 @router.get("/ai/weaknesses")
 def weaknesses(user: UserDep):
-    return payload("ai")["weaknesses"]
+    return {"items": []}
 
 
 @router.get("/ai/prediction")
 def prediction(user: UserDep):
-    return payload("ai")["prediction"]
+    return {}
 
 
 @router.get("/ai/graph-search")
 def graph_search(user: UserDep, q: str | None = None):
-    return {**payload("ai")["graphSearch"], "query": q or ""}
+    return {"results": [], "query": q or ""}
 
 
 @router.get("/ai/assistant/threads")
-def assistant_threads(user: UserDep):
-    return {"threads": payload("ai")["assistantThreads"]}
+def assistant_threads(db: DbDep, user: UserDep):
+    convos = db.scalars(
+        select(AiConversation)
+        .where(AiConversation.user_id == user.id, AiConversation.channel == "teaching_studio")
+        .order_by(AiConversation.created_at.desc())
+    ).all()
+    threads = []
+    for conv in convos:
+        messages = db.scalars(select(AiMessage).where(AiMessage.conversation_id == conv.id).order_by(AiMessage.created_at)).all()
+        threads.append(
+            {
+                "id": conv.id,
+                "title": conv.title,
+                "updated": conv.created_at.isoformat() if conv.created_at else None,
+                "messages": [{"id": m.id, "role": m.role, "text": m.content} for m in messages],
+            }
+        )
+    return {"threads": threads}
 
 
 @router.post("/ai/generate-quiz")
 def generate_quiz(body: dict, user: UserDep):
-    sample = payload("ai")["quizGeneratorSample"]
-    return {"quiz": {**sample, "title": f"Generated: {body.get('topic') or 'General'} — {body.get('count') or 5} questions"}}
+    return {
+        "ok": False,
+        "gap": "BACKEND GAP — quiz generation is not persisted to the question bank yet.",
+        "quiz": None,
+        "title": body.get("topic"),
+    }
 
 
 @router.post("/ai/generate-exam")
 def generate_exam(body: dict, user: UserDep):
-    return {"exam": payload("ai")["examGeneratorSample"]}
+    return {
+        "ok": False,
+        "gap": "BACKEND GAP — exam generation must use POST /faculty/paper-generator/papers.",
+        "exam": None,
+    }
 
 
 @router.get("/ai/stats")
-def ai_stats(user: UserDep):
-    return payload("ai")["stats"]
+def ai_stats(db: DbDep, user: UserDep):
+    from app.models.ai import AiConversation
+
+    rows = db.scalars(select(AiConversation).where(AiConversation.user_id == user.id)).all()
+    return {"totalSessions": len(rows), "rating": None, "hours": 0}

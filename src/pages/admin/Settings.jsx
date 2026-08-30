@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Bell, Building2, CalendarRange, GraduationCap, Landmark, Lock, Mail, Phone, ShieldCheck, ToggleLeft } from 'lucide-react'
 import { useAdminSettings } from '@/services'
+import { useSaveAdminSettings } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Select, SelectItem, Switch, useToast } from '@/components/ui'
@@ -26,12 +27,12 @@ function SettingRow({ icon: Icon, title, desc, children }) {
 function Settings() {
   const { data, isLoading, isError, refetch } = useAdminSettings()
   const [features, setFeatures] = useState(null)
+  const saveSettings = useSaveAdminSettings()
   const toast = useToast()
   const f = features ?? data?.features ?? {}
 
   const toggle = (key) => {
     setFeatures((prev) => ({ ...(prev ?? data.features), [key]: !(prev ?? data.features)[key] }))
-    toast.success('Feature updated', 'Applied institution-wide instantly.')
   }
 
   if (isLoading) return <DashboardSkeleton cards={2} />
@@ -56,13 +57,13 @@ function Settings() {
           </div>
           <div className="space-y-3.5 pt-1">
             {[
-              { icon: Building2, label: 'Full name', value: data.institution.name },
-              { icon: Landmark, label: 'Short name', value: data.institution.shortName },
-              { icon: MapPin, label: 'Address', value: data.institution.address },
-              { icon: Phone, label: 'Phone', value: data.institution.phone },
-              { icon: Mail, label: 'Email', value: data.institution.email },
-              { icon: Globe, label: 'Time zone', value: data.institution.timezone },
-              { icon: CalendarRange, label: 'Fiscal year', value: data.institution.fiscalYear },
+              { icon: Building2, label: 'Full name', value: data.institution?.name ?? '—' },
+              { icon: Landmark, label: 'Short name', value: data.institution?.shortName ?? '—' },
+              { icon: MapPin, label: 'Address', value: data.institution?.address ?? '—' },
+              { icon: Phone, label: 'Phone', value: data.institution?.phone ?? '—' },
+              { icon: Mail, label: 'Email', value: data.institution?.email ?? '—' },
+              { icon: Globe, label: 'Time zone', value: data.institution?.timezone ?? '—' },
+              { icon: CalendarRange, label: 'Fiscal year', value: data.institution?.fiscalYear ?? '—' },
             ].map((row, i) => (
               <motion.div key={row.label} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }} className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-100 px-3.5 py-3 dark:border-slate-800">
                 <row.icon className="h-4 w-4 shrink-0 text-slate-400" />
@@ -83,7 +84,7 @@ function Settings() {
             <div className="grid grid-cols-1 gap-3.5 pt-1 sm:grid-cols-2">
               <div>
                 <p className="mb-1.5 text-xs font-semibold text-slate-500">Semester system</p>
-                <Select defaultValue={data.academics.semesterSystem}>
+                <Select defaultValue={data.academics?.semesterSystem || 'Semester'}>
                   <SelectItem value="Semester">Semester</SelectItem>
                   <SelectItem value="Trimester">Trimester</SelectItem>
                   <SelectItem value="Annual">Annual</SelectItem>
@@ -91,22 +92,22 @@ function Settings() {
               </div>
               <div>
                 <p className="mb-1.5 text-xs font-semibold text-slate-500">Current term</p>
-                <Select defaultValue={data.academics.currentTerm}>
-                  <SelectItem value={data.academics.currentTerm}>{data.academics.currentTerm}</SelectItem>
+                <Select defaultValue={data.academics?.currentTerm || '—'}>
+                  <SelectItem value={data.academics?.currentTerm || '—'}>{data.academics?.currentTerm || '—'}</SelectItem>
                   <SelectItem value="Sem 4 · 2026-27">Sem 4 · 2026-27</SelectItem>
                 </Select>
               </div>
               <div>
                 <p className="mb-1.5 text-xs font-semibold text-slate-500">Grading scale</p>
-                <Select defaultValue={data.academics.gradingScale}>
-                  <SelectItem value={data.academics.gradingScale}>{data.academics.gradingScale}</SelectItem>
+                <Select defaultValue={data.academics?.gradingScale || '10-point CGPA'}>
+                  <SelectItem value={data.academics?.gradingScale || '10-point CGPA'}>{data.academics?.gradingScale || '10-point CGPA'}</SelectItem>
                   <SelectItem value="4-point GPA">4-point GPA</SelectItem>
                   <SelectItem value="Percentage">Percentage</SelectItem>
                 </Select>
               </div>
               <div>
                 <p className="mb-1.5 text-xs font-semibold text-slate-500">Attendance threshold</p>
-                <Select defaultValue={`${data.academics.attendanceThreshold}%`}>
+                <Select defaultValue={`${data.academics?.attendanceThreshold ?? 75}%`}>
                   <SelectItem value="75%">75%</SelectItem>
                   <SelectItem value="80%">80%</SelectItem>
                   <SelectItem value="70%">70%</SelectItem>
@@ -114,7 +115,7 @@ function Settings() {
               </div>
               <div>
                 <p className="mb-1.5 text-xs font-semibold text-slate-500">Pass mark</p>
-                <Select defaultValue={`${data.academics.passMark}%`}>
+                <Select defaultValue={`${data.academics?.passMark ?? 40}%`}>
                   <SelectItem value="40%">40%</SelectItem>
                   <SelectItem value="35%">35%</SelectItem>
                   <SelectItem value="50%">50%</SelectItem>
@@ -129,20 +130,20 @@ function Settings() {
               <ShieldCheck className="h-4 w-4 text-violet-500" />
               <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Security</h3>
             </div>
-            <SettingRow icon={ShieldCheck} title="SSO / SAML" desc={`${data.security.ssoProvider} — ${data.security.ssoEnabled ? 'enabled' : 'not configured'}`}>
-              <Switch checked={data.security.ssoEnabled} onCheckedChange={() => toast.info('SSO setup', 'Your SAML metadata is ready — contact support to complete.')} />
+            <SettingRow icon={ShieldCheck} title="SSO / SAML" desc={`${data.security?.ssoProvider || 'Not configured'} — ${data.security?.ssoEnabled ? 'enabled' : 'not configured'}`}>
+              <Switch checked={!!data.security?.ssoEnabled} onCheckedChange={() => toast.info('SSO setup', 'SAML configuration is stored with institution settings after Save.')} />
             </SettingRow>
             <SettingRow icon={Lock} title="Multi-factor authentication" desc="Required for admin and faculty accounts.">
-              <Switch checked={data.security.mfaRequired} onCheckedChange={() => toast.success('MFA policy updated')} />
+              <Switch checked={!!data.security?.mfaRequired} onCheckedChange={() => {}} />
             </SettingRow>
-            <SettingRow icon={Bell} title="Session timeout" desc={`${data.security.sessionTimeout} minutes of inactivity.`}>
+            <SettingRow icon={Bell} title="Session timeout" desc={`${data.security?.sessionTimeout ?? 30} minutes of inactivity.`}>
               <Select defaultValue={`${data.security.sessionTimeout} min`}>
                 <SelectItem value="15 min">15 min</SelectItem>
                 <SelectItem value="30 min">30 min</SelectItem>
                 <SelectItem value="60 min">60 min</SelectItem>
               </Select>
             </SettingRow>
-            <SettingRow icon={Lock} title="Data residency" desc={data.security.dataResidency}>
+            <SettingRow icon={Lock} title="Data residency" desc={data.security?.dataResidency || '—'}>
               <Badge variant="success">Compliant</Badge>
             </SettingRow>
           </Card>
@@ -177,8 +178,15 @@ function Settings() {
       </Card>
 
       <div className="mt-6 flex justify-end gap-2.5">
-        <Button variant="outline" onClick={() => toast.success('Discarded', 'Unsaved changes reverted.')}>Discard</Button>
-        <Button onClick={() => toast.success('All settings saved ✓', 'Changes are live institution-wide.')}>Save all changes</Button>
+        <Button variant="outline" onClick={() => { setFeatures(null); toast.info('Discarded', 'Local edits reverted.') }}>Discard</Button>
+        <Button onClick={async () => {
+          try {
+            await saveSettings.mutateAsync({ features: f, institution: data.institution, academics: data.academics, security: data.security })
+            toast.success('Settings saved', 'Persisted to the institution record.')
+          } catch (err) {
+            toast.error('Save failed', err?.response?.data?.detail || 'Could not save settings.')
+          }
+        }}>Save all changes</Button>
       </div>
     </div>
   )

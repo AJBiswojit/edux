@@ -81,16 +81,16 @@ function universityEntry(input, ctx) {
 
   /* --- factors: university-only signals (no percentile / negative marking / PYQ) --- */
   const course = (data.courses ?? []).find((c) => c.subjectCode === meta.subjectCode)
-  const syllabus = clamp(input.syllabusCoverage ?? course?.progress ?? 55)
-  const quizAvg = (data.quizResults ?? []).length ? avg(data.quizResults, 'accuracy') : 70
-  const practiceAvg = (data.practiceSessions ?? []).length ? avg(data.practiceSessions, 'score') : 70
-  const mock = clamp(input.mockAveragePct ?? ((quizAvg + practiceAvg) / 2) * 1.05)
-  const time = clamp(input.timeManagement ?? data.learningBehaviour?.avgFocus ?? 78)
-  const revision = clamp(input.revisionCompleted ?? 60)
+  const syllabus = clamp(input.syllabusCoverage ?? course?.progress ?? 0)
+  const quizAvg = (data.quizResults ?? []).length ? avg(data.quizResults, 'accuracy') : 0
+  const practiceAvg = (data.practiceSessions ?? []).length ? avg(data.practiceSessions, 'score') : 0
+  const mock = clamp(input.mockAveragePct ?? ((quizAvg + practiceAvg) / 2))
+  const time = clamp(input.timeManagement ?? data.learningBehaviour?.avgFocus ?? 0)
+  const revision = clamp(input.revisionCompleted ?? 0)
   const last = input.lastAssessmentPct ?? previousUniversityPct(data, meta.subjectCode)
 
   const att = data.attendance ?? {}
-  const attendanceFactor = clamp(((att.overall ?? 90) - (att.required ?? 75)) * 1.2 + 70)
+  const attendanceFactor = clamp(((att.overall ?? 0) - (att.required ?? 75)) * 1.2 + 70)
 
   const readiness = round1(weighted([
     { value: syllabus, weight: 0.3 },
@@ -98,7 +98,7 @@ function universityEntry(input, ctx) {
     { value: time, weight: 0.15 },
     { value: revision, weight: 0.15 },
     { value: attendanceFactor, weight: 0.1 },
-    { value: data.consistencyScore ?? 70, weight: 0.1 },
+    { value: data.consistencyScore ?? 0, weight: 0.1 },
   ]))
 
   /* --- strengths / weaknesses (university DNA: subjects + chapters + topics) --- */
@@ -116,7 +116,7 @@ function universityEntry(input, ctx) {
     { value: readiness, weight: 0.4 },
     { value: quizAvg, weight: 0.25 },
     { value: practiceAvg, weight: 0.25 },
-    { value: data.academicHealth?.score ?? 80, weight: 0.1 },
+    { value: data.academicHealth?.score ?? 0, weight: 0.1 },
   ]))
 
   /* --- expected outcome (university: attendance may shape expectation) --- */
@@ -215,7 +215,7 @@ export function buildUniversityReadiness(data, today = '2026-08-06') {
         examId: e.id,
         title: e.title,
         date: e.date,
-        syllabusCoverage: course?.progress ?? 55,
+        syllabusCoverage: course?.progress ?? 0,
         timeManagement: null,
         revisionCompleted: null,
         practiceDrills: 0,
@@ -256,9 +256,9 @@ function competitiveEntry(exam, data, todayTs) {
   const mockAvg = mocks.avgPct
   const pyqAccuracy = clamp(pyq.accuracy ?? 0)
   const speedScore = clamp((120 - (pyq.avgSecondsPerQuestion ?? 100)) * 1.1 + 50)
-  const negMarking = clamp(100 - (pyq.guessRate ?? 8) * 3)
-  const chapterScore = clamp(avg(pyq.subjects?.flatMap((s) => s.chapters ?? []), 'accuracy') || 60)
-  const trendScore = clamp(50 + ((mocks.latestPct ?? 55) - (mocks.previousPct ?? mocks.latestPct ?? 55)) * 3)
+  const negMarking = clamp(100 - (pyq.guessRate ?? 0) * 3)
+  const chapterScore = clamp(avg(pyq.subjects?.flatMap((s) => s.chapters ?? []), 'accuracy') || 0)
+  const trendScore = clamp(50 + ((mocks.latestPct ?? 0) - (mocks.previousPct ?? mocks.latestPct ?? 0)) * 3)
 
   const readiness = round1(weighted([
     { value: mockAvg, weight: 0.3 },
@@ -396,7 +396,7 @@ export function buildFamilyReadiness(data, entries, today = '2026-08-06') {
         { label: 'Mock average', value: round1(mocks.avgPct) },
         { label: 'PYQ accuracy', value: round1(clamp(pyq.accuracy ?? 0)) },
         { label: 'Speed', value: round1(clamp((120 - (pyq.avgSecondsPerQuestion ?? 100)) * 1.1 + 50)) },
-        { label: 'Negative-marking discipline', value: round1(clamp(100 - (pyq.guessRate ?? 8) * 3)) },
+        { label: 'Negative-marking discipline', value: round1(clamp(100 - (pyq.guessRate ?? 0) * 3)) },
       ],
       strengths: { subjects, chapters: strengths },
       weaknesses: { subjects: subjects.filter((s) => s.mastery < 65), chapters: weaknesses },

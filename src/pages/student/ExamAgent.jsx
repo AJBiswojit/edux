@@ -17,7 +17,7 @@ import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge } from '@/components/ui'
 import { useExamAgentAttempt, useExamAgentAttempts, useExamAgentExams, useSaveExamAgentAttempt } from '@/services/exam-agent'
 import { useMasterStudentProfile, useStudentIntelligence } from '@/services/intelligence'
-import { buildCanonicalExamAttempt, buildExamAgentReport } from '@/intelligence'
+import { buildCanonicalExamAttempt, buildExamAgentReport } from '@/intelligence/engine/exam-agent.js'
 import { ExamAgentHome, ExamAgentInstructions, ExamAgentLive, ExamAgentReport } from '@/components/exam-workspace'
 
 const ANALYSIS_STEPS = [

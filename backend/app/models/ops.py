@@ -72,5 +72,6 @@ class FileObject(Base):
     bucket: Mapped[str] = mapped_column(String(64))
     object_key: Mapped[str] = mapped_column(String(512))
     mime: Mapped[Optional[str]] = mapped_column(String(128))
+    bytes: Mapped[Optional[int]]
     purpose: Mapped[Optional[str]] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)

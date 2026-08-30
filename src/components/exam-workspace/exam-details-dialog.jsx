@@ -113,15 +113,15 @@ function ExamDetailsDialog({ exam, open, onOpenChange, admit, onDownload }) {
                 <QrCode className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">Admit card · {exam.admitStatus ?? 'Issued'}</p>
+                <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100">Admit card · {admit?.available ? (exam.admitStatus ?? 'Available') : (exam.admitStatus ?? 'Not issued')}</p>
                 <p className="text-[11px] text-slate-400">
-                  {admit ? `${admit.name} · ${admit.rollNo} · ${admit.semester}` : 'Available for download once issued.'}
+                  {admit ? `${admit.name ?? 'Student'} · ${admit.rollNo ?? '—'} · ${admit.semester ?? '—'}` : 'Available for download once issued.'}
                 </p>
               </div>
             </div>
             <Button size="sm" onClick={() => {
               if (onDownload) onDownload()
-              else toast.success('Downloading…', `admit-card-${exam.id}.pdf saved.`)
+              else toast.info('BACKEND GAP', 'Admit-card PDF download is not available yet.')
             }}>
               <Ticket className="h-4 w-4" /> Download admit card
             </Button>

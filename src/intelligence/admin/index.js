@@ -43,10 +43,17 @@ export {
    Phase 11: the snapshot is backend-fed. The datasets are injected as a
    parameter (the service/API layer supplies them), so this engine never
    default-imports backend-owned seed data at runtime. */
+const EMPTY_PROFILE = {
+  totals: { students: 0, faculty: 0, courses: 0, departments: 0, programs: 0, activeBatches: 0 },
+  departments: [],
+  programs: [],
+  aiContext: { aiAdoptionSessions: 0 },
+}
+
 export function computeAdminIntelligence(datasets = {}) {
-  const ds = datasets
-  const profile = masterInstitutionProfile
-  const admin = ds.analytics
+  const ds = datasets || {}
+  const profile = ds.profile || ds.masterProfile || EMPTY_PROFILE
+  const admin = ds.analytics || {}
 
   /* Health pillars */
   const academicHealth = computeAcademicHealth({ adminAnalytics: admin.adminAnalytics, adminPerformance: admin.adminPerformance })
@@ -55,7 +62,7 @@ export function computeAdminIntelligence(datasets = {}) {
 
   /* At-risk rate (authoritative faculty cohort trend) → feeds student success. */
   const cohortTrend = admin.weakStudentDetection?.cohortTrend ?? []
-  const atRiskRate = cohortTrend[cohortTrend.length - 1]?.atRisk ?? 5.9
+  const atRiskRate = cohortTrend.length ? (cohortTrend[cohortTrend.length - 1]?.atRisk ?? 0) : null
 
   const studentSuccess = computeStudentSuccess({
     adminAnalytics: admin.adminAnalytics, adminPerformance: admin.adminPerformance,
@@ -98,12 +105,15 @@ export function computeAdminIntelligence(datasets = {}) {
   })
 
   /* AI narrative (foundation only — Phase 5 renders it) */
+  const aiPack = ds.ai || {}
+  const people = ds.people || { faculty: [], students: [] }
+  const academics = ds.academics || {}
   const ai = {
-    insights: ds.ai.execInsightPool,
-    recommendations: ds.ai.interventionPool.slice(0, 4),
-    reportTemplates: ds.ai.adminReportTemplates,
-    promptSeeds: ds.ai.execPromptSeeds,
-    aiAdoption: { sessions: profile.aiContext.aiAdoptionSessions },
+    insights: aiPack.execInsightPool || [],
+    recommendations: (aiPack.interventionPool || []).slice(0, 4),
+    reportTemplates: aiPack.adminReportTemplates || [],
+    promptSeeds: aiPack.execPromptSeeds || [],
+    aiAdoption: { sessions: profile.aiContext?.aiAdoptionSessions ?? 0 },
   }
 
   /* Reports (structured summaries) */
@@ -111,30 +121,40 @@ export function computeAdminIntelligence(datasets = {}) {
     institution: buildInstitutionSummary({ health: institutionHealth, totals, students, assessments, aiAdoption: ai.aiAdoption }),
     departments: buildDepartmentSummary({ departments }),
     studentRisk: buildStudentRiskSummary({ students }),
-    faculty: buildFacultySummary({ facultyHealth, profile, people: ds.people }),
+    faculty: buildFacultySummary({ facultyHealth, profile, people }),
     assessment: buildAssessmentSummary({ assessments, health: assessmentHealth }),
   }
 
   return {
-    profile: institutionProfileView,
+    profile: ds.profile ? {
+      name: profile.name,
+      shortName: profile.shortName,
+      address: profile.address,
+      phone: profile.phone,
+      email: profile.email,
+      timezone: profile.timezone,
+      fiscalYear: profile.fiscalYear,
+      academicYear: profile.academicYear,
+      currentSemester: profile.currentSemester?.label || profile.currentSemester,
+    } : { name: profile.name || null, shortName: profile.shortName || null },
     masterProfile: profile,
     totals,
     institutionHealth,
     departments,
     students,
     faculty: {
-      totals: profile.totals.faculty,
+      totals: profile.totals?.faculty ?? 0,
       health: facultyHealth,
-      rosterCount: ds.people.faculty.length,
+      rosterCount: (people.faculty || []).length,
       byDept: reports.faculty.byDept,
     },
     academics: {
-      programs: profile.programs,
-      courses: ds.academics.adminCourses.length,
-      subjects: ds.academics.adminSubjects.length,
-      batches: ds.academics.adminBatches.length,
-      calendar: ds.academics.adminAcademicCalendar,
-      deptHodMap: ds.academics.deptHodMap,
+      programs: profile.programs || [],
+      courses: (academics.adminCourses || []).length,
+      subjects: (academics.adminSubjects || []).length,
+      batches: (academics.adminBatches || []).length,
+      calendar: academics.adminAcademicCalendar || [],
+      deptHodMap: academics.deptHodMap || {},
     },
     assessments,
     attendance,
@@ -186,8 +206,8 @@ function buildInterventions({ institutionHealth, departments, students, attendan
     })
   }
 
-  const outstanding = adminRevenue?.kpis?.find((k) => k.label === 'Outstanding')?.value ?? '₹4.7 Cr'
-  if (String(outstanding).includes('4.7')) {
+  const outstanding = adminRevenue?.kpis?.find((k) => k.label === 'Outstanding')?.value
+  if (outstanding != null && String(outstanding).includes('4.7')) {
     list.push({
       id: 'aint_fin', priority: 'Medium', category: 'Finance',
       reason: '₹4.7 Cr outstanding · 342 invoices overdue >45 days (44% MBA, 31% ECE)',
@@ -217,10 +237,11 @@ const profileThreshold = () => 75
 
 /** Fully assembled snapshot: profile + datasets + derived. */
 export function getAdminIntelligence(datasets = {}) {
+  const derived = computeAdminIntelligence(datasets)
   return {
-    profile: masterInstitutionProfile,
+    profile: datasets.profile || derived.profile,
     datasets,
-    derived: computeAdminIntelligence(datasets),
+    derived,
   }
 }
 

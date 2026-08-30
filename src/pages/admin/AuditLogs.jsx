@@ -66,7 +66,7 @@ function AuditLogs() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'Audit Logs' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Export started', 'audit_log_2026-08.csv will download shortly.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'BACKEND GAP — audit export is not implemented.')}>
               <Download className="h-4 w-4" /> Export
             </Button>
             <Button size="sm" onClick={() => toast.info('Immutable by design', 'Logs are write-once; even admins cannot edit them.')}>

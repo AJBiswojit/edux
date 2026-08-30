@@ -77,8 +77,8 @@ function Exams() {
   const upcoming = items.filter((e) => (e.status ?? 'Upcoming') === 'Upcoming')
   const past = items.filter((e) => e.status === 'Completed')
 
-  const handleAddToPlanner = (exam) => {
-    toast.success(exam.inPlanner ? 'Already in planner' : 'Added to planner', exam.inPlanner ? 'Revision sessions already scheduled.' : 'AI has scheduled revision sessions.')
+  const handleAddToPlanner = () => {
+    toast.info('BACKEND GAP', 'Planner writes are not available yet — no planner mutation exists.')
   }
 
   return (
@@ -118,7 +118,7 @@ function Exams() {
       </div>
       <PastResultsTable items={past} />
 
-      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.success('Downloading…', `admit-card-${selected?.id}.pdf saved.`)} />
+      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.info('BACKEND GAP', 'Admit-card PDF download is not available yet.')} />
     </div>
   )
 }

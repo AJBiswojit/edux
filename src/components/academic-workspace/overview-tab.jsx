@@ -18,16 +18,22 @@ function OverviewTab({ derived, profile, datasets, context = 'University' }) {
     return <CompetitiveOverview derived={derived} />
   }
   const d = derived
-  const h = d.academicHealth
-  const perf = datasets.academicPerformance
-  const lastSem = perf.semesterHistory[perf.semesterHistory.length - 2]
-  const cgpaDelta = ((profile?.cgpa ?? 8.72) - (lastSem?.gpa ?? 8.2)).toFixed(2)
+  const h = d.academicHealth ?? {}
+  const perf = datasets?.academicPerformance ?? {}
+  const history = perf.semesterHistory ?? []
+  const lastSem = history.length >= 2 ? history[history.length - 2] : null
+  const cgpaDelta = (profile?.cgpa != null && lastSem?.gpa != null)
+    ? (profile.cgpa - lastSem.gpa).toFixed(2)
+    : null
+  const study = datasets?.studyStatistics ?? {}
+  const practice = datasets?.practiceSessions ?? []
+  const practiceFreq = datasets?.learningBehaviourDetailed?.practiceFrequency?.perWeek ?? 0
 
   const kpis = [
-    { label: 'Overall academic performance', value: `${d.confidenceIndex}`, unit: '/100', icon: Gauge, grad: 'from-indigo-600 to-blue-600', sub: `Confidence · ${d.confidenceIndex}` },
-    { label: 'Academic health', value: `${h.score}`, unit: '/100', icon: Activity, grad: 'from-emerald-500 to-teal-500', sub: `${h.grade} · ${h.trend}` },
-    { label: 'Overall progress', value: `${d.achievements.progress}`, unit: '%', icon: TrendingUp, grad: 'from-amber-500 to-orange-500', sub: `${d.achievements.completed}/${d.achievements.total} achievements` },
-    { label: 'Current trend', value: `${cgpaDelta.startsWith('-') ? '' : '+'}${cgpaDelta}`, unit: 'CGPA', icon: ArrowUpRight, grad: 'from-violet-500 to-purple-600', sub: `vs ${lastSem?.semester ?? 'last sem'}` },
+    { label: 'Overall academic performance', value: `${d.confidenceIndex ?? 0}`, unit: '/100', icon: Gauge, grad: 'from-indigo-600 to-blue-600', sub: `Confidence · ${d.confidenceIndex ?? 0}` },
+    { label: 'Academic health', value: `${h.score ?? 0}`, unit: '/100', icon: Activity, grad: 'from-emerald-500 to-teal-500', sub: `${h.grade ?? 'Building'} · ${h.trend ?? 'steady'}` },
+    { label: 'Overall progress', value: `${d.achievements?.progress ?? 0}`, unit: '%', icon: TrendingUp, grad: 'from-amber-500 to-orange-500', sub: `${d.achievements?.completed ?? 0}/${d.achievements?.total ?? 0} achievements` },
+    { label: 'Current trend', value: cgpaDelta == null ? '—' : `${cgpaDelta.startsWith('-') ? '' : '+'}${cgpaDelta}`, unit: 'CGPA', icon: ArrowUpRight, grad: 'from-violet-500 to-purple-600', sub: lastSem?.semester ? `vs ${lastSem.semester}` : 'No prior semester yet' },
   ]
 
   return (
@@ -68,10 +74,10 @@ function OverviewTab({ derived, profile, datasets, context = 'University' }) {
         <ChartCard title="Consistency summary" subtitle="What keeps you on track">
           <div className="space-y-3">
             {[
-              { icon: Flame, label: 'Study streak', value: `${datasets.studyStatistics.streakDays} days`, note: `Longest: ${datasets.studyStatistics.longestStreak} days` },
-              { icon: Target, label: 'Weekly study', value: `${datasets.studyStatistics.weeklyHours}h`, note: `Avg focus ${datasets.studyStatistics.avgFocus}%` },
-              { icon: Award, label: 'Practice sessions', value: `${datasets.practiceSessions.length} completed`, note: `${datasets.learningBehaviourDetailed.practiceFrequency.perWeek}/week cadence` },
-              { icon: Activity, label: 'Attendance', value: `${datasets.attendance.overall}%`, note: `${datasets.attendance.buffer} pts above required` },
+              { icon: Flame, label: 'Study streak', value: `${study.streakDays ?? 0} days`, note: `Longest: ${study.longestStreak ?? 0} days` },
+              { icon: Target, label: 'Weekly study', value: `${study.weeklyHours ?? 0}h`, note: `Avg focus ${study.avgFocus ?? 0}%` },
+              { icon: Award, label: 'Practice sessions', value: `${practice.length} completed`, note: `${practiceFreq}/week cadence` },
+              { icon: Activity, label: 'Attendance', value: `${datasets?.attendance?.overall ?? 0}%`, note: `${datasets?.attendance?.buffer ?? 0} pts vs required` },
             ].map((r) => (
               <div key={r.label} className="flex items-center gap-3.5 rounded-2xl border border-slate-100 p-3 dark:border-slate-800">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-teal-500/10 text-indigo-600 ring-1 ring-indigo-500/15 dark:text-indigo-300">
@@ -96,27 +102,27 @@ function OverviewTab({ derived, profile, datasets, context = 'University' }) {
             <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-white/75">
               <BrainCircuit className="h-3.5 w-3.5" /> Quick AI insights
             </p>
-            <p className="mt-2 text-[13px] leading-relaxed text-white/95">{d.dnaWorkspace.executive.summary}</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-white/95">{d.dnaWorkspace?.executive?.summary ?? 'Building your profile from live records.'}</p>
             <div className="mt-3.5 flex flex-wrap gap-2">
-              {d.strengths.slice(0, 2).map((s) => <span key={s.subjectCode} className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25">{s.subject} · {s.mastery}%</span>)}
-              {d.weaknesses.slice(0, 2).map((s) => <span key={s.subjectCode} className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25">{s.subject} · {s.mastery}%</span>)}
+              {(d.strengths ?? []).slice(0, 2).map((s) => <span key={s.subjectCode} className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25">{s.subject} · {s.mastery}%</span>)}
+              {(d.weaknesses ?? []).slice(0, 2).map((s) => <span key={s.subjectCode} className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold ring-1 ring-white/25">{s.subject} · {s.mastery}%</span>)}
             </div>
           </div>
         </div>
 
         <ChartCard title="Recent improvement" subtitle="Last 4 semesters">
           <div className="space-y-3">
-            {perf.semesterHistory.slice(-4).map((s) => (
+            {history.slice(-4).map((s) => (
               <div key={s.semester} className="flex items-center gap-3 rounded-2xl border border-slate-100 px-3.5 py-2.5 dark:border-slate-800">
                 <span className="w-14 text-[11px] font-bold text-slate-400">{s.semester}</span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-teal-400" style={{ width: `${(s.gpa / 10) * 100}%` }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-teal-400" style={{ width: `${((s.gpa ?? 0) / 10) * 100}%` }} />
                 </div>
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{s.gpa ?? '—'}</span>
               </div>
             ))}
             <p className="rounded-2xl bg-emerald-50/60 px-3.5 py-2.5 text-[11.5px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-              <Sparkles className="mr-1 inline h-3 w-3" /> Rank improved 42 → 14 across 4 semesters.
+              <Sparkles className="mr-1 inline h-3 w-3" /> {history.length ? 'Semester GPA from graded records.' : 'Semester history appears after graded university work.'}
             </p>
           </div>
         </ChartCard>

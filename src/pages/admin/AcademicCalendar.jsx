@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CalendarDays, Plus } from 'lucide-react'
-import { useAdminCalendar } from '@/services/extra'
+import { useAdminCalendar, useCreateAdminCalendarEvent } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Badge, Button, Card, Calendar, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, useToast } from '@/components/ui'
@@ -21,12 +21,15 @@ function AcademicCalendar() {
   const { data, isLoading, isError, refetch } = useAdminCalendar()
   const [filter, setFilter] = useState('All')
   const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ title: '', date: '', type: 'Academic' })
+  const createEvent = useCreateAdminCalendarEvent()
   const toast = useToast()
   const events = (data?.events ?? []).filter((e) => filter === 'All' || e.type === filter)
 
   const byMonth = useMemo(() => {
     const map = {}
     events.forEach((e) => {
+      if (!e.date) return
       const key = format(new Date(e.date), 'MMMM yyyy')
       map[key] = map[key] ?? []
       map[key].push(e)
@@ -110,9 +113,9 @@ function AcademicCalendar() {
             <DialogDescription>Publishes to students, faculty and parent calendars instantly.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Field label="Event title" required><Input placeholder="e.g. Mid-term results release" /></Field>
+            <Field label="Event title" required><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Mid-term results release" /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Date" required><Input type="date" /></Field>
+              <Field label="Date" required><Input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} /></Field>
               <Field label="Type">
                 <select className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100">
                   <option>Academic</option><option>Exam</option><option>Deadline</option><option>Event</option><option>Placement</option><option>Finance</option>
@@ -127,7 +130,16 @@ function AcademicCalendar() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.success('Event created 📅', 'Broadcast to all relevant calendars.') }}>
+            <Button onClick={async () => {
+              try {
+                await createEvent.mutateAsync({ title: form.title, date: form.date, type: form.type })
+                setOpen(false)
+                setForm({ title: '', date: '', type: 'Academic' })
+                toast.success('Event created', 'Saved to the institution calendar.')
+              } catch (err) {
+                toast.error('Create failed', err?.response?.data?.detail || 'Could not create event.')
+              }
+            }}>
               <CalendarDays className="h-4 w-4" /> Create event
             </Button>
           </DialogFooter>

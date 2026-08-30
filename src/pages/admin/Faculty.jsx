@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BookOpen, GraduationCap, Mail, ShieldCheck, UserPlus, Users } from 'lucide-react'
 import { useAdminDepartments } from '@/services'
-import { useAdminFaculty } from '@/services/extra'
+import { useAdminFaculty, useInviteAdminUsers } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DataTable } from '@/components/shared/data-table'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -12,7 +12,10 @@ function Faculty() {
   const { data: facultyData, isLoading: facultyLoading, isError: facultyError, refetch: refetchFaculty } = useAdminFaculty()
   const [dept, setDept] = useState('All')
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteEmails, setInviteEmails] = useState('')
+  const inviteUsers = useInviteAdminUsers()
   const toast = useToast()
+  const deptCodes = ['All', ...new Set((deptData?.departments ?? []).map((d) => d.code).filter(Boolean))]
 
   const roster = (facultyData?.faculty ?? []).filter((f) => dept === 'All' || f.dept === dept)
 
@@ -38,7 +41,7 @@ function Faculty() {
       label: 'Courses',
       sortable: true,
       render: (f) => (
-        <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400"><BookOpen className="h-3.5 w-3.5" /> {f.courses}</span>
+        <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400"><BookOpen className="h-3.5 w-3.5" /> {f.courses ?? '—'}</span>
       ),
     },
     {
@@ -46,7 +49,7 @@ function Faculty() {
       label: 'Students',
       sortable: true,
       render: (f) => (
-        <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400"><Users className="h-3.5 w-3.5" /> {f.students}</span>
+        <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400"><Users className="h-3.5 w-3.5" /> {f.students ?? '—'}</span>
       ),
     },
     {
@@ -72,7 +75,8 @@ function Faculty() {
     },
   ], [toast])
 
-  const totalFaculty = facultyData?.total ?? deptData?.departments?.reduce((a, d) => a + d.faculty, 0) ?? 640
+  const totalFaculty = facultyData?.total ?? deptData?.departments?.reduce((a, d) => a + (d.faculty || 0), 0) ?? 0
+  const deptCount = deptData?.departments?.length ?? 0
 
   if (deptLoading || facultyLoading) return <DashboardSkeleton cards={3} />
   if (deptError || facultyError) return <ErrorState onRetry={() => { refetchDepts(); refetchFaculty() }} />
@@ -82,7 +86,7 @@ function Faculty() {
       <PageHeader
         eyebrow="Management · Faculty"
         title="Faculty management"
-        description={`${totalFaculty} faculty members across 8 departments — assignments, load and publications.`}
+        description={`${totalFaculty} faculty members across ${deptCount} departments — assignments, load and publications.`}
         breadcrumbs={[{ label: 'Admin' }, { label: 'Faculty' }]}
         actions={
           <Button size="sm" onClick={() => setInviteOpen(true)}>
@@ -92,7 +96,7 @@ function Faculty() {
       />
 
       <div className="mb-5 flex flex-wrap gap-2">
-        {['All', 'CSE', 'ECE', 'ME', 'EE', 'CE', 'MBA', 'DES', 'MATH'].map((d) => (
+        {deptCodes.map((d) => (
           <button key={d} onClick={() => setDept(d)} className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all duration-200 ${dept === d ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/25' : 'border border-slate-200 bg-white text-slate-500 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
             {d}
           </button>

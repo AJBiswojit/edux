@@ -121,6 +121,55 @@ export function useArchiveReport() {
   })
 }
 
+export function useDownloadReport() {
+  return useMutation({
+    mutationFn: async (report) => {
+      if (report?.generationStatus && report.generationStatus !== 'READY') {
+        throw new Error('Report is not ready for download')
+      }
+      const response = await request({
+        method: 'get',
+        url: `/faculty/reports/${report.id}/download`,
+        responseType: 'blob',
+      })
+      const blob = new Blob([response.data], { type: response.headers?.['content-type'] || 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${(report.title || 'report').replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      return { ok: true }
+    },
+  })
+}
+
+export function useCreateLecture() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/faculty/lecture-planner', data: payload }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['faculty', 'lecture-planner'] }),
+  })
+}
+
+export function useCreateTimetableSlot() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/faculty/timetable', data: payload }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['faculty', 'timetable'] }),
+  })
+}
+
+export function useCreatePublication() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/faculty/research', data: payload }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['faculty', 'research'] }),
+  })
+}
+
 export function usePaperShare() {
   return useMutation({
     mutationFn: ({ id, payload }) => request({ method: 'post', url: `/faculty/paper-generator/papers/${id}/share`, data: payload }).then((r) => r.data),
@@ -132,6 +181,167 @@ export function usePaperShare() {
 
 export const useAdminStudents = () => useQuery(get('/admin/students', ['admin', 'students']))
 export const useAdminFaculty = () => useQuery(get('/admin/faculty', ['admin', 'faculty']))
+export const useAdminSupport = () => useQuery(get('/admin/support', ['admin', 'support']))
+export const useAdminReports = () => useQuery(get('/admin/reports', ['admin', 'reports']))
+export const useExecutiveThreads = () => useQuery(get('/ai/executive/threads', ['ai', 'executive', 'threads']))
+
+function invalidateAdmin(qc) {
+  qc.invalidateQueries({ queryKey: ['admin'] })
+  qc.invalidateQueries({ queryKey: ['admin-intelligence'] })
+}
+
+export function useCreateAdminStudent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/students', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useCreateAdminFaculty() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/faculty', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useInviteAdminUsers() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/users/invite', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useSetAdminUserStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, status }) =>
+      request({ method: 'patch', url: `/admin/users/${userId}/status`, data: { status } }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useCreateAdminDepartment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/departments', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useCreateAdminProgram() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/programs', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useCreateAdminCourse() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/courses', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useCreateAdminSubject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/subjects', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useCreateAdminBatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/batches', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useCreateAdminCalendarEvent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/calendar', data: payload }).then((r) => r.data),
+    onSuccess: () => invalidateAdmin(qc),
+  })
+}
+
+export function useSaveAdminSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'patch', url: '/admin/settings', data: payload }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'settings'] })
+      qc.invalidateQueries({ queryKey: ['admin-intelligence'] })
+    },
+  })
+}
+
+export function useCreateAdminSupportTicket() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/support', data: payload }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'support'] }),
+  })
+}
+
+export function useCreateAdminReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/admin/reports', data: payload }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'reports'] })
+      qc.invalidateQueries({ queryKey: ['admin-intelligence'] })
+    },
+  })
+}
+
+export function useDeleteAdminReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => request({ method: 'delete', url: `/admin/reports/${id}` }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'reports'] }),
+  })
+}
+
+export function useDownloadAdminReport() {
+  return useMutation({
+    mutationFn: async (report) => {
+      if (report?.generationStatus && report.generationStatus !== 'READY') {
+        throw new Error('Report is not ready for download')
+      }
+      const response = await request({
+        method: 'get',
+        url: `/admin/reports/${report.id}/download`,
+        responseType: 'blob',
+      })
+      const blob = new Blob([response.data], { type: response.headers?.['content-type'] || 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${(report.title || 'report').replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      return { ok: true }
+    },
+  })
+}
+
+export function useExecutiveAsk() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ message, conversationId }) =>
+      request({ method: 'post', url: '/ai/executive/ask', data: { message, conversationId } }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai', 'executive', 'threads'] }),
+  })
+}
 
 export function useSaveStudioItem() {
   return useMutation({

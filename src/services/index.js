@@ -22,10 +22,76 @@ export function useUpdateStudentSettings() {
   })
 }
 
+export function useSubmitAssignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...payload }) => request({ method: 'post', url: `/student/assignments/${id}/submit`, data: payload }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['intelligence', 'summary'] })
+      qc.invalidateQueries({ queryKey: ['student', 'assignments'] })
+    },
+  })
+}
+
 /* ================= FACULTY ================= */
 
 export const useFacultyAttendance = () => useQuery(get('/faculty/attendance', ['faculty', 'attendance']))
 export const useFacultyAssignments = () => useQuery(get('/faculty/assignments', ['faculty', 'assignments']))
+
+export function useCreateFacultyAssignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/faculty/assignments', data: payload }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faculty', 'assignments'] })
+      qc.invalidateQueries({ queryKey: ['faculty-intelligence'] })
+      qc.invalidateQueries({ queryKey: ['intelligence', 'summary'] })
+    },
+  })
+}
+
+export function usePublishFacultyAssignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => request({ method: 'post', url: `/faculty/assignments/${id}/publish` }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faculty', 'assignments'] })
+      qc.invalidateQueries({ queryKey: ['faculty-intelligence'] })
+    },
+  })
+}
+
+export function useGradeFacultyAssignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ assignmentId, ...payload }) =>
+      request({ method: 'post', url: `/faculty/assignments/${assignmentId}/grade`, data: payload }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faculty', 'assignments'] })
+      qc.invalidateQueries({ queryKey: ['faculty-intelligence'] })
+    },
+  })
+}
+
+export function useCreateAttendanceSession() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => request({ method: 'post', url: '/faculty/attendance', data: payload }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['faculty', 'attendance'] }),
+  })
+}
+
+export function useMarkAttendance() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sessionId, records }) =>
+      request({ method: 'post', url: `/faculty/attendance/${sessionId}/mark`, data: { records } }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faculty', 'attendance'] })
+      qc.invalidateQueries({ queryKey: ['faculty-intelligence'] })
+    },
+  })
+}
 export const useQuestionBank = () => useQuery({
   queryKey: ['faculty', 'question-bank'],
   queryFn: () => fetchQuestions({}),
@@ -53,6 +119,7 @@ export const useAdminPermissions = () => useQuery(get('/admin/permissions', ['ad
 export const useAdminAuditLogs = () => useQuery(get('/admin/audit-logs', ['admin', 'audit-logs']))
 export const useAdminAiConfig = () => useQuery(get('/admin/ai-config', ['admin', 'ai-config']))
 export const useAdminSettings = () => useQuery(get('/admin/settings', ['admin', 'settings']))
+export const useAdminSupport = () => useQuery(get('/admin/support', ['admin', 'support']))
 
 /* ================= PARENT ================= */
 

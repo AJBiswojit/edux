@@ -41,7 +41,7 @@ function SuccessCenter({ derived, profile, datasets, dnaOpen, readinessOpen, car
     .map(([family, fam]) => ({ family, score: fam?.score ?? '—' }))
 
   const careerSkillBase = career.skillBase
-  const communication = (portfolio.skills ?? []).find((s) => s.name === 'Communication')?.level ?? 70
+  const communication = (portfolio.skills ?? []).find((s) => s.name === 'Communication')?.level ?? 0
 
   const cards = [
     {
@@ -109,8 +109,8 @@ function SuccessCenter({ derived, profile, datasets, dnaOpen, readinessOpen, car
       grad: 'from-fuchsia-500 to-pink-500',
       title: 'AI Digital Portfolio',
       subtitle: 'Certificates · projects · skills',
-      ringValue: portfolio.resumeScore ?? 60,
-      ringLabel: `${portfolio.resumeScore ?? 60}`,
+      ringValue: portfolio.resumeScore ?? 0,
+      ringLabel: `${portfolio.resumeScore ?? 0}`,
       ringSub: 'Complete',
       headline: `${(portfolio.certifications ?? []).length + achievements.completed}`,
       headlineSub: 'Milestones',
@@ -119,7 +119,7 @@ function SuccessCenter({ derived, profile, datasets, dnaOpen, readinessOpen, car
         { label: 'Projects', value: `${(portfolio.projects ?? []).length}` },
         { label: 'Skills', value: `${(portfolio.skills ?? []).length}` },
       ],
-      summary: `Resume ${portfolio.resumeScore ?? 60}% complete · ${achievements.completed}/${achievements.total} achievements earned.`,
+      summary: `Resume ${portfolio.resumeScore ?? 0}% complete · ${achievements.completed}/${achievements.total} achievements earned.`,
       cta: 'Open Portfolio',
     },
   ]

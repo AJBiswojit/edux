@@ -17,7 +17,7 @@ import { useAdmitCard } from '@/services/extra'
 import { useStudentExams } from '@/services/student-examinations'
 import { useExamAgentExams } from '@/services/exam-agent'
 import { useStudentInterventions } from '@/services/faculty-interventions'
-import { useMasterStudentProfile } from '@/services/intelligence'
+import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { DashboardSkeleton } from '@/components/shared/loading'
 import { Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent, useToast } from '@/components/ui'
@@ -31,8 +31,8 @@ const CATEGORIES = [
 
 function Examinations() {
   const { data: admitData } = useAdmitCard()
-  const { data: masterProfile } = useMasterStudentProfile()
-  const { data: studentInterventionsData } = useStudentInterventions(masterProfile?.id ?? 'u_stu_001')
+  const { user } = useAuth()
+  const { data: studentInterventionsData } = useStudentInterventions(user?.id)
   const { data: agentExamsData } = useExamAgentExams()
   const [selected, setSelected] = useState(null)
   const [category, setCategory] = useState('All')
@@ -90,11 +90,11 @@ function Examinations() {
   const competitive = upcoming.filter((e) => (e.domain ?? e.category) === 'Competitive' || e.examFamily === 'JEE' || e.examFamily === 'NEET' || e.category === 'Competitive')
   const visible = category === 'All' ? upcoming : category === 'University' ? university : competitive
 
-  const handleAddToPlanner = (exam) => {
-    toast.success(exam.inPlanner ? 'Already in planner' : 'Added to planner', exam.inPlanner ? 'Revision sessions already scheduled.' : 'AI has scheduled revision sessions.')
+  const handleAddToPlanner = () => {
+    toast.info('BACKEND GAP', 'Planner writes are not available yet — no planner mutation exists.')
   }
-  const handleAddToCalendar = (exam) => {
-    toast.success('Added to calendar', `${exam.title} — ${exam.date?.slice(0, 10) ?? 'TBD'} · ${exam.duration ?? ''}.`)
+  const handleAddToCalendar = () => {
+    toast.info('BACKEND GAP', 'Calendar writes are not available yet — no calendar mutation exists.')
   }
 
   return (
@@ -186,7 +186,7 @@ function Examinations() {
         <TabsContent value="readiness"><ReadinessTab readiness={null} /></TabsContent>
       </Tabs>
 
-      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.success('Downloading…', `admit-card-${selected?.id}.pdf saved.`)} />
+      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.info('BACKEND GAP', 'Admit-card PDF download is not available yet.')} />
     </div>
   )
 }

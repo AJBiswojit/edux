@@ -5,18 +5,14 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
 from app.core.deps import DbDep, UserDep
-from app.models.exams import ExamAttempt, ExamQuestionAttempt
+from app.models.exams import ExamAttempt
 from app.models.ops import SupportTicket
 from app.models.people import StudentProfile
 from app.schemas.auth import ExamAttemptCreate
-from app.services.seed import student_master_profile
-from app.services.spa_exams import analysis_from_attempt, attempt_to_dict, practice_questions
-from app.services.spa_issues import build_similar_issues, intervention_from_group
-from app.services import live_catalog
+from app.services.spa_exams import analysis_from_attempt, attempt_to_dict
 from app.services.examination import get_published_exam, list_published_exams, start_exam, submit_exam_attempt
-from app.services.spa_payloads import payload
-from app.services.spa_store import coll_key, kv_get, kv_set
-from app.services.people_directory import faculty_students_directory
+from app.services import student_runtime
+from app.services import intervention_practice
 from app.workers.intelligence import rebuild_student_dna
 
 router = APIRouter(tags=["student"])
@@ -32,31 +28,28 @@ def _require_student(db, user) -> StudentProfile:
 @router.get("/student/profile")
 def student_profile(db: DbDep, user: UserDep):
     _require_student(db, user)
-    return student_master_profile(db, user)
+    return student_runtime.build_profile(db, user)
 
 
 @router.get("/intelligence/profile")
 def intelligence_profile(db: DbDep, user: UserDep):
     _require_student(db, user)
-    return student_master_profile(db, user)
+    return student_runtime.build_profile(db, user)
 
 
 @router.get("/intelligence/summary")
 def intelligence_summary(db: DbDep, user: UserDep):
-    _require_student(db, user)
-    snap = payload("student-intelligence-summary")
-    snap["profile"] = student_master_profile(db, user)
-    return snap
+    return student_runtime.assemble_student_intelligence(db, user)
 
 
 @router.get("/intelligence/datasets")
-def intelligence_datasets(user: UserDep):
-    return payload("student-intelligence-datasets")
+def intelligence_datasets(db: DbDep, user: UserDep):
+    return student_runtime.assemble_student_intelligence(db, user)["datasets"]
 
 
 @router.get("/intelligence/derived")
-def intelligence_derived(user: UserDep):
-    return payload("student-intelligence-derived")
+def intelligence_derived(db: DbDep, user: UserDep):
+    return student_runtime.assemble_student_intelligence(db, user)["derived"]
 
 
 @router.get("/intelligence/exam-dna-signals")
@@ -111,10 +104,6 @@ def intelligence_attempts(
         q = q.filter(ExamAttempt.is_demo.is_(False))
     rows = q.order_by(ExamAttempt.submitted_at.desc()).all()
     items = [attempt_to_dict(r, db) for r in rows]
-    if includeSeeds and target in {user.id, "u_stu_001"}:
-        portal = payload("student-portal")
-        # keep live attempts first; seed-shaped analysis options still come from exam-analysis fixture
-        _ = portal
     if examMode:
         items = [a for a in items if str(a.get("examMode") or "").lower() == examMode.lower()]
     if examFamily:
@@ -173,48 +162,71 @@ def submit_attempt(body: ExamAttemptCreate, db: DbDep, user: UserDep):
 
 
 @router.get("/student/dashboard")
-def student_dashboard(user: UserDep):
-    return payload("student-portal")["dashboard"]
+def student_dashboard(db: DbDep, user: UserDep):
+    return student_runtime.student_dashboard_payload(db, user)
 
 
 @router.get("/student/attendance")
-def student_attendance(user: UserDep):
-    return payload("student-portal")["attendance"]
+def student_attendance(db: DbDep, user: UserDep):
+    _require_student(db, user)
+    return student_runtime.calculate_attendance(db, user)
 
 
 @router.get("/student/assignments")
 def student_assignments(db: DbDep, user: UserDep):
-    return {"items": live_catalog.student_assignments(db, user)}
+    return {"items": student_runtime.list_student_assignments(db, user)}
+
+
+@router.get("/student/micro-assessments")
+def student_micro_list(db: DbDep, user: UserDep):
+    from app.services import micro_assessments
+
+    return micro_assessments.list_student(db, user)
+
+
+@router.get("/student/micro-assessments/{assessment_id}")
+def student_micro_get(assessment_id: str, db: DbDep, user: UserDep):
+    from app.services import micro_assessments
+
+    return micro_assessments.get_student(db, user, assessment_id)
+
+
+@router.post("/student/micro-assessments/{assessment_id}/attempts")
+def student_micro_submit(assessment_id: str, body: dict, db: DbDep, user: UserDep):
+    from app.services import micro_assessments
+
+    return micro_assessments.submit_student(db, user, assessment_id, body or {})
+
+
+@router.post("/student/assignments/{assignment_id}/submit")
+def student_assignment_submit(assignment_id: str, db: DbDep, user: UserDep, body: dict | None = None):
+    return student_runtime.submit_assignment(db, user, assignment_id, body or {})
 
 
 @router.get("/student/courses")
 def student_courses(db: DbDep, user: UserDep):
-    return {"items": live_catalog.student_courses(db, user)}
+    return {"items": student_runtime.list_student_courses(db, user)}
 
 
 @router.get("/student/courses/{course_id}")
-def student_course(course_id: str, user: UserDep):
-    detail = payload("student-portal")["courseDetail"]
-    courses = payload("student-portal")["courses"]
-    match = next((c for c in courses if c.get("id") == course_id), None)
-    if match:
-        return {"course": {**detail, **match, "id": course_id}}
-    return {"course": {**detail, "id": course_id, "code": course_id}}
+def student_course(course_id: str, db: DbDep, user: UserDep):
+    return student_runtime.course_detail(db, user, course_id)
 
 
 @router.get("/student/subjects")
-def student_subjects(user: UserDep):
-    return {"items": payload("student-portal")["subjects"]}
+def student_subjects(db: DbDep, user: UserDep):
+    snap = student_runtime.assemble_student_intelligence(db, user)
+    return {"items": snap["datasets"].get("subjects") or []}
 
 
 @router.get("/student/events")
 def student_events(db: DbDep, user: UserDep):
-    return {"items": live_catalog.student_events(db, user)}
+    return {"items": student_runtime.list_student_events(db, user)}
 
 
 @router.get("/student/mock-tests")
-def mock_tests(user: UserDep):
-    return {"items": payload("student-portal")["mockTests"]}
+def mock_tests(db: DbDep, user: UserDep):
+    return {"items": student_runtime.list_mock_tests(db, user)}
 
 
 @router.get("/student/exams")
@@ -246,27 +258,25 @@ def exam_submit(exam_id: str, body: dict, db: DbDep, user: UserDep):
 
 @router.get("/student/settings")
 def student_settings(db: DbDep, user: UserDep):
-    stored = kv_get(db, coll_key("student_settings", user.id), None)
-    return stored or payload("student-portal")["settings"]
+    _require_student(db, user)
+    return student_runtime.settings_payload(db, user)
 
 
 @router.patch("/student/settings")
 def patch_student_settings(body: dict, db: DbDep, user: UserDep):
-    current = kv_get(db, coll_key("student_settings", user.id), payload("student-portal")["settings"])
-    current.update(body or {})
-    kv_set(db, coll_key("student_settings", user.id), current)
+    _require_student(db, user)
+    current = student_runtime.patch_settings(db, user, body or {})
     return {"ok": True, "settings": current}
 
 
 @router.get("/student/programs")
-def programs(user: UserDep):
-    return payload("student-portal")["programs"]
+def programs(db: DbDep, user: UserDep):
+    return student_runtime.programs_payload(db, user)
 
 
 @router.get("/student/forum")
 def forum(user: UserDep):
-    portal = payload("student-portal")
-    return {"topics": portal["forumTopics"], "categories": portal["forumCategories"]}
+    return {**student_runtime.forum_payload(), "gap": "BACKEND GAP — forum tables are unused"}
 
 
 @router.get("/student/support")
@@ -311,39 +321,18 @@ def create_support(body: dict, db: DbDep, user: UserDep):
 
 
 @router.get("/student/admit-card")
-def admit_card(user: UserDep):
-    return payload("student-portal")["admitCard"]
+def admit_card(db: DbDep, user: UserDep):
+    return student_runtime.admit_card_payload(db, user)
 
 
 @router.get("/student/exam-analysis")
-def exam_analysis(user: UserDep):
-    return payload("student-portal")["examAnalysis"]
+def exam_analysis(db: DbDep, user: UserDep):
+    return student_runtime.exam_analysis_options(db, user)
 
 
 @router.get("/student/exam-analysis/options")
 def exam_analysis_options(db: DbDep, user: UserDep):
-    rows = db.query(ExamAttempt).filter(ExamAttempt.student_id == user.id, ExamAttempt.is_demo.is_(False)).order_by(ExamAttempt.submitted_at.desc()).all()
-    live = []
-    for r in rows:
-        d = attempt_to_dict(r, db, include_questions=False)
-        live.append(
-            {
-                "id": d["id"],
-                "attemptId": d["id"],
-                "examId": d.get("examId"),
-                "title": d.get("examTitle") or d.get("examName"),
-                "examMode": d.get("examMode"),
-                "examFamily": d.get("examFamily"),
-                "submittedAt": d.get("submittedAt"),
-                "sample": False,
-            }
-        )
-    options = payload("student-portal")["examAnalysisOptions"]
-    if isinstance(options, list):
-        return live + options
-    if isinstance(options, dict) and "items" in options:
-        return {**options, "items": live + (options.get("items") or [])}
-    return {"items": live or options}
+    return student_runtime.exam_analysis_options(db, user)
 
 
 @router.get("/student/exam-analysis/{analysis_id}")
@@ -351,147 +340,58 @@ def exam_analysis_by_id(analysis_id: str, db: DbDep, user: UserDep):
     row = db.get(ExamAttempt, analysis_id)
     if row and (user.primary_role != "student" or row.student_id == user.id):
         return analysis_from_attempt(attempt_to_dict(row, db))
-    variants = payload("student-portal").get("examAnalysisVariants") or {}
-    if isinstance(variants, dict) and analysis_id in variants:
-        return variants[analysis_id]
-    if isinstance(variants, list):
-        found = next((v for v in variants if v.get("id") == analysis_id), None)
-        if found:
-            return found
-    return payload("student-portal")["examAnalysis"]
+    raise HTTPException(404, "Attempt not found.")
 
 
 @router.get("/student/mentor/workspace")
-def mentor_workspace(user: UserDep):
-    portal = payload("student-portal")
-    intel = payload("student-intelligence-datasets")
-    mentor = portal["mentor"]
-    return {
-        **mentor,
-        "conversations": intel.get("aiConversations"),
-        "suggestedQuestions": intel.get("suggestedQuestions"),
-        "quickPrompts": intel.get("quickPrompts"),
-        "resourceRecommendations": intel.get("resourceRecommendations"),
-        "generatedNotes": intel.get("generatedNotes"),
-        "downloads": intel.get("downloads"),
-        "completedRecommendations": intel.get("completedRecommendations"),
-    }
+def mentor_workspace(db: DbDep, user: UserDep):
+    return student_runtime.mentor_workspace(db, user)
 
 
 @router.get("/student/academic-profile")
-def academic_profile(user: UserDep):
-    return payload("student-portal")["academicProfile"]
+def academic_profile(db: DbDep, user: UserDep):
+    return student_runtime.build_profile(db, user)
 
 
 @router.get("/student/academic-resources")
-def academic_resources(user: UserDep):
-    return {"items": payload("student-portal")["academicResources"]}
+def academic_resources(db: DbDep, user: UserDep):
+    snap = student_runtime.assemble_student_intelligence(db, user)
+    return {"items": snap["datasets"].get("academicResources") or []}
 
 
 @router.get("/student/academic-progress")
-def academic_progress(user: UserDep):
-    return payload("student-portal")["academicProgress"]
+def academic_progress(db: DbDep, user: UserDep):
+    snap = student_runtime.assemble_student_intelligence(db, user)
+    return snap["derived"].get("university", {}).get("progress") or {"overall": 0, "courses": [], "subjects": []}
 
 
 @router.get("/student/performance-accuracy")
-def performance_accuracy(user: UserDep):
-    return payload("student-portal")["performanceAccuracy"]
-
-
-def _student_groups(db, user):
-    directory = faculty_students_directory(db, user.institution_id)
-    packed = build_similar_issues(directory.get("students") or [])
-    overrides = kv_get(db, coll_key("interventions", user.institution_id), {})
-    return packed["groups"], overrides
+def performance_accuracy(db: DbDep, user: UserDep):
+    return student_runtime.assemble_student_intelligence(db, user)["derived"]
 
 
 @router.get("/student/interventions")
 def my_interventions(db: DbDep, user: UserDep, studentId: str | None = None):
-    target = studentId or user.id
-    if user.primary_role == "student":
-        target = user.id
-    groups, overrides = _student_groups(db, user)
-    items = []
-    for g in groups:
-        iv = intervention_from_group(g, overrides.get(g["id"]))
-        if target in (iv.get("studentIds") or []):
-            items.append(iv)
+    from app.services import interventions_sql
+
+    snap = student_runtime.assemble_student_intelligence(db, user)
+    derived = snap["derived"].get("interventions") or []
+    sql_items = interventions_sql.student_sql_interventions(db, user)
+    sql_ids = {row["id"] for row in sql_items}
+    items = sql_items + [row for row in derived if row.get("id") not in sql_ids]
     return {"items": items, "interventions": items, "count": len(items)}
 
 
 @router.get("/student/interventions/{intervention_id}/practice")
-def intervention_practice(intervention_id: str, db: DbDep, user: UserDep):
-    groups, overrides = _student_groups(db, user)
-    group = next((g for g in groups if g["id"] == intervention_id), None)
-    if not group:
-        raise HTTPException(404, "Intervention not found.")
-    iv = intervention_from_group(group, overrides.get(group["id"]))
-    questions = practice_questions(subject=iv.get("subject"), chapter=iv.get("chapter"), count=iv.get("practiceConfig", {}).get("count") or 8)
-    return {
-        "items": questions,
-        "questions": questions,
-        "count": len(questions),
-        "requested": iv.get("practiceConfig", {}).get("count") or 8,
-        "sufficient": len(questions) >= 5,
-        "interventionId": iv["id"],
-        "practiceType": iv.get("practiceConfig", {}).get("type"),
-        "durationMinutes": iv.get("practiceConfig", {}).get("duration") or 20,
-        "whyAssigned": f"Your recent assessments show repeated difficulty with {iv.get('chapter')}.",
-        "chapter": iv.get("chapter"),
-        "subject": iv.get("subject"),
-    }
+def intervention_practice_get(intervention_id: str, db: DbDep, user: UserDep):
+    return intervention_practice.student_practice_payload(db, user, intervention_id)
 
 
 @router.get("/student/interventions/{intervention_id}/retest")
 def intervention_retest(intervention_id: str, db: DbDep, user: UserDep):
-    retests = kv_get(db, coll_key("retests", user.institution_id), [])
-    retest = next((r for r in retests if r.get("interventionId") == intervention_id), None)
-    if not retest:
-        raise HTTPException(404, "No re-test assigned for this intervention.")
-    return {"retest": retest}
+    return intervention_practice.student_retest_payload(db, user, intervention_id)
 
 
 @router.post("/student/interventions/{intervention_id}/practice-attempts")
 def submit_practice_attempt(intervention_id: str, body: dict, db: DbDep, user: UserDep):
-    groups, overrides = _student_groups(db, user)
-    group = next((g for g in groups if g["id"] == intervention_id), None)
-    if not group:
-        raise HTTPException(404, "Intervention not found.")
-    iv = intervention_from_group(group, overrides.get(group["id"]))
-    kind = body.get("kind") or "practice"
-    attempt = {
-        "id": f"ip-{int(datetime.now(timezone.utc).timestamp() * 1000)}",
-        "interventionId": iv["id"],
-        "studentId": body.get("studentId") or user.id,
-        "kind": kind,
-        "domain": iv.get("domain"),
-        "examFamily": iv.get("examFamily"),
-        "subject": iv.get("subject"),
-        "chapter": iv.get("chapter"),
-        "questionAttempts": body.get("questionAttempts") or [],
-        "score": body.get("score") or 0,
-        "maxScore": body.get("maxScore") or 0,
-        "accuracy": body.get("accuracy") or 0,
-        "attemptRate": body.get("attemptRate") or 0,
-        "avgTime": body.get("avgTime") or 0,
-        "incorrect": body.get("incorrect") or 0,
-        "startedAt": body.get("startedAt"),
-        "submittedAt": datetime.now(timezone.utc).isoformat(),
-        "mode": "intervention-retest" if kind == "retest" else "intervention-practice",
-    }
-    attempts = kv_get(db, coll_key("practice_attempts", user.institution_id), [])
-    attempts.append(attempt)
-    kv_set(db, coll_key("practice_attempts", user.institution_id), attempts)
-    current = overrides.get(iv["id"]) or {}
-    if kind == "practice":
-        if current.get("status") in {None, "Assigned"}:
-            current["status"] = "In Progress"
-        elif current.get("status") == "In Progress":
-            current["status"] = "Completed"
-            current["completedAt"] = attempt["submittedAt"]
-    else:
-        current["status"] = "Evaluating"
-    current["updatedAt"] = attempt["submittedAt"]
-    overrides[iv["id"]] = current
-    kv_set(db, coll_key("interventions", user.institution_id), overrides)
-    return {"ok": True, "attempt": attempt, "status": current["status"]}
+    return intervention_practice.submit_practice(db, user, intervention_id, body or {})

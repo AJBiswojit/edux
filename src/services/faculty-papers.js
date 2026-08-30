@@ -178,9 +178,29 @@ export function usePaperArchiveBackend() {
   })
 }
 
+export async function fetchPaperShares() {
+  const { data } = await api.get('/faculty/paper-generator/shares')
+  return data
+}
+
+export function usePaperShares() {
+  return useQuery({
+    queryKey: ['faculty', 'paper-shares'],
+    queryFn: fetchPaperShares,
+    retry: false,
+    staleTime: 1000 * 60,
+  })
+}
+
 export function usePaperShareBackend() {
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, payload }) => sharePaper(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-shares'] })
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator'] })
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-library'] })
+    },
   })
 }
 

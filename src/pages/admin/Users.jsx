@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Download, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import { useAdminUsers } from '@/services'
+import { useInviteAdminUsers, useSetAdminUserStatus } from '@/services/extra'
 import { PageHeader } from '@/components/shared/page-header'
 import { DataTable } from '@/components/shared/data-table'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
@@ -12,6 +13,10 @@ const ROLE_COLOR = { Student: 'from-indigo-500 to-blue-500', Faculty: 'from-teal
 function Users() {
   const { data, isLoading, isError, refetch } = useAdminUsers()
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteEmails, setInviteEmails] = useState('')
+  const [inviteRole, setInviteRole] = useState('student')
+  const inviteUsers = useInviteAdminUsers()
+  const setStatus = useSetAdminUserStatus()
   const toast = useToast()
   const users = data?.users ?? []
 
@@ -59,7 +64,15 @@ function Users() {
       render: (u) => (
         <div className="flex justify-end gap-1.5">
           <Button size="sm" variant="ghost" onClick={() => toast.info('Message', `Compose a message to ${u.name}.`)}><Mail className="h-3.5 w-3.5" /></Button>
-          <Button size="sm" variant="ghost" onClick={() => toast.success('Permissions opened', `${u.name} — role: ${u.role}.`)}><ShieldCheck className="h-3.5 w-3.5" /></Button>
+          <Button size="sm" variant="ghost" onClick={async () => {
+            const next = (u.status || '').toLowerCase() === 'active' ? 'inactive' : 'active'
+            try {
+              await setStatus.mutateAsync({ userId: u.id, status: next })
+              toast.success('Status updated', `${u.name} is now ${next}.`)
+            } catch (err) {
+              toast.error('Update failed', err?.response?.data?.detail || 'Could not change status.')
+            }
+          }}><ShieldCheck className="h-3.5 w-3.5" /></Button>
         </div>
       ),
     },
@@ -74,7 +87,7 @@ function Users() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'Users' }]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Export started', 'user_directory.csv will download shortly.')}>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Export unavailable', 'BACKEND GAP — directory export is not implemented.')}>
               <Download className="h-4 w-4" /> Export
             </Button>
             <Button size="sm" onClick={() => setInviteOpen(true)}>
@@ -100,28 +113,29 @@ function Users() {
           </DialogHeader>
           <div className="space-y-4">
             <Field label="Email addresses" required>
-              <textarea rows={3} placeholder="name1@institution.edu&#10;name2@institution.edu" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/15 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100" />
+              <textarea value={inviteEmails} onChange={(e) => setInviteEmails(e.target.value)} rows={3} placeholder="name1@institution.edu&#10;name2@institution.edu" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/15 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100" />
             </Field>
             <Field label="Assign role" required>
-              <Select defaultValue="Student">
-                <SelectItem value="Student">Student</SelectItem>
-                <SelectItem value="Faculty">Faculty</SelectItem>
-                <SelectItem value="Parent">Parent</SelectItem>
-                <SelectItem value="Admin">Administrator</SelectItem>
-              </Select>
-            </Field>
-            <Field label="Department">
-              <Select defaultValue="Computer Science & Engineering">
-                <SelectItem value="Computer Science & Engineering">Computer Science & Engineering</SelectItem>
-                <SelectItem value="Electronics & Communication">Electronics & Communication</SelectItem>
-                <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
-                <SelectItem value="School of Business">School of Business</SelectItem>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectItem value="student">Student</SelectItem>
+                <SelectItem value="faculty">Faculty</SelectItem>
+                <SelectItem value="parent">Parent</SelectItem>
+                <SelectItem value="admin">Administrator</SelectItem>
               </Select>
             </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setInviteOpen(false); toast.success('Invitations sent ✉️', '3 users will receive onboarding emails.') }}>
+            <Button onClick={async () => {
+              try {
+                const res = await inviteUsers.mutateAsync({ emails: inviteEmails, role: inviteRole })
+                setInviteOpen(false)
+                setInviteEmails('')
+                toast.success('Invitations saved', `${res.count} user(s) created as invited.`)
+              } catch (err) {
+                toast.error('Invite failed', err?.response?.data?.detail || 'Could not persist invitations.')
+              }
+            }}>
               <UserPlus className="h-4 w-4" /> Send invitations
             </Button>
           </DialogFooter>

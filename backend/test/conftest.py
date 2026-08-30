@@ -30,6 +30,7 @@ import app.models.interventions  # noqa: E402,F401
 import app.models.ops  # noqa: E402,F401
 import app.models.people  # noqa: E402,F401
 import app.models.teaching  # noqa: E402,F401
+import app.models.capabilities  # noqa: E402,F401
 from app.core.security import create_access_token, hash_password  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal, engine, get_db  # noqa: E402
@@ -189,17 +190,22 @@ def world(app):
     ]
     db.add_all(questions)
     db.commit()
-    try:
-        yield {
-            "inst_a": inst_a,
-            "inst_b": inst_b,
-            "faculty": faculty,
-            "faculty_b": faculty_b,
-            "student": student,
-            "student_b": student_b,
-        }
-    finally:
-        db.close()
+    for user in (faculty, faculty_b, student, student_b):
+        _ = user.primary_role
+        _ = user.id
+        _ = user.institution_id
+        _ = user.email
+        _ = user.full_name
+    snapshot = {
+        "inst_a": inst_a,
+        "inst_b": inst_b,
+        "faculty": faculty,
+        "faculty_b": faculty_b,
+        "student": student,
+        "student_b": student_b,
+    }
+    db.close()
+    yield snapshot
 
 
 def auth_header(user: User) -> dict[str, str]:

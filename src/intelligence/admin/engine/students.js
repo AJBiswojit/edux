@@ -19,19 +19,19 @@ import { clamp, round1, avg } from './scores.js'
 export function computeStudentIntelligence({
   profile, adminPerformance, adminAttendanceAnalytics, adminAnalytics, weakStudentDetection,
 }) {
-  const totalStudents = profile?.totals?.students ?? 12480
+  const totalStudents = profile?.totals?.students ?? 0
 
-  /* At-risk trend — authoritative series from the faculty cohort model. */
+  /* At-risk trend — only from provided cohort evidence. */
   const riskTrend = (weakStudentDetection?.cohortTrend ?? []).map((c) => ({
     month: c.month,
     atRisk: c.atRisk,
   }))
-  const latestRate = riskTrend[riskTrend.length - 1]?.atRisk ?? 5.9
+  const latestRate = riskTrend[riskTrend.length - 1]?.atRisk ?? 0
   const firstRate = riskTrend[0]?.atRisk ?? latestRate
   const trendDelta = round1(latestRate - firstRate)
   const trendReduction = firstRate ? round1(((firstRate - latestRate) / firstRate) * 100) : 0
 
-  const intervention = adminPerformance?.interventionImpact ?? { flagged: 214, recovered: 168, recoveryRate: 78.5, avgWeeks: 4.2 }
+  const intervention = adminPerformance?.interventionImpact ?? { flagged: 0, recovered: 0, recoveryRate: 0, avgWeeks: 0 }
 
   /* Performance distribution (adminPerformance.gradeDistribution: % shares). */
   const distribution = (adminPerformance?.gradeDistribution ?? []).map((g) => ({
@@ -47,12 +47,12 @@ export function computeStudentIntelligence({
   const attendanceRisk = (adminAttendanceAnalytics?.belowThreshold ?? []).map((s) => ({ ...s }))
 
   /* Retention + CGPA context. */
-  const retention = adminAnalytics?.retention?.slice(-1)[0]?.overall ?? 92
-  const cgpaAvg = adminAnalytics?.semesterWise?.length ? round1(avg(adminAnalytics.semesterWise, 'cgpa')) : 7.7
+  const retention = adminAnalytics?.retention?.slice(-1)[0]?.overall ?? 0
+  const cgpaAvg = adminAnalytics?.semesterWise?.length ? round1(avg(adminAnalytics.semesterWise, 'cgpa')) : null
 
   /* Documented deterministic approximation: active at-risk cohort = total × rate. */
   const activeRisk = Math.round((totalStudents * latestRate) / 100)
-  const improvingStudents = intervention.recovered ?? 168
+  const improvingStudents = intervention.recovered ?? 0
 
   return {
     totals: {
