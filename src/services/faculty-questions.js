@@ -19,6 +19,7 @@ export async function fetchQuestions(filters = {}) {
   if (filters.domain) params.domain = filters.domain
   const examFamily = canonicalExamFamily(filters.examFamily)
   if (examFamily) params.examFamily = examFamily
+  if (filters.course && filters.course !== 'All courses' && filters.course !== 'All') params.course = filters.course
   if (filters.subject && filters.subject !== 'All subjects' && filters.subject !== 'All') params.subject = filters.subject
   if (filters.chapter && filters.chapter !== 'All chapters' && filters.chapter !== 'All') params.chapter = filters.chapter
   if (filters.topic && filters.topic !== 'All topics' && filters.topic !== 'All') params.topic = filters.topic
@@ -47,6 +48,7 @@ export function useFacultyQuestions(filters = {}, options = {}) {
   const keyFilters = {
     domain: filters.domain ?? null,
     examFamily: canonicalExamFamily(filters.examFamily) ?? filters.examFamily ?? null,
+    course: filters.course ?? null,
     subject: filters.subject ?? null,
     chapter: filters.chapter ?? null,
     topic: filters.topic ?? null,

@@ -873,9 +873,137 @@ def reports_list(db: Session, user: User) -> list:
     return list_reports(db, user)
 
 
+def _paper_generator_catalog(db: Session, institution_id: str | None) -> dict:
+    """Real Course → Subject → Chapter → Topic catalog for the paper studio.
+
+    Scoped to the authenticated faculty's institution. Empty tables produce
+    empty arrays — never a prototype/demo fallback.
+    """
+    if not institution_id:
+        return {
+            "programs": [],
+            "courseCatalog": [],
+            "courses": [],
+            "subjectCatalog": [],
+            "subjects": [],
+            "chapters": {},
+            "topics": {},
+            "competitiveSubjects": {"JEE": [], "NEET": []},
+        }
+    programs = [
+        p.name
+        for p in db.scalars(select(Program).where(Program.institution_id == institution_id).order_by(Program.name)).all()
+    ]
+    subjects = db.scalars(
+        select(Subject).where(Subject.institution_id == institution_id).order_by(Subject.code)
+    ).all()
+    subject_ids = [row.id for row in subjects]
+    chapter_rows = (
+        db.scalars(
+            select(Chapter)
+            .where(Chapter.subject_id.in_(subject_ids))
+            .order_by(Chapter.sort_order, Chapter.name)
+        ).all()
+        if subject_ids
+        else []
+    )
+    chapter_ids = [row.id for row in chapter_rows]
+    topic_rows = (
+        db.scalars(
+            select(Topic).where(Topic.chapter_id.in_(chapter_ids)).order_by(Topic.sort_order, Topic.name)
+        ).all()
+        if chapter_ids
+        else []
+    )
+    topics_by_chapter: dict[str, list[str]] = defaultdict(list)
+    for topic in topic_rows:
+        topics_by_chapter[topic.chapter_id].append(topic.name)
+
+    subject_catalog = []
+    for subject in subjects:
+        subject_chapters = [row for row in chapter_rows if row.subject_id == subject.id]
+        subject_catalog.append(
+            {
+                "id": subject.id,
+                "code": subject.code,
+                "name": subject.name,
+                "examMode": subject.exam_mode,
+                "examFamily": subject.exam_family,
+                "chapters": [
+                    {
+                        "id": chapter.id,
+                        "name": chapter.name,
+                        "courseId": chapter.course_id,
+                        "topics": topics_by_chapter.get(chapter.id, []),
+                    }
+                    for chapter in subject_chapters
+                ],
+            }
+        )
+
+    courses = db.scalars(
+        select(Course).where(Course.institution_id == institution_id).order_by(Course.code)
+    ).all()
+    subject_by_id = {row.id: row for row in subjects}
+    course_catalog = []
+    for course in courses:
+        subject = subject_by_id.get(course.subject_id) if course.subject_id else None
+        course_catalog.append(
+            {
+                "id": course.id,
+                "code": course.code,
+                "name": course.name,
+                "subjectId": subject.id if subject else None,
+                "subjectCode": subject.code if subject else None,
+                "subjectName": subject.name if subject else None,
+            }
+        )
+
+    university_subjects = [
+        row for row in subject_catalog if (row.get("examMode") or "university").lower() == "university"
+    ]
+    university_courses = [row for row in course_catalog if row.get("subjectCode")]
+
+    chapters_map: dict[str, list[str]] = {}
+    topics_map: dict[str, list[str]] = {}
+    for subject in subject_catalog:
+        subject_chapter_names = [chapter["name"] for chapter in subject["chapters"]]
+        chapters_map[f"{subject['code']} — {subject['name']}"] = subject_chapter_names
+        chapters_map.setdefault(subject["name"], subject_chapter_names)
+        for chapter in subject["chapters"]:
+            topics_map[chapter["name"]] = chapter["topics"]
+
+    competitive_subjects = {"JEE": [], "NEET": []}
+    for subject in subject_catalog:
+        mode = (subject.get("examMode") or "").lower()
+        family = (subject.get("examFamily") or "").lower()
+        if mode == "competitive" and family in {"jee", "neet"}:
+            competitive_subjects["JEE" if family == "jee" else "NEET"].append(subject["name"])
+
+    return {
+        "programs": programs,
+        "universityTypes": ["Mid Semester", "End Semester", "Full Mock Test", "Practice Test"],
+        "competitiveTypes": ["Full Mock Test", "Practice Test"],
+        "durations": [60, 90, 120, 150, 180],
+        "courseCatalog": course_catalog,
+        "courses": [f"{row['code']} — {row['name']}" for row in university_courses],
+        "subjectCatalog": subject_catalog,
+        "subjects": [f"{row['code']} — {row['name']}" for row in university_subjects],
+        "chapters": chapters_map,
+        "topics": topics_map,
+        "competitiveSubjects": competitive_subjects,
+    }
+
+
 def paper_generator_payload(db: Session, user: User) -> dict:
     papers = list_faculty_papers(db, user)
-    return {"generatedPapers": papers, "items": papers, "templates": [], "config": {}, "versionHistory": {}}
+    return {
+        "generatedPapers": papers,
+        "items": papers,
+        "templates": [],
+        "config": _paper_generator_catalog(db, user.institution_id),
+        "versionHistory": {},
+    }
 
 
 def _serialize_paper_share(db: Session, row: PaperShare, paper: Paper | None = None) -> dict:

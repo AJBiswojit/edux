@@ -124,51 +124,92 @@ describe('PYQ Analysis (faculty) — subject → chapter → topic', () => {
 
 describe('Paper Generator (assessment workspace) — course → subject → chapter → topic', () => {
   const cfg = {
-    courses: ['CS501 — DSA', 'CS502 — DBMS'],
-    competitiveSubjects: { JEE: ['Physics', 'Mathematics'], NEET: ['Physics', 'Biology'] },
+    courseCatalog: [
+      { id: 'c1', code: 'CS501', name: 'Data Structures & Algorithms', subjectCode: 'CS501', subjectName: 'Data Structures & Algorithms' },
+      { id: 'c2', code: 'CS502', name: 'Database Management Systems', subjectCode: 'CS502', subjectName: 'Database Management Systems' },
+    ],
+    subjectCatalog: [
+      { id: 'CS501', code: 'CS501', name: 'Data Structures & Algorithms', examMode: 'university', examFamily: null, chapters: [{ id: 'ch1', name: 'Trees', topics: ['AVL', 'Heaps'] }, { id: 'ch2', name: 'Graphs', topics: ['Dijkstra', 'BFS'] }] },
+      { id: 'CS502', code: 'CS502', name: 'Database Management Systems', examMode: 'university', examFamily: null, chapters: [{ id: 'ch3', name: 'Normalization', topics: ['3NF', 'BCNF'] }] },
+      { id: 'PHY', code: 'PHY', name: 'Physics', examMode: 'competitive', examFamily: 'jee', chapters: [{ id: 'ch4', name: 'Rotational Motion', topics: ['Torque', 'Moment of Inertia'] }] },
+      { id: 'BIO', code: 'BIO', name: 'Biology', examMode: 'competitive', examFamily: 'neet', chapters: [{ id: 'ch5', name: 'Genetics', topics: ['Mendel'] }] },
+    ],
+    competitiveSubjects: { JEE: ['Physics'], NEET: ['Biology'] },
   }
-  const compQuestions = [
-    { exam: 'JEE Main', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque' },
-    { exam: 'JEE Main', subject: 'Mathematics', chapter: 'Calculus', topic: 'Integration' },
-    { exam: 'NEET UG', subject: 'Physics', chapter: 'Optics', topic: 'Lenses' },
-    { exam: 'NEET UG', subject: 'Biology', chapter: 'Genetics', topic: 'Mendel' },
-  ]
-  const bankQuestions = [
-    { subject: 'CS501', chapter: 'Trees', topic: 'AVL' },
-    { subject: 'CS502', chapter: 'Normalisation', topic: '3NF' },
-  ]
 
-  it('validates URL-prefilled values against the mode and exam context', () => {
-    const jee = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'JEE', cfg, bankQuestions, compQuestions })
+  const COURSE_DSA = 'CS501 — Data Structures & Algorithms'
+  const COURSE_DBMS = 'CS502 — Database Management Systems'
+
+  it('derives real course options and never injects demo courses', () => {
+    const university = buildPaperGeneratorCascade({ mode: 'University', exam: 'JEE', cfg })
+    const options = university.deriveOptions('course', { course: '' }, 'display')
+    expect(options).toEqual([COURSE_DSA, COURSE_DBMS])
+    expect(options).not.toContain('CS501 — DSA')
+    expect(options).not.toContain('CS503 — OS')
+    expect(options).not.toContain('CS505 — ML')
+  })
+
+  it('keeps a valid real chain and clears children when the course changes', () => {
+    const university = buildPaperGeneratorCascade({ mode: 'University', exam: 'JEE', cfg })
     const valid = sanitizeCascadeValues(
-      { course: 'CS501 — DSA', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque' },
+      { course: COURSE_DSA, subject: 'Data Structures & Algorithms', chapter: 'Trees', topic: 'AVL' },
+      university,
+    )
+    expect(valid).toMatchObject({ course: COURSE_DSA, subject: 'Data Structures & Algorithms', chapter: 'Trees', topic: 'AVL' })
+
+    const switched = sanitizeCascadeValues(
+      { course: COURSE_DBMS, subject: 'Data Structures & Algorithms', chapter: 'Trees', topic: 'AVL' },
+      university,
+    )
+    expect(switched).toMatchObject({ subject: PAPER_GENERATOR_EMPTY.subject, chapter: PAPER_GENERATOR_EMPTY.chapter, topic: PAPER_GENERATOR_EMPTY.topic })
+  })
+
+  it('never shows a chapter/topic that does not belong to the selected subject', () => {
+    const university = buildPaperGeneratorCascade({ mode: 'University', exam: 'JEE', cfg })
+    const crossed = sanitizeCascadeValues(
+      { course: COURSE_DSA, subject: 'Data Structures & Algorithms', chapter: 'Normalization', topic: '3NF' },
+      university,
+    )
+    expect(crossed.chapter).toBe(PAPER_GENERATOR_EMPTY.chapter)
+    expect(crossed.topic).toBe(PAPER_GENERATOR_EMPTY.topic)
+
+    const valid = sanitizeCascadeValues(
+      { course: COURSE_DSA, subject: 'Data Structures & Algorithms', chapter: 'Graphs', topic: 'Dijkstra' },
+      university,
+    )
+    expect(valid).toMatchObject({ chapter: 'Graphs', topic: 'Dijkstra' })
+  })
+
+  it('keeps empty API responses empty (no fabricated options)', () => {
+    const empty = buildPaperGeneratorCascade({ mode: 'University', exam: 'JEE', cfg: { courseCatalog: [], subjectCatalog: [] } })
+    expect(empty.deriveOptions('course', { course: '' }, 'display')).toEqual([])
+    expect(empty.deriveOptions('subject', { course: '' }, 'display')).toEqual([])
+    expect(empty.deriveOptions('chapter', { subject: '' }, 'display')).toEqual([])
+    expect(empty.deriveOptions('topic', { chapter: '' }, 'display')).toEqual([])
+  })
+
+  it('validates competitive URL values against the real competitive catalog', () => {
+    const jee = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'JEE', cfg })
+    const valid = sanitizeCascadeValues(
+      { course: '', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque' },
       jee,
     )
     expect(valid).toMatchObject({ subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque' })
 
-    // NEET URL value under JEE context — Biology is not a JEE subject
-    const jeeNeetLeak = sanitizeCascadeValues({ course: '', subject: 'Biology', chapter: '', topic: '' }, jee)
+    const jeeNeetLeak = sanitizeCascadeValues({ course: '', subject: 'Biology', chapter: 'Genetics', topic: 'Mendel' }, jee)
     expect(jeeNeetLeak.subject).toBe(PAPER_GENERATOR_EMPTY.subject)
 
-    const neet = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'NEET', cfg, bankQuestions, compQuestions })
-    const neetKept = sanitizeCascadeValues({ course: '', subject: 'Physics', chapter: 'Optics', topic: 'Lenses' }, neet)
-    expect(neetKept).toMatchObject({ subject: 'Physics', chapter: 'Optics', topic: 'Lenses' })
+    const neet = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'NEET', cfg })
+    const neetKept = sanitizeCascadeValues({ course: '', subject: 'Biology', chapter: 'Genetics', topic: 'Mendel' }, neet)
+    expect(neetKept).toMatchObject({ subject: 'Biology', chapter: 'Genetics', topic: 'Mendel' })
   })
 
-  it('switching JEE → NEET keeps a valid subject and clears an invalid one', () => {
-    const jee = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'JEE', cfg, bankQuestions, compQuestions })
-    const jeeState = sanitizeCascadeValues({ course: '', subject: 'Mathematics', chapter: 'Calculus', topic: 'Integration' }, jee)
-    expect(jeeState.subject).toBe('Mathematics')
-    // same values, new exam context (deriveOptions closure changed)
-    const neet = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'NEET', cfg, bankQuestions, compQuestions })
+  it('clears an invalid item when switching JEE → NEET while keeping a shared valid subject', () => {
+    const jee = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'JEE', cfg })
+    const jeeState = sanitizeCascadeValues({ course: '', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque' }, jee)
+    const neet = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'NEET', cfg })
     const afterSwitch = sanitizeCascadeValues(jeeState, neet)
     expect(afterSwitch).toMatchObject({ subject: PAPER_GENERATOR_EMPTY.subject, chapter: PAPER_GENERATOR_EMPTY.chapter, topic: PAPER_GENERATOR_EMPTY.topic })
-  })
-
-  it('keeps course values while the config is still loading (async protection)', () => {
-    const loading = buildPaperGeneratorCascade({ mode: 'University', exam: 'JEE', cfg: null, bankQuestions: [], compQuestions: [] })
-    const next = sanitizeCascadeValues({ course: 'CS501 — DSA', subject: 'CS501', chapter: 'Trees', topic: 'AVL' }, loading)
-    expect(next).toMatchObject({ course: 'CS501 — DSA', subject: 'CS501', chapter: 'Trees', topic: 'AVL' })
   })
 })
 

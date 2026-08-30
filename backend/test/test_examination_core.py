@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from app.models.assessment import Paper, PaperQuestion
+from app.models.assessment import Paper, PaperQuestion, Question
+from app.models.catalog import Chapter, Course, Subject, Topic
 from app.models.exams import ExamAttempt
 
 from test.conftest import auth_header
@@ -51,6 +52,89 @@ def test_question_bank_sql_filters_isolate_families(client, world):
 def test_student_cannot_access_faculty_bank(client, world):
     res = client.get("/v1/faculty/question-bank", headers=auth_header(world["student"]))
     assert res.status_code == 403
+
+
+def test_paper_generator_config_returns_real_catalog(client, world, db):
+    faculty = world["faculty"]
+    inst = world["inst_a"]
+
+    subject = Subject(id="subj_catalog_test", institution_id=inst.id, code="CAT101", name="Catalog Subject", exam_mode="university")
+    course = Course(id="course_catalog_test", institution_id=inst.id, code="CAT101", name="Catalog Course", subject_id=subject.id)
+    chapter = Chapter(id="ch_catalog_test", subject_id=subject.id, course_id=course.id, name="Catalog Chapter", sort_order=1)
+    topic = Topic(id="topic_catalog_test", chapter_id=chapter.id, name="Catalog Topic", sort_order=1)
+    db.add_all([subject, course, chapter, topic])
+    db.commit()
+    try:
+        payload = client.get("/v1/faculty/paper-generator", headers=auth_header(faculty)).json()
+        config = payload["config"]
+        course_row = next((row for row in config["courseCatalog"] if row["code"] == "CAT101"), None)
+        assert course_row == {
+            "id": course.id,
+            "code": "CAT101",
+            "name": "Catalog Course",
+            "subjectId": subject.id,
+            "subjectCode": "CAT101",
+            "subjectName": "Catalog Subject",
+        }
+        assert "CAT101 — Catalog Course" in config["courses"]
+        subject_row = next((row for row in config["subjectCatalog"] if row["code"] == "CAT101"), None)
+        assert subject_row["chapters"] == [{"id": chapter.id, "name": "Catalog Chapter", "courseId": course.id, "topics": ["Catalog Topic"]}]
+        assert config["chapters"]["Catalog Subject"] == ["Catalog Chapter"]
+        assert config["topics"]["Catalog Chapter"] == ["Catalog Topic"]
+    finally:
+        db.delete(topic)
+        db.delete(chapter)
+        db.delete(course)
+        db.delete(subject)
+        db.commit()
+
+
+def test_question_bank_course_filter_uses_real_catalog_hierarchy(client, world, db):
+    faculty = world["faculty"]
+    inst = world["inst_a"]
+
+    subject = Subject(id="subj_course_test_a", institution_id=inst.id, code="CS_TEST", name="Test CS", exam_mode="university")
+    course = Course(id="course_test_a", institution_id=inst.id, code="CS900", name="Test Course", subject_id=subject.id)
+    chapter = Chapter(id="ch_course_test_a", subject_id=subject.id, course_id=course.id, name="Test Chapter", sort_order=1)
+    question = Question(
+        id="q_course_test_1",
+        institution_id=inst.id,
+        exam_mode="university",
+        exam_family=None,
+        subject_id=subject.id,
+        chapter_id=chapter.id,
+        stem="Course-filtered question?",
+        options='["A","B","C","D"]',
+        correct_answer="0",
+        marks=1,
+        negative_marks=0,
+        difficulty="easy",
+        q_type="mcq",
+        concept="Test",
+        status="approved",
+    )
+    db.add_all([subject, course, chapter, question])
+    db.commit()
+
+    matched = client.get(
+        "/v1/faculty/question-bank",
+        params={"domain": "University", "course": "CS900"},
+        headers=auth_header(faculty),
+    ).json()
+    assert "q_course_test_1" in {q["id"] for q in matched["questions"]}
+
+    missing = client.get(
+        "/v1/faculty/question-bank",
+        params={"domain": "University", "course": "CS-NOT-A-REAL-CODE"},
+        headers=auth_header(faculty),
+    ).json()
+    assert "q_course_test_1" not in {q["id"] for q in missing["questions"]}
+
+    db.delete(question)
+    db.delete(chapter)
+    db.delete(course)
+    db.delete(subject)
+    db.commit()
 
 
 def test_paper_persists_selected_ids_on_sql_not_kv(client, world, db):
