@@ -21,7 +21,7 @@ function Roles() {
         description="Role-based access across the institution — least privilege by default, escalation when needed."
         breadcrumbs={[{ label: 'Admin' }, { label: 'Roles' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — custom roles are not created from this screen yet.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'Custom roles cannot be created from this screen yet.')}>
             <ShieldCheck className="h-4 w-4" /> Create role
           </Button>
         }

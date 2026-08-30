@@ -363,11 +363,11 @@ export function generateStudioContent({ type = 'notes', config, derived, dataset
       }
     case 'mindmap':
       return {
-        id: `mm_${Date.now()}`, type, title: title('Mind Map (Mock)'), count: 1, difficulty,
+        id: `mm_${Date.now()}`, type, title: title('Mind Map (Prototype)'), count: 1, difficulty,
         nodes: [
           { center: topic, branches: ['Concepts', 'Methods', 'Examples', 'Pitfalls', 'Exam links'] },
         ],
-        meta: 'Mock mind map — visual version ships with the export',
+        meta: 'Prototype mind map — visual version ships with the export',
       }
     case 'case':
     case 'scenario':

@@ -40,8 +40,8 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
         <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-700">
           <Database className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">Paper Library unavailable</p>
-          <p className="mt-1 text-xs text-slate-400">Connect the EduX backend to view generated papers.</p>
-          <p className="mt-2 text-[11px] text-slate-400">GET /faculty/paper-generator → {String(error?.message ?? 'Network error')}</p>
+          <p className="mt-1 text-xs text-slate-400">The paper library is temporarily unavailable. Please try again later.</p>
+          <p className="mt-2 text-[11px] text-slate-400">{String(error?.message ?? 'Network error')}</p>
           <Button size="sm" variant="outline" className="mt-4" onClick={() => refetch()}>Retry</Button>
         </div>
       )
@@ -110,9 +110,9 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
   return (
     <div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard index={0} label="Papers in library" value={String(papers.length)} sub="backend only" icon="BookOpen" gradient="from-indigo-500 to-blue-500" />
+        <StatCard index={0} label="Papers in library" value={String(papers.length)} sub="saved papers" icon="BookOpen" gradient="from-indigo-500 to-blue-500" />
         <StatCard index={1} label="Ready to publish" value={String(readyCount)} sub="status · Ready" icon="CheckCircle2" gradient="from-emerald-500 to-teal-500" />
-        <StatCard index={2} label="Total questions" value={String(totalQuestions)} sub="ID-based count" icon="ListChecks" gradient="from-amber-500 to-orange-500" />
+        <StatCard index={2} label="Total questions" value={String(totalQuestions)} sub="across all papers" icon="ListChecks" gradient="from-amber-500 to-orange-500" />
         <StatCard index={3} label="Total marks" value={String(papers.reduce((a, p) => a + (p.totalMarks ?? 0), 0))} sub="library capacity" icon="Target" gradient="from-violet-500 to-purple-500" />
       </div>
 
@@ -129,7 +129,7 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
             </span>
           </button>
         ))}
-        <span className="ml-auto text-xs font-semibold text-slate-400">{filtered.length} papers · backend only, no sample fallback</span>
+        <span className="ml-auto text-xs font-semibold text-slate-400">{filtered.length} papers</span>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -145,7 +145,7 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
           </button>
         ))}
         <div className="relative ml-auto">
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers… (backend)" className="h-9 w-48 pl-8 text-xs sm:w-64" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search papers…" className="h-9 w-48 pl-8 text-xs sm:w-64" />
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
         </div>
       </div>
@@ -153,7 +153,7 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {modeFilter === 'Competitive' && (
           <>
-            <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">ExamFamily</span>
+            <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Exam Family</span>
             {['All', 'JEE', 'NEET'].map((e) => (
               <button
                 key={e}
@@ -189,7 +189,7 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
         <div className="mt-4 rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-700">
           <BookOpen className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No question papers yet.</p>
-          <p className="mt-1 text-xs text-slate-400">Backend returned 0 papers — no sample fallback. Create via Paper Generator.</p>
+          <p className="mt-1 text-xs text-slate-400">Create or generate questions to build your paper library.</p>
           {onGoToGenerate && (
             <Button size="sm" className="mt-4" onClick={onGoToGenerate}>
               Create your first paper

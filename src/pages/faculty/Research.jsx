@@ -120,7 +120,7 @@ function Research() {
                   refetch()
                 }
               } catch (e) {
-                toast.error('Could not save', e?.response?.data?.detail ?? e?.message ?? 'Backend create failed.')
+                toast.error('Could not save', e?.response?.data?.detail ?? e?.message ?? 'Please try again.')
               }
             }}>{creating ? 'Saving…' : 'Save'}</Button>
           </DialogFooter>

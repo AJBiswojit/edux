@@ -22,10 +22,10 @@ function Scholarships() {
       <PageHeader
         eyebrow="Management · Scholarships"
         title="Scholarships & financial aid"
-        description={gap ? 'BACKEND GAP — scholarships are not operational yet.' : `${items.length} active schemes · ₹${(totalBudget / 10000000).toFixed(1)} Cr annual budget`}
+        description={gap ? 'Scholarships are not available yet.' : `${items.length} active schemes · ₹${(totalBudget / 10000000).toFixed(1)} Cr annual budget`}
         breadcrumbs={[{ label: 'Admin' }, { label: 'Scholarships' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — scholarship schemes are not persisted yet.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'Scholarship schemes cannot be saved yet.')}>
             <Plus className="h-4 w-4" /> New scheme
           </Button>
         }
@@ -84,7 +84,7 @@ function Scholarships() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'BACKEND GAP — scholarship schemes are not persisted yet.') }}>
+            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'Scholarship schemes cannot be saved yet.') }}>
               <Award className="h-4 w-4" /> Create scheme
             </Button>
           </DialogFooter>

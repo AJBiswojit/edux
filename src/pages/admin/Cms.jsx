@@ -25,7 +25,7 @@ function Cms() {
         description="Website pages, portal banners and institutional announcements — one publishing console."
         breadcrumbs={[{ label: 'Admin' }, { label: 'CMS' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — CMS pages are not persisted yet.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'CMS pages cannot be saved yet.')}>
             <Plus className="h-4 w-4" /> New page
           </Button>
         }
@@ -120,7 +120,7 @@ function Cms() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Save draft</Button>
-            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'BACKEND GAP — CMS pages are not persisted yet.') }}>
+            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'CMS pages cannot be saved yet.') }}>
               <CheckCircle2 className="h-4 w-4" /> Publish
             </Button>
           </DialogFooter>

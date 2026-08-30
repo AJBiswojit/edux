@@ -54,7 +54,7 @@ function Assignments() {
         setForm({ title: '', courseId: '', dueAt: '', maxMarks: '100' })
       }
     } catch (e) {
-      toast.error('Could not create assignment', e?.response?.data?.detail ?? e?.message ?? 'Backend create failed.')
+      toast.error('Could not create assignment', e?.response?.data?.detail ?? e?.message ?? 'Please try again.')
     }
   }
 
@@ -76,7 +76,7 @@ function Assignments() {
         setGradeForm({ studentId: '', marks: '', feedback: '' })
       }
     } catch (e) {
-      toast.error('Could not grade', e?.response?.data?.detail ?? e?.message ?? 'Backend grade failed.')
+      toast.error('Could not grade', e?.response?.data?.detail ?? e?.message ?? 'Please try again.')
     }
   }
 

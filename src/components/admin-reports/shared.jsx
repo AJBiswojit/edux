@@ -211,7 +211,7 @@ export function PreviewDoc({ doc, footerNote }) {
 
       {/* footer */}
       <div className="mt-8 border-t border-slate-200 pt-4 text-[10.5px] leading-relaxed text-slate-400 dark:border-slate-800">
-        <p>Generated deterministically from the MediXO EduX Institution Intelligence Foundation — frontend prototype, no backend involved.</p>
+        <p>Generated from the MediXO EduX Institution Intelligence Foundation.</p>
         <p className="mt-1">{footerNote}</p>
       </div>
     </div>

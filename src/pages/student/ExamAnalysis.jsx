@@ -700,13 +700,13 @@ function ExamAnalysis() {
         actions={
           showAnalysis && analysisData ? (
             <>
-              <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'PDF export is not available yet — no report-file endpoint.')}>
+              <Button variant="outline" size="sm" onClick={() => toast.info('Not available yet', 'PDF export is not available yet.')}>
                 <Download className="h-4 w-4" /> PDF
               </Button>
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Printer className="h-4 w-4" /> Print
               </Button>
-              <Button variant="outline" size="sm" onClick={() => toast.info('BACKEND GAP', 'Shareable report links are not available yet.')}>
+              <Button variant="outline" size="sm" onClick={() => toast.info('Not available yet', 'Shareable report links are not available yet.')}>
                 <Share2 className="h-4 w-4" /> Share
               </Button>
               <Button asChild size="sm">

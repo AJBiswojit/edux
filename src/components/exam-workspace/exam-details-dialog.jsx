@@ -121,7 +121,7 @@ function ExamDetailsDialog({ exam, open, onOpenChange, admit, onDownload }) {
             </div>
             <Button size="sm" onClick={() => {
               if (onDownload) onDownload()
-              else toast.info('BACKEND GAP', 'Admit-card PDF download is not available yet.')
+              else toast.info('Not available yet', 'Admit-card PDF download is not available yet.')
             }}>
               <Ticket className="h-4 w-4" /> Download admit card
             </Button>

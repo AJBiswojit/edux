@@ -72,7 +72,7 @@ function ExamAgentInstructions({ exam, mode, onBack, onStart }) {
                 It tracks only your exam interactions — time per question, answers, changes, revisits and skips — to
                 compute question intelligence, subject &amp; chapter analysis and recommendations. This is NOT a
                 proctoring system: no webcam, facial recognition, microphone monitoring, emotion detection or device
-                surveillance is used. Analysis runs locally (frontend prototype).
+                surveillance is used. Analysis runs locally (prototype).
               </p>
             </div>
           </div>

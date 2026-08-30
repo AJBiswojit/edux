@@ -15,7 +15,7 @@ import { Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, D
 const FAQS = [
   { q: 'How do I interpret the institution health score?', a: 'The score is a weighted blend of six pillars — academic health, student success, attendance, assessment, faculty and outcomes. It updates from the intelligence foundation whenever you open the Command Center.' },
   { q: 'Where can I find department-level analytics?', a: 'Open Institution Intelligence → Department Intelligence, or generate a Department Comparison Report from Reports → Department Comparison.' },
-  { q: 'How are the AI insights generated?', a: 'The Executive AI reads the current intelligence snapshot and generates deterministic responses — it never invents data outside the snapshot. It is a frontend prototype.' },
+  { q: 'How are the AI insights generated?', a: 'The Executive AI reads your current institution data and generates its answers from it — it never invents data outside that.' },
   { q: 'What do the intervention levels mean?', a: 'Critical = act immediately, Needs Attention = act this week, Improving = sustain momentum. Every intervention includes evidence and a recommended action.' },
 ]
 
@@ -75,7 +75,7 @@ function Support() {
               </div>
               <h3 className="mt-4 text-[15px] font-bold text-slate-900 dark:text-white">{c.title}</h3>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-500 dark:text-slate-400">{c.desc}</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={() => toast.info(c.title, 'Frontend prototype — this channel would open here.')}>{c.cta}</Button>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => toast.info(c.title, 'Prototype — this channel would open here.')}>{c.cta}</Button>
             </Card>
           </motion.div>
         ))}

@@ -226,7 +226,7 @@ export function processMicroSource(sourceInput, base = null) {
       context: sourceContextLabel(source),
     },
     processingSteps: ['Reading source', 'Identifying concepts', 'Finding question opportunities', 'Preparing assessment'],
-    note: 'Prototype AI Understanding — deterministic mock processing derived from source metadata; no real LLM call.',
+    note: 'Prototype AI Understanding — deterministic processing derived from source metadata; no real LLM call.',
   }
 }
 

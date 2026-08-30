@@ -17,7 +17,7 @@ export function PastResultsTable({ items }) {
   if (!items?.length) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
-        <p className="py-2 text-sm text-slate-400">No completed exams yet — backend returned 0. No seeded fallback.</p>
+        <p className="py-2 text-sm text-slate-400">No completed exams yet.</p>
       </div>
     )
   }
@@ -62,11 +62,11 @@ function Exams() {
     const isBackendDown = !error?.response || error?.response?.status >= 500
     return (
       <div>
-        <PageHeader eyebrow="Academics · Exams" title="Examinations · Backend-Ready" description="Backend only, no seeded fallback." breadcrumbs={[{ label: 'Student' }, { label: 'Exams' }]} />
+        <PageHeader eyebrow="Academics · Exams" title="Examinations" description="Your upcoming and past examinations." breadcrumbs={[{ label: 'Student' }, { label: 'Exams' }]} />
         <div className="rounded-3xl border border-dashed border-slate-200 p-12 text-center dark:border-slate-700">
           <Database className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">{isBackendDown ? 'No examinations available' : 'Could not load examinations'}</p>
-          <p className="mt-1 text-xs text-slate-400">Connect the EduX backend — GET /student/exams → backend DB.</p>
+          <p className="mt-1 text-xs text-slate-400">Examinations are temporarily unavailable. Please try again later.</p>
           <Button size="sm" variant="outline" className="mt-4" onClick={() => refetch()}>Retry</Button>
         </div>
       </div>
@@ -78,29 +78,29 @@ function Exams() {
   const past = items.filter((e) => e.status === 'Completed')
 
   const handleAddToPlanner = () => {
-    toast.info('BACKEND GAP', 'Planner writes are not available yet — no planner mutation exists.')
+    toast.info('Not available yet', 'Adding this exam to your planner is not available yet.')
   }
 
   return (
     <div>
       <PageHeader
         eyebrow="Academics · Exams"
-        title="Examinations · Backend-Ready"
-        description="Upcoming and past examinations from backend — no seeded fallback, no answer keys in list."
+        title="Examinations"
+        description="Your upcoming and past examinations — answer keys stay hidden until the exam is over."
         breadcrumbs={[{ label: 'Student' }, { label: 'Exams' }]}
-        actions={<Badge variant="gradient" className="px-3 py-1"><CalendarDays className="h-3 w-3" /> Backend only · {upcoming.length} upcoming</Badge>}
+        actions={<Badge variant="gradient" className="px-3 py-1"><CalendarDays className="h-3 w-3" /> {upcoming.length} upcoming</Badge>}
       />
 
       <div className="mb-4 flex items-center gap-2">
         <ClipboardList className="h-4 w-4 text-indigo-500" />
-        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Upcoming ({upcoming.length}) · Backend</h2>
+        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Upcoming ({upcoming.length})</h2>
       </div>
 
       {upcoming.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
           <Database className="mx-auto h-6 w-6 text-slate-300" />
           <p className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-200">No upcoming examinations</p>
-          <p className="mt-1 text-xs text-slate-400">Backend returned 0 published exams. No seeded fallback.</p>
+          <p className="mt-1 text-xs text-slate-400">No published examinations yet.</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -114,11 +114,11 @@ function Exams() {
 
       <div className="mb-4 mt-10 flex items-center gap-2">
         <FileText className="h-4 w-4 text-emerald-500" />
-        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Past results · Backend</h2>
+        <h2 className="text-[15px] font-bold text-slate-900 dark:text-white">Past results</h2>
       </div>
       <PastResultsTable items={past} />
 
-      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.info('BACKEND GAP', 'Admit-card PDF download is not available yet.')} />
+      <ExamDetailsDialog exam={selected} open={!!selected} onOpenChange={(v) => !v && setSelected(null)} admit={admitData} onDownload={() => toast.info('Not available yet', 'Admit-card PDF download is not available yet.')} />
     </div>
   )
 }

@@ -23,7 +23,7 @@ function ApiConfig() {
         description="Endpoints, webhooks and API keys — the integration surface for ERP, LMS and partner systems."
         breadcrumbs={[{ label: 'Admin' }, { label: 'API Configuration' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — API keys are not operational yet.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'API keys are not available yet.')}>
             <KeyRound className="h-4 w-4" /> Generate API key
           </Button>
         }
@@ -146,7 +146,7 @@ function ApiConfig() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'BACKEND GAP — API keys are not operational yet.') }}>
+            <Button onClick={() => { setOpen(false); toast.info('Unavailable', 'API keys are not available yet.') }}>
               <RefreshCw className="h-4 w-4" /> Generate
             </Button>
           </DialogFooter>

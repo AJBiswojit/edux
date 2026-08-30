@@ -30,7 +30,7 @@ function ExamHistoryTable({ attempts, studentId }) {
             <TableRow key={a.id}>
               <TableCell>
                 <p className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">{a.examName ?? a.examId}</p>
-                <p className="text-[10.5px] font-medium text-slate-400">{a.shortTitle}{a.mock ? ' · sample' : ''}</p>
+                <p className="text-[10.5px] font-medium text-slate-400">{a.shortTitle}{a.mock ? ' · mock test' : ''}</p>
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">

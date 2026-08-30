@@ -32,7 +32,7 @@ function Revenue() {
         description="Institution finances — collections, outstanding invoices and revenue streams."
         breadcrumbs={[{ label: 'Admin' }, { label: 'Revenue' }]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Unavailable', 'BACKEND GAP — invoices are not operational yet.')}>
+          <Button size="sm" onClick={() => toast.info('Unavailable', 'Invoices are not available yet.')}>
             <Receipt className="h-4 w-4" /> Export ledger
           </Button>
         }

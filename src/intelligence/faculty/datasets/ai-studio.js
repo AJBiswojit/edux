@@ -36,7 +36,7 @@ export const contentStudioTypes = [
   { id: 'revision', name: 'Revision Notes', icon: 'RefreshCw', description: 'Condensed unit summaries for revision', defaultCount: 1 },
   { id: 'formula', name: 'Formula Sheet', icon: 'Sigma', description: 'Key formulas and definitions at a glance', defaultCount: 1 },
   { id: 'quick', name: 'Quick Revision', icon: 'Zap', description: 'Rapid-fire facts for last-minute prep', defaultCount: 15 },
-  { id: 'mindmap', name: 'Mind Map (Mock)', icon: 'Network', description: 'Visual concept map of the unit', defaultCount: 1 },
+  { id: 'mindmap', name: 'Mind Map (Prototype)', icon: 'Network', description: 'Visual concept map of the unit', defaultCount: 1 },
 ]
 
 /* ---------- Evaluation workflows ---------- */
@@ -48,7 +48,7 @@ export const evaluationWorkflows = [
     mistakes: ['Wrong complexity analysis', 'Missing edge cases', 'Off-by-one errors', 'Unclear variable naming'],
   },
   {
-    id: 'subjective', name: 'Subjective Answer Review (Mock)', icon: 'FileText',
+    id: 'subjective', name: 'Subjective Answer Review (Prototype)', icon: 'FileText',
     description: 'AI-assisted marking with model-answer comparison',
     rubric: ['Conceptual accuracy (40%)', 'Completeness of steps (25%)', 'Clarity & structure (20%)', 'Conclusion quality (15%)'],
     mistakes: ['Key steps omitted', 'Unsupported claims', 'Weak conclusion'],

@@ -31,11 +31,11 @@ function Forum() {
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
   const like = () => {
-    toast.error('Forum unavailable', 'BACKEND GAP — likes are not persisted yet.')
+    toast.error('Forum unavailable', 'Likes cannot be saved yet.')
   }
 
   const postTopic = () => {
-    toast.error('Forum unavailable', 'BACKEND GAP — discussion posts are not persisted yet.')
+    toast.error('Forum unavailable', 'Discussion posts cannot be saved yet.')
   }
 
   return (
@@ -69,7 +69,7 @@ function Forum() {
       </div>
 
       {filtered.length === 0 && (
-        <EmptyState title="No discussions yet" description="The campus forum is empty. Posting is not available until the forum backend is wired." />
+        <EmptyState title="No discussions yet" description="The campus forum is empty. Posting is not available yet." />
       )}
       <div className="space-y-3">
         {filtered.map((t, i) => (
@@ -143,7 +143,7 @@ function Forum() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenTopic(null)}>Close</Button>
-            <Button onClick={() => { toast.error('Forum unavailable', 'BACKEND GAP — replies are not persisted yet.') }}>
+            <Button onClick={() => { toast.error('Forum unavailable', 'Replies cannot be saved yet.') }}>
               <ArrowUpRight className="h-4 w-4" /> Post reply
             </Button>
           </DialogFooter>

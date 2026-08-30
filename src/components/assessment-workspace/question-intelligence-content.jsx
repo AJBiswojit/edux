@@ -207,14 +207,14 @@ function QuestionIntelligenceContent({ data, intelData }) {
           <div className="rounded-3xl border border-slate-200/70 bg-white p-4 shadow-card dark:border-slate-800 dark:bg-slate-900">
             <p className="text-[11px] font-bold uppercase tracking-widest text-teal-600 dark:text-teal-300">PYQ coverage</p>
             <p className="mt-1 font-display text-2xl font-bold text-slate-900 dark:text-white">{pyqCount}<span className="text-sm text-slate-400"> PYQ records</span></p>
-            <p className="mt-1 text-[11px] text-slate-400">Counted from question-bank fields only — year/session are omitted when the API does not send them.</p>
+            <p className="mt-1 text-[11px] text-slate-400">Counted from question bank fields only — year and session are shown when recorded.</p>
           </div>
         </div>
 
         <CompetitiveQuestionBrowser
           questions={competitiveRecords}
           title="Competitive question browser"
-          subtitle="JEE · NEET from GET /faculty/question-bank — answer keys are omitted by this endpoint"
+          subtitle="JEE and NEET previous-year questions — answer keys are omitted"
           badge={<Badge variant="gradient" className="px-3 py-1"><Sparkles className="h-3 w-3" /> Question bank</Badge>}
           defaultExam={family === 'All' ? null : family === 'JEE' ? 'JEE Main' : 'NEET UG'}
           defaultSubject={subject !== 'All' ? subject : null}

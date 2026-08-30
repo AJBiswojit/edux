@@ -167,7 +167,7 @@ function ChatPanel({ derived, onSaveInsight, onNavigate }) {
             </span>
             <p className="mt-3 text-[15px] font-bold text-slate-800 dark:text-slate-100">Ask about your institution</p>
             <p className="mt-1 max-w-sm text-[12px] leading-relaxed text-slate-400">
-              Institutional health, student risk, departments, faculty, assessments, outcomes and executive reporting — answered from the live intelligence snapshot.
+              Institutional health, student risk, departments, faculty, assessments, outcomes and executive reporting — answered from live institution data.
             </p>
           </div>
         )}

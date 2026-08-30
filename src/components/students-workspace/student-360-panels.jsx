@@ -393,7 +393,7 @@ function TrendsPanel({ s360, domain }) {
           ]} formatter={(v) => `${v}%`} />
         ) : <p className="py-8 text-center text-xs text-slate-400">Need at least 2 {domain} attempts to plot a trend.</p>}
       </ChartCard>
-      <ChartCard title="Persistent vs resolved issues" subtitle="Classified from the Phase 2 chapter trend logic — each with evidence">
+      <ChartCard title="Persistent vs resolved issues" subtitle="Classified from chapter trend analysis — each with evidence">
         {issues.length ? (
           <div className="grid gap-2.5 md:grid-cols-2">
             {issues.map((i) => (

@@ -122,7 +122,7 @@ function ExamAgentHome({ exams, attempts, onStart, onOpenAttempt }) {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Recent attempts</h3>
-              <p className="text-xs font-medium text-slate-400">Stored locally on this browser (prototype persistence).</p>
+              <p className="text-xs font-medium text-slate-400">Stored locally on this browser.</p>
             </div>
             <Eye className="h-4 w-4 text-slate-300 dark:text-slate-600" />
           </div>
@@ -163,9 +163,9 @@ function ExamAgentHome({ exams, attempts, onStart, onOpenAttempt }) {
 
       {/* Honesty note */}
       <p className="mt-8 rounded-2xl bg-slate-50 px-4 py-3 text-[11.5px] font-medium leading-relaxed text-slate-400 dark:bg-slate-800/60">
-        <span className="font-bold text-slate-500 dark:text-slate-300">Prototype note:</span> the AI Exam Agent is a frontend-only
-        simulation — it analyses your attempt locally and never sends data anywhere. Attempt history is stored in this
-        browser only, and no real backend, WebSocket or proctoring infrastructure is involved.
+        <span className="font-bold text-slate-500 dark:text-slate-300">Prototype note:</span> the AI Exam Agent
+        analyses your attempt locally and never sends data anywhere. Attempt history is stored in this
+        browser only, and no live proctoring is used.
       </p>
     </div>
   )

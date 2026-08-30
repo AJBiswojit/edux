@@ -154,7 +154,7 @@ function ProfileTab({ data }) {
           </div>
         </ChartCard>
 
-        <ChartCard title="Publications (sample data)" subtitle="Research output">
+        <ChartCard title="Publications" subtitle="Research output (prototype)">
           <div className="space-y-2.5">
             {(p.publications ?? []).map((pub) => (
               <div key={pub.id} className="rounded-2xl border border-slate-100 p-3 dark:border-slate-800">
