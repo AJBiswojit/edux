@@ -1,4 +1,7 @@
+import json
+from datetime import date
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -460,13 +463,34 @@ def ai_paper_detail(paper_id: str, db: DbDep, user: FacultyDep):
 
     questions = []
     for q in rows:
+        # JSON columns come back as decoded objects on PostgreSQL; on SQLite
+        # (tests/local) they can arrive as raw JSON strings.
         extra = q.extra or {}
-        options = []
-        for opt in q.options or []:
-            if isinstance(opt, dict):
-                options.append(opt.get("text") or opt.get("key") or "")
-            else:
-                options.append(str(opt))
+        if isinstance(extra, str):
+            try:
+                extra = json.loads(extra)
+            except (ValueError, TypeError):
+                extra = {}
+        raw_options = q.options or []
+        if isinstance(raw_options, str):
+            try:
+                raw_options = json.loads(raw_options)
+            except (ValueError, TypeError):
+                raw_options = []
+        # Options are preserved in their stored contract — structured records
+        # ({key, text, imageUrl}) from the AI question service or plain strings.
+        # The frontend normalises them for display (optionText adapter).
+        options = [
+            {
+                "key": (opt.get("key") if isinstance(opt, dict) else None),
+                "text": (opt.get("text") if isinstance(opt, dict) else None) or str(opt),
+                "imageUrl": (opt.get("imageUrl") if isinstance(opt, dict) else None),
+            }
+            if isinstance(opt, dict)
+            else str(opt)
+            for opt in raw_options
+        ]
+        stem_image = q.stem_image_url if q.has_image and q.stem_image_url else None
         questions.append({
             "id": q.id,
             "subject": paper.subject_name or extra.get("subject_name"),
@@ -475,6 +499,7 @@ def ai_paper_detail(paper_id: str, db: DbDep, user: FacultyDep):
             "difficulty": _difficulty_label(q.level),
             "type": "MCQ",
             "text": q.stem_text,
+            "imageUrl": stem_image,
             "options": options,
             "correctOption": q.correct_option,
             "solution": q.solution,
@@ -494,9 +519,15 @@ def ai_paper_detail(paper_id: str, db: DbDep, user: FacultyDep):
         "ok": True,
         "paper_id": paper.id,
         "title": paper.title,
-        "examFamily": paper.exam_family,
-        "subject": paper.subject_name,
+        "examFamily": _ai_exam_label(paper.exam_family),
+        "domain": "Competitive",
+        "mode": "Competitive",
+        "paperCode": paper.paper_code,
+        "totalMarks": paper.total_marks or sum(q["marks"] or 0 for q in questions),
+        "duration": paper.duration_minutes,
         "status": paper.status,
+        "created": paper.created_at.date().isoformat() if paper.created_at else None,
+        "subject": paper.subject_name,
         "requested": paper.question_count,
         "generated": len(questions),
         "difficulty": (paper.difficulty_mix or {}).get("difficulty", "mixed"),
@@ -555,7 +586,17 @@ def ai_active_generation(db: DbDep, user: FacultyDep):
 
 
 # Map the AI service's exam_family enum back to EduX-facing labels.
-_AI_EXAM_LABEL = {"JEE_MAIN": "JEE", "JEE_ADVANCED": "JEE", "NEET": "NEET"}
+# The AI pipeline stores several spellings ("JEE_MAIN", "JEE-Main",
+# "jee_advanced"); normalise every one to the canonical JEE/NEET labels.
+def _ai_exam_label(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    token = str(raw).strip().lower().replace("_", " ").replace("-", " ")
+    if token.startswith("jee"):
+        return "JEE"
+    if token.startswith("neet"):
+        return "NEET"
+    return raw.strip()
 
 
 @router.get("/faculty/paper-generator/ai-library")
@@ -582,9 +623,9 @@ def ai_paper_library(db: DbDep, user: FacultyDep):
 
     items = []
     for p in papers:
-        exam_label = _AI_EXAM_LABEL.get(p.exam_family or "", p.exam_family)
+        exam_label = _ai_exam_label(p.exam_family)
         q_count = counts.get(p.id, 0) or p.question_count or 0
-        created = p.created_at.date().isoformat() if p.created_at else _today()
+        created = p.created_at.date().isoformat() if p.created_at else date.today().isoformat()
         published = p.published_at.date().isoformat() if p.published_at else created
         items.append({
             "id": p.id,

@@ -75,7 +75,7 @@ const CATALOG = {
     { id: 's1', code: 'CS501', name: 'Data Structures & Algorithms', examMode: 'university', examFamily: null, chapters: [{ id: 'ch1', name: 'Trees', topics: ['AVL', 'Heaps'] }] },
     { id: 's2', code: 'PHY', name: 'Physics', examMode: 'competitive', examFamily: 'JEE', chapters: [{ id: 'ch2', name: 'Mechanics', topics: ['Kinematics'] }] },
   ],
-  competitiveSubjects: { JEE: ['Physics'], NEET: [] },
+  competitiveSubjects: { JEE: ['Physics', 'Mathematics', 'Chemistry'], NEET: ['Physics', 'Chemistry', 'Biology'] },
 }
 
 const UNI_QUESTIONS = [
@@ -313,10 +313,11 @@ describe('Generate Paper — Competitive domain', () => {
     expect(view.container.textContent).not.toContain('[object Object]')
     expect(view.container.textContent).not.toContain('imageUrl')
 
-    // Competitive subject options come from the real catalog.
+    // Competitive subject options come from the real catalog — the full
+    // JEE subject list, not just the first/only subject row.
     const subjectTrigger = triggerOf(view.container, 'Subject')
     await openSelect(subjectTrigger)
-    expect(optionsOf(menuOf(view.container, 'Subject')).map((o) => o.textContent.trim())).toEqual(['All subjects', 'Physics'])
+    expect(optionsOf(menuOf(view.container, 'Subject')).map((o) => o.textContent.trim())).toEqual(['All subjects', 'Physics', 'Mathematics', 'Chemistry'])
   })
 })
 

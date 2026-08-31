@@ -973,12 +973,40 @@ def _paper_generator_catalog(db: Session, institution_id: str | None) -> dict:
         for chapter in subject["chapters"]:
             topics_map[chapter["name"]] = chapter["topics"]
 
+    def _competitive_family(raw: Any) -> str | None:
+        """Normalise a subject's exam_family label to the JEE/NEET buckets.
+
+        Accepts the values used across the schema and the AI pipeline
+        ("jee", "JEE_MAIN", "JEE Advanced", "neet-ug", ...). Returns None for
+        anything that is not a JEE/NEET family.
+        """
+        token = str(raw or "").strip().lower().replace("_", " ").replace("-", " ")
+        if not token:
+            return None
+        if token.startswith("jee"):
+            return "JEE"
+        if token.startswith("neet"):
+            return "NEET"
+        return None
+
     competitive_subjects = {"JEE": [], "NEET": []}
     for subject in subject_catalog:
         mode = (subject.get("examMode") or "").lower()
-        family = (subject.get("examFamily") or "").lower()
-        if mode == "competitive" and family in {"jee", "neet"}:
-            competitive_subjects["JEE" if family == "jee" else "NEET"].append(subject["name"])
+        if mode == "competitive":
+            bucket = _competitive_family(subject.get("examFamily"))
+            if bucket:
+                competitive_subjects[bucket].append(subject["name"])
+        # A subject whose exam_family marks it as JEE/NEET belongs to that
+        # bucket even if exam_mode was left blank/legacy (e.g. rows written by
+        # older seeds or directly in SQL).
+        if mode != "competitive":
+            bucket = _competitive_family(subject.get("examFamily"))
+            if bucket:
+                competitive_subjects[bucket].append(subject["name"])
+    for bucket in competitive_subjects.values():
+        # Deterministic, de-duplicated order.
+        deduped = sorted({name for name in bucket}, key=str.casefold)
+        bucket[:] = deduped
 
     return {
         "programs": programs,

@@ -134,7 +134,11 @@ describe('Paper Generator (assessment workspace) — course → subject → chap
       { id: 'PHY', code: 'PHY', name: 'Physics', examMode: 'competitive', examFamily: 'jee', chapters: [{ id: 'ch4', name: 'Rotational Motion', topics: ['Torque', 'Moment of Inertia'] }] },
       { id: 'BIO', code: 'BIO', name: 'Biology', examMode: 'competitive', examFamily: 'neet', chapters: [{ id: 'ch5', name: 'Genetics', topics: ['Mendel'] }] },
     ],
-    competitiveSubjects: { JEE: ['Physics'], NEET: ['Biology'] },
+    // The catalog carries the full real competitive subject lists
+    // (Mathematics/Physics/Chemistry for JEE; Physics/Chemistry/Biology for
+    // NEET) — the production bug was that only one subject per family
+    // reached the dropdown.
+    competitiveSubjects: { JEE: ['Mathematics', 'Physics', 'Chemistry'], NEET: ['Physics', 'Chemistry', 'Biology'] },
   }
 
   const COURSE_DSA = 'CS501 — Data Structures & Algorithms'
@@ -204,12 +208,37 @@ describe('Paper Generator (assessment workspace) — course → subject → chap
     expect(neetKept).toMatchObject({ subject: 'Biology', chapter: 'Genetics', topic: 'Mendel' })
   })
 
-  it('clears an invalid item when switching JEE → NEET while keeping a shared valid subject', () => {
+  it('clears a family-only subject when switching JEE → NEET and keeps a shared subject valid', () => {
+    // Mathematics is JEE-only: switching to NEET must reset it (and its
+    // chapter/topic descendants).
     const jee = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'JEE', cfg })
-    const jeeState = sanitizeCascadeValues({ course: '', subject: 'Physics', chapter: 'Rotational Motion', topic: 'Torque' }, jee)
+    const jeeState = sanitizeCascadeValues({ course: '', subject: 'Mathematics', chapter: 'Calculus', topic: 'Limits' }, jee)
+    expect(jeeState).toMatchObject({ subject: 'Mathematics' })
     const neet = buildPaperGeneratorCascade({ mode: 'Competitive', exam: 'NEET', cfg })
     const afterSwitch = sanitizeCascadeValues(jeeState, neet)
-    expect(afterSwitch).toMatchObject({ subject: PAPER_GENERATOR_EMPTY.subject, chapter: PAPER_GENERATOR_EMPTY.chapter, topic: PAPER_GENERATOR_EMPTY.topic })
+    expect(afterSwitch.subject).toBe(PAPER_GENERATOR_EMPTY.subject)
+    expect(afterSwitch.chapter).toBe(PAPER_GENERATOR_EMPTY.chapter)
+    expect(afterSwitch.topic).toBe(PAPER_GENERATOR_EMPTY.topic)
+
+    // Biology is NEET-only: switching back to JEE must reset it too.
+    const neetState = sanitizeCascadeValues({ course: '', subject: 'Biology', chapter: 'Genetics', topic: 'Mendel' }, neet)
+    const afterSwitchBack = sanitizeCascadeValues(neetState, jee)
+    expect(afterSwitchBack.subject).toBe(PAPER_GENERATOR_EMPTY.subject)
+
+    // Physics exists in both families; the tab itself resets subject on an
+    // exam-family click, but the engine correctly keeps a subject valid for
+    // both families (a stale JEE-only selection can never survive).
+    const sharedJee = sanitizeCascadeValues({ course: '', subject: 'Physics' }, jee)
+    const sharedAfter = sanitizeCascadeValues(sharedJee, neet)
+    expect(sharedAfter.subject).toBe('Physics')
+
+    // JEE must offer all three subjects; NEET its own three, deterministically.
+    const jeeSubjects = jee.deriveOptions('subject', { subject: '' }, 'sanitize')
+    const neetSubjects = neet.deriveOptions('subject', { subject: '' }, 'sanitize')
+    expect(jeeSubjects).toEqual(expect.arrayContaining(['Mathematics', 'Physics', 'Chemistry']))
+    expect(jeeSubjects).not.toContain('Biology')
+    expect(neetSubjects).toEqual(expect.arrayContaining(['Physics', 'Chemistry', 'Biology']))
+    expect(neetSubjects).not.toContain('Mathematics')
   })
 })
 

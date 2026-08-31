@@ -31,6 +31,32 @@ export const PAPER_GENERATOR_EMPTY = {
 const courseLabel = (course) => (course ? `${course.code} — ${course.name}` : '')
 
 /**
+ * Canonical Competitive syllabus subject sets (product configuration).
+ *
+ * JEE and NEET are national fixed-syllabus examinations: their subject set
+ * is defined by the exam itself, not by institution catalog data. The live
+ * backend catalog (config.competitiveSubjects, derived from real Subject
+ * rows) is authoritative when the institution manages its own competitive
+ * subjects; when that list is empty (the institution's subjects table
+ * carries only University courses), this canonical syllabus map provides
+ * the deterministic JEE/NEET subject set. No fake courses/chapters are
+ * invented — chapters still come exclusively from real subject rows.
+ */
+export const COMPETITIVE_SYLLABUS_SUBJECTS = {
+  JEE: ['Mathematics', 'Physics', 'Chemistry'],
+  NEET: ['Physics', 'Chemistry', 'Biology'],
+}
+
+export function competitiveSubjectsFor(exam, cfg) {
+  const family = String(exam ?? 'JEE').trim().toUpperCase() === 'NEET' ? 'NEET' : 'JEE'
+  const fromCatalog = Array.isArray(cfg?.competitiveSubjects?.[family])
+    ? cfg.competitiveSubjects[family].filter(Boolean)
+    : []
+  if (fromCatalog.length > 0) return fromCatalog
+  return COMPETITIVE_SYLLABUS_SUBJECTS[family] ?? []
+}
+
+/**
  * @param {Object} ctx
  * @param {'University'|'Competitive'} ctx.mode
  * @param {'JEE'|'NEET'} [ctx.exam]
@@ -47,7 +73,7 @@ export function buildPaperGeneratorCascade({ mode, exam = 'JEE', cfg = null }) {
   const subjectByName = new Map(subjectCatalog.map((subject) => [subject.name, subject]))
 
   const subjectOptionsFor = (values) => {
-    if (competitive) return cfg?.competitiveSubjects?.[exam] ?? []
+    if (competitive) return competitiveSubjectsFor(exam, cfg)
     const course = courseByLabel.get(values?.course)
     if (!course?.subjectCode) return []
     const subject = subjectCatalog.find(
