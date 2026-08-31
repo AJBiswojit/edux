@@ -12,14 +12,16 @@
  *  PATCH  /faculty/paper-generator/papers/:id/archive
  *  POST   /faculty/paper-generator/papers/:id/share
  *  POST   /faculty/paper-generator/generate-demo      -> deterministic bank generation
- *  POST   /faculty/paper-generator/generate-ai        -> trigger AI generation
- *  GET    /faculty/paper-generator/ai-status/:jobId   -> poll AI job progress
- *  GET    /faculty/paper-generator/ai-paper/:paperId  -> read back AI questions
- *  GET    /faculty/paper-generator/ai-active          -> resume latest in-progress job
  *  GET    /faculty/paper-generator/ai-library         -> AI paper library
  *
  * Domain isolation preserved via domain+examFamily, not subject inference.
  * `{ ok: false }` HTTP 200 is rejected by the axios interceptor.
+ *
+ * The AI job endpoints (generate-ai / ai-status / ai-paper / ai-active) have no
+ * runtime consumers: question generation runs through
+ * /faculty/question-bank/generate (faculty-question-generation.js) and finished
+ * AI papers are listed from ai-library in the Paper Library tab. Nothing may
+ * auto-load an AI paper into the Generate Paper workflow.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -32,32 +34,9 @@ export async function fetchPaperGenerator() {
   return normalizePaperGeneratorPayload(data)
 }
 
-// --- AI generation (external microservice, Option A) ---
-// EduX triggers the AI service, polls job status, then reads the questions back.
-
-/** Trigger AI generation. Returns { paper_id, job_id, status, estimated_minutes, ... }. */
-export async function generateAiPaper(config) {
-  const { data } = await api.post('/faculty/paper-generator/generate-ai', config)
-  return data
-}
-
-/** Poll an AI generation job's progress. */
-export async function fetchAiPaperStatus(jobId) {
-  const { data } = await api.get(`/faculty/paper-generator/ai-status/${jobId}`)
-  return data
-}
-
-/** Read back the finished AI paper + questions (Section 6 review contract). */
-export async function fetchAiPaper(paperId) {
-  const { data } = await api.get(`/faculty/paper-generator/ai-paper/${paperId}`)
-  return data
-}
-
-/** Resume support — latest in-progress/recent AI job for the current faculty. */
-export async function fetchAiActive() {
-  const { data } = await api.get('/faculty/paper-generator/ai-active')
-  return data
-}
+// --- AI paper library (external microservice, Option A) ---
+// The AI service writes generated papers/questions into the shared DB; EduX
+// reads the finished records back for the Paper Library.
 
 /** Paper Library backed by ai_generated_papers. */
 export async function fetchAiLibrary() {

@@ -96,6 +96,24 @@ describe('Phase F — question adapter isolation', () => {
     ], { domain: 'Competitive', examFamily: 'JEE' })
     expect(rows).toHaveLength(0)
   })
+
+  it('resolves structured { key, text, imageUrl } options to their display text', () => {
+    const q = normalizeQuestion({
+      id: 'EA-JEE-PHY-02-Q01',
+      text: 'A particle is projected at 20 m/s. Find the range.',
+      type: 'MCQ',
+      options: [
+        { key: 'A', text: '20.4 m', imageUrl: 'https://assets.edux/a.png' },
+        { key: 'B', text: '40.8 m', imageUrl: null },
+        { key: 'C', text: '', imageUrl: 'https://assets.edux/c.png' },
+      ],
+    })
+    // Every option the faculty UI renders must be a renderable string.
+    expect(q.options).toEqual(['20.4 m', '40.8 m', 'C'])
+    expect(q.options.every((o) => typeof o === 'string')).toBe(true)
+    // String options pass through untouched (classic bank contract).
+    expect(normalizeQuestion({ id: 'q2', text: 'x', options: ['a', 'b'] }).options).toEqual(['a', 'b'])
+  })
 })
 
 describe('Phase F — paper adapter', () => {

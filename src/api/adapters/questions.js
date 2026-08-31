@@ -54,6 +54,27 @@ export function inferIdentityFromQuestionId(id) {
   return { domain: null, examFamily: null, source: null }
 }
 
+/**
+ * Option display text for the faculty question UI.
+ *
+ * Bank questions authored by the AI question service carry structured option
+ * records (`{ key, text, imageUrl }`); classic bank rows carry plain strings.
+ * The review lists render the human-readable text (mirroring the backend's
+ * ai-paper read-back contract), so the adapter resolves each record to its
+ * `text` (falling back to `label`/`key`). No component renders option images,
+ * so nothing downstream needs the structured record.
+ */
+export function optionText(option) {
+  if (option == null) return ''
+  if (typeof option === 'object') {
+    for (const label of [option.text, option.label, option.key]) {
+      if (label != null && String(label).trim() !== '') return String(label)
+    }
+    return ''
+  }
+  return String(option)
+}
+
 export function normalizeQuestion(raw) {
   if (!raw || typeof raw !== 'object') return null
   const fromFields = {
@@ -64,7 +85,7 @@ export function normalizeQuestion(raw) {
   const domain = fromFields.domain ?? inferred.domain
   const examFamily = fromFields.examFamily ?? (domain === 'University' ? null : inferred.examFamily)
   const type = normalizeQuestionType(raw.type ?? raw.q_type ?? raw.questionType) ?? 'MCQ'
-  const options = Array.isArray(raw.options) ? raw.options : []
+  const options = (Array.isArray(raw.options) ? raw.options : []).map(optionText)
   const text = raw.text ?? raw.question ?? raw.stem ?? ''
   return {
     ...raw,
@@ -265,6 +286,7 @@ export function toCompetitiveBrowserQuestion(question) {
 
 export default {
   normalizeQuestion,
+  optionText,
   filterQuestions,
   adaptQuestionBank,
   canonicalDomain,
