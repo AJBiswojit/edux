@@ -5,19 +5,16 @@
  */
 
 import { useEffect, useState } from 'react'
-import { BookOpen, Database, History } from 'lucide-react'
-import { useAiPaperLibrary, usePaperDeleteBackend, usePaperDuplicateBackend, usePaperArchiveBackend } from '@/services/faculty-papers'
+import { BookOpen, Database } from 'lucide-react'
+import { useAiPaperLibrary, usePaperDeleteBackend } from '@/services/faculty-papers'
 import { StatCard } from '@/components/shared/stat-card'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
-import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, useToast } from '@/components/ui'
+import { Button, Input, useToast } from '@/components/ui'
 import { PaperCard, PaperPreviewDialog, PaperDeleteDialog, SharePaperDialog } from './paper-parts'
-import { formatDate } from '@/utils/format'
 
 function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
   const { data, isLoading, isError, error, refetch } = useAiPaperLibrary()
   const { mutateAsync: deletePaper } = usePaperDeleteBackend()
-  const { mutateAsync: duplicatePaper } = usePaperDuplicateBackend()
-  const { mutateAsync: archivePaper } = usePaperArchiveBackend()
   const [filter, setFilter] = useState('All')
   const [modeFilter, setModeFilter] = useState('All')
   const [examFilter, setExamFilter] = useState('All')
@@ -26,7 +23,6 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
 
   useEffect(() => { refetch() }, [refetch])
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [versionsOpen, setVersionsOpen] = useState(false)
   const [selectedPaper, setSelectedPaper] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -50,47 +46,32 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
   }
 
   const papers = data?.generatedPapers ?? []
-  const statusFiltered = filter === 'All' ? papers : filter === 'Archived' ? papers.filter((p) => p.archived) : papers.filter((p) => p.status === filter)
+  const paperDomain = (p) => p.domain ?? p.mode ?? 'University'
+  const paperFamily = (p) => p.examFamily ?? p.exam ?? null
+  const paperStatus = (p) => String(p.status ?? 'Draft')
+  const statusFiltered = filter === 'All'
+    ? papers
+    : filter === 'Archived'
+      ? papers.filter((p) => p.archived)
+      : papers.filter((p) => paperStatus(p).toLowerCase() === filter.toLowerCase())
   const filtered = statusFiltered.filter((p) => {
-    const mode = p.domain ?? p.mode ?? 'University'
+    const mode = paperDomain(p)
     if (modeFilter === 'University' && mode !== 'University') return false
     if (modeFilter === 'Competitive' && mode !== 'Competitive') return false
-    if (examFilter === 'JEE' && (p.examFamily ?? p.exam) !== 'JEE' && !String(p.examType ?? '').includes('JEE') && (p.examFamily ?? '') !== 'JEE Main') return false
-    if (examFilter === 'NEET' && (p.examFamily ?? p.exam) !== 'NEET' && !String(p.examType ?? '').includes('NEET') && (p.examFamily ?? '') !== 'NEET UG') return false
+    if (examFilter === 'JEE' && paperFamily(p) !== 'JEE') return false
+    if (examFilter === 'NEET' && paperFamily(p) !== 'NEET') return false
     if (search) {
-      const hay = `${p.title} ${p.subject ?? ''} ${p.course ?? ''} ${p.exam ?? ''} ${p.examType ?? ''}`.toLowerCase()
+      const hay = `${p.title} ${p.subject ?? ''} ${p.course ?? ''} ${paperFamily(p) ?? ''} ${p.examType ?? ''}`.toLowerCase()
       if (!hay.includes(search.toLowerCase())) return false
     }
     return true
   })
-  const uniCount = papers.filter((p) => (p.domain ?? p.mode ?? 'University') === 'University').length
-  const compCount = papers.filter((p) => (p.domain ?? p.mode ?? 'University') === 'Competitive').length
-  const jeeCount = papers.filter((p) => (p.domain ?? p.mode ?? 'University') === 'Competitive' && ((p.examFamily ?? p.exam) === 'JEE' || String(p.examType ?? '').includes('JEE') || (p.examFamily ?? '') === 'JEE Main')).length
-  const neetCount = papers.filter((p) => (p.domain ?? p.mode ?? 'University') === 'Competitive' && ((p.examFamily ?? p.exam) === 'NEET' || String(p.examType ?? '').includes('NEET') || (p.examFamily ?? '') === 'NEET UG')).length
+  const uniCount = papers.filter((p) => paperDomain(p) === 'University').length
+  const compCount = papers.filter((p) => paperDomain(p) === 'Competitive').length
+  const jeeCount = papers.filter((p) => paperDomain(p) === 'Competitive' && paperFamily(p) === 'JEE').length
+  const neetCount = papers.filter((p) => paperDomain(p) === 'Competitive' && paperFamily(p) === 'NEET').length
   const totalQuestions = papers.reduce((a, p) => a + (p.questions ?? p.selectedQuestionIds?.length ?? 0), 0)
-  const readyCount = papers.filter((p) => p.status === 'Ready' && !p.archived).length
-
-  const handleDuplicate = async (paper) => {
-    try {
-      const res = await duplicatePaper(paper.id)
-      if (res?.ok || res?.paper) {
-        toast.success('Duplicated', `${res.paper?.title ?? paper.title} added as a copy.`)
-        refetch()
-      }
-    } catch {
-      toast.error('Could not duplicate', 'Please try again.')
-    }
-  }
-
-  const handleArchive = async (paper) => {
-    try {
-      const res = await archivePaper({ id: paper.id, archived: !paper.archived })
-      toast.success(paper.archived ? 'Restored' : 'Archived', `${res.paper?.title ?? paper.title} ${paper.archived ? 'restored to the library.' : 'moved to the archive.'}`)
-      refetch()
-    } catch {
-      toast.error('Could not archive', 'Please try again.')
-    }
-  }
+  const readyCount = papers.filter((p) => ['ready', 'published'].includes(paperStatus(p).toLowerCase()) && !p.archived).length
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -125,7 +106,7 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
           >
             {f}
             <span className="ml-1.5 opacity-60">
-              {f === 'All' ? papers.length : f === 'Archived' ? papers.filter((p) => p.archived).length : papers.filter((p) => p.status === f).length}
+              {f === 'All' ? papers.length : f === 'Archived' ? papers.filter((p) => p.archived).length : papers.filter((p) => paperStatus(p).toLowerCase() === f.toLowerCase()).length}
             </span>
           </button>
         ))}
@@ -175,10 +156,7 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
             paper={p}
             index={i}
             onView={(paper) => { setSelectedPaper(paper); setPreviewOpen(true) }}
-            onDuplicate={handleDuplicate}
             onDelete={setDeleteTarget}
-            onArchive={handleArchive}
-            onVersions={(paper) => { setSelectedPaper(paper); setVersionsOpen(true) }}
             onShare={setShareTarget}
             onEdit={(paper) => { if (onEditPaper) onEditPaper({ ...paper }); }}
           />
@@ -197,27 +175,6 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
           )}
         </div>
       )}
-
-      <Dialog open={versionsOpen} onOpenChange={setVersionsOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5 text-indigo-500" /> Version history — {selectedPaper?.title}</DialogTitle>
-            <DialogDescription>{selectedPaper?.course} · {selectedPaper?.domain ?? selectedPaper?.mode ?? 'University'} · {selectedPaper?.examType ?? '—'} · created {formatDate(selectedPaper?.created ?? selectedPaper?.generated, 'MMM d, yyyy')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2.5">
-            {(data?.versionHistory?.[selectedPaper?.id] ?? []).slice().reverse().map((v) => (
-              <div key={v.version} className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
-                <Badge variant="gradient" size="sm">{v.version}</Badge>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12.5px] font-semibold text-slate-700 dark:text-slate-200">{v.note}</p>
-                  <p className="text-[10.5px] text-slate-400">{formatDate(v.date, 'MMM d, yyyy')}</p>
-                </div>
-              </div>
-            ))}
-            {!data?.versionHistory?.[selectedPaper?.id]?.length && <p className="py-6 text-center text-xs text-slate-400">No version history yet.</p>}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <PaperPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} paper={selectedPaper} />
       <PaperDeleteDialog open={!!deleteTarget} onOpenChange={(v) => !v && !deleting && setDeleteTarget(null)} paper={deleteTarget} onConfirm={handleDelete} deleting={deleting} />

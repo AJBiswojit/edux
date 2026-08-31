@@ -47,6 +47,19 @@ export async function fetchAiLibrary() {
   }
 }
 
+/**
+ * Full detail of one AI-generated paper, including its questions.
+ *
+ * Used by the Paper Library View modal: the list payload carries only
+ * counts/metadata, while the question records (stem, options, solution,
+ * explanation) live behind the read-back endpoint
+ * GET /faculty/paper-generator/ai-paper/{id}.
+ */
+export async function fetchAiPaperDetail(id) {
+  const { data } = await api.get(`/faculty/paper-generator/ai-paper/${id}`)
+  return data
+}
+
 export async function fetchPapers() {
   const data = await fetchPaperGenerator()
   return {
@@ -160,6 +173,20 @@ export function useAiPaperLibrary() {
   return useQuery({
     queryKey: ['faculty', 'paper-library', 'ai'],
     queryFn: fetchAiLibrary,
+    retry: false,
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
+/**
+ * Full paper + questions for the View modal. Enabled only while a paper is
+ * open; data is cached per paper id, so re-opening a paper is instant.
+ */
+export function useAiPaperDetail(paperId) {
+  return useQuery({
+    queryKey: ['faculty', 'paper-library', 'ai-paper', paperId],
+    queryFn: () => fetchAiPaperDetail(paperId),
+    enabled: !!paperId,
     retry: false,
     staleTime: 1000 * 60 * 2,
   })

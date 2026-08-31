@@ -507,7 +507,18 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                 {['JEE', 'NEET'].map((e) => (
                   <button
                     key={e}
-                    onClick={() => { setExamFamily(e); setSelectedIds([]); setPage(1); applyScope({ subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }) }}
+                    onClick={() => {
+                      // Domain stays Competitive; only the exam family changes.
+                      // The cascade hook re-sanitizes against the new family's
+                      // subject list (JEE Mathematics ∉ NEET etc.), so a stale
+                      // subject/chapter/topic selection is cleared — but call
+                      // applyScope too so the reset is synchronous (no stale
+                      // option rendered for one frame) and page selection resets.
+                      setExamFamily(e)
+                      setSelectedIds([])
+                      setPage(1)
+                      applyScope({ subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' })
+                    }}
                     className={`flex-1 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${examFamily === e ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
                   >
                     {e}

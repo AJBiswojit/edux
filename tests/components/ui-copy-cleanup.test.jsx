@@ -51,6 +51,7 @@ vi.mock('../../src/services/faculty-papers', () => {
       ], versionHistory: {} },
       isLoading: false, isError: false, error: null, refetch: () => {},
     }),
+    useAiPaperDetail: () => ({ data: null, isLoading: false, isError: false }),
   }
 })
 
