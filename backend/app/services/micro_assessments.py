@@ -190,6 +190,9 @@ def get_faculty(db: Session, user: User, assessment_id: str) -> dict:
     if not row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Micro-assessment not found")
     _faculty_owns(user, row)
+    # A generation submitted moments ago may have completed by now — link its
+    # questions before serialising the assessment.
+    _sync_generation_links(db, user, row)
     return {"assessment": serialize_faculty(db, row, include_questions=True)}
 
 
@@ -225,6 +228,42 @@ def create(db: Session, user: User, body: dict) -> dict:
     return {"ok": True, "assessment": serialize_faculty(db, row)}
 
 
+def _sync_generation_links(db: Session, user: User, row: MicroAssessment) -> None:
+    """Materialise a finished AI generation's questions into the assessment's
+    question links (idempotent). The deployed agent writes asynchronously, so
+    these links are created as soon as the generation is READY — either during
+    `generate_questions` or on the next faculty read of the assessment."""
+    if not row.generation_id:
+        return
+    if _links(db, row.id):
+        return
+    packed = get_generation_questions(db, user, row.generation_id)
+    questions = packed.get("questions") or []
+    if not questions:
+        return
+    for index, item in enumerate(questions, start=1):
+        qid = item.get("id")
+        if not qid:
+            continue
+        db.add(
+            MicroAssessmentQuestion(
+                assessment_id=row.id,
+                question_id=qid,
+                sort_order=index,
+                snapshot=json.dumps(
+                    {
+                        "question": item.get("question") or item.get("text"),
+                        "options": item.get("options") or [],
+                        "difficulty": item.get("difficulty"),
+                        "questionType": item.get("questionType") or item.get("type"),
+                        "concept": item.get("topic") or item.get("chapter"),
+                    }
+                ),
+            )
+        )
+    db.commit()
+
+
 def generate_questions(db: Session, user: User, assessment_id: str, body: dict | None = None) -> dict:
     require_faculty(user)
     row = db.get(MicroAssessment, assessment_id)
@@ -247,37 +286,16 @@ def generate_questions(db: Session, user: User, assessment_id: str, body: dict |
     generated = create_generation(db, user, payload)
     if generated.get("status") == "FAILED":
         return {"ok": False, "status": "FAILED", "error": generated.get("error") or generated.get("errorMessage"), "assessment": serialize_faculty(db, row)}
-    packed = get_generation_questions(db, user, generated["generationId"])
-    questions = packed.get("questions") or []
-    db.query(MicroAssessmentQuestion).filter(MicroAssessmentQuestion.assessment_id == row.id).delete()
-    for index, item in enumerate(questions, start=1):
-        qid = item.get("id")
-        if not qid:
-            continue
-        db.add(
-            MicroAssessmentQuestion(
-                assessment_id=row.id,
-                question_id=qid,
-                sort_order=index,
-                snapshot=json.dumps(
-                    {
-                        "question": item.get("question") or item.get("text"),
-                        "options": item.get("options") or [],
-                        "difficulty": item.get("difficulty"),
-                        "questionType": item.get("questionType") or item.get("type"),
-                        "concept": item.get("topic") or item.get("chapter"),
-                    }
-                ),
-            )
-        )
     row.generation_id = generated["generationId"]
+    _sync_generation_links(db, user, row)
+    questions = _questions_for(db, row.id, include_answers=True)
     db.commit()
     db.refresh(row)
     return {
         "ok": True,
         "generationId": generated["generationId"],
         "status": generated.get("status"),
-        "questions": _questions_for(db, row.id, include_answers=True),
+        "questions": questions,
         "assessment": serialize_faculty(db, row),
     }
 

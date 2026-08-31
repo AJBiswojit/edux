@@ -284,29 +284,75 @@ def test_faculty_cannot_use_other_institution_questions(client, world):
 # Paper Library regression tests — AI-generated papers ONLY
 # ---------------------------------------------------------------------------
 
-def _generate_and_create_ai_paper(client, faculty, *, title, domain="University", exam_family=None):
-    """Helper: generate AI questions then create a paper from them.
+_AI_TEST_SUBJECT_ID = "t_exam_core_ai_subject"
+_AI_TEST_CHAPTER_ID = "t_exam_core_ai_chapter"
+_AI_TEST_TOPIC_ID = "t_exam_core_ai_topic"
+
+
+def _ensure_ai_test_catalog(db, institution_id: str) -> None:
+    """Seed the AI test subject/chapter/topic used by the fake agent flow."""
+    from app.models.catalog import Chapter, Subject, Topic
+
+    if db.get(Subject, _AI_TEST_SUBJECT_ID) is None:
+        db.add(Subject(
+            id=_AI_TEST_SUBJECT_ID, institution_id=institution_id, code="AI-TEST",
+            name="AI Test Subject", exam_mode="competitive", exam_family="NEET",
+        ))
+    if db.get(Chapter, _AI_TEST_CHAPTER_ID) is None:
+        db.add(Chapter(id=_AI_TEST_CHAPTER_ID, subject_id=_AI_TEST_SUBJECT_ID, name="AI Test Chapter", sort_order=1))
+    if db.get(Topic, _AI_TEST_TOPIC_ID) is None:
+        db.add(Topic(id=_AI_TEST_TOPIC_ID, chapter_id=_AI_TEST_CHAPTER_ID, name="AI Test Topic", sort_order=1))
+    db.commit()
+
+
+def _remove_ai_test_catalog(db) -> None:
+    from app.models.catalog import Chapter, Subject, Topic
+
+    db.query(Topic).filter(Topic.id == _AI_TEST_TOPIC_ID).delete()
+    db.query(Chapter).filter(Chapter.id == _AI_TEST_CHAPTER_ID).delete()
+    db.query(Subject).filter(Subject.id == _AI_TEST_SUBJECT_ID).delete()
+    db.commit()
+
+
+def _generate_and_create_ai_paper(client, faculty, db, ai_service, *, title):
+    """Helper: generate AI questions via the deployed-agent flow, then create a
+    paper from the persisted generation questions.
+
+    The AI agent is simulated by `ai_service` (conftest fixture); its question
+    rows are written into the shared ai_generated_* tables before the
+    generation is settled, exactly like the deployed pipeline.
 
     Returns (paper_dict, generation_id).
     """
-    gen_body = {
-        "domain": domain,
-        "examFamily": exam_family,
+    from test.conftest import settle_generation
+
+    body = {
+        "domain": "Competitive",
+        "examFamily": "NEET",
         "subject": "AI Test Subject",
+        "chapter": "AI Test Chapter",
+        "topic": "AI Test Topic",
         "questionCount": 2,
         "difficulty": "Medium",
         "questionTypes": ["MCQ"],
     }
-    gen_res = client.post("/v1/faculty/question-bank/generate", json=gen_body, headers=auth_header(faculty))
+    gen_res = client.post("/v1/faculty/question-bank/generate", json=body, headers=auth_header(faculty))
     assert gen_res.status_code == 200, gen_res.text
-    gen_data = gen_res.json()
-    generation_id = gen_data["generationId"]
-    q_ids = gen_data["questionIds"]
+    generation_id = gen_res.json()["generationId"]
+
+    ai_service["write_output"]()
+    settled = settle_generation(client, faculty, generation_id)
+    assert settled["status"] == "READY", settled
+    q_res = client.get(
+        f"/v1/faculty/question-bank/generations/{generation_id}/questions", headers=auth_header(faculty)
+    ).json()
+    q_ids = [q["id"] for q in q_res["questions"]]
+    assert len(q_ids) == 2
 
     paper_body = {
         "title": title,
-        "domain": domain,
-        "examFamily": exam_family,
+        "domain": "Competitive",
+        "examFamily": "NEET",
         "selectedQuestionIds": q_ids,
         "duration": 60,
         "totalMarks": 8,
@@ -332,7 +378,7 @@ def _create_manual_paper(client, faculty, *, title, question_ids):
     return res.json()["paper"]
 
 
-def test_paper_library_shows_only_ai_generated_papers(client, world, db):
+def test_paper_library_shows_only_ai_generated_papers(client, world, db, fake_ai_service):
     """Regression: Paper Library (GET /faculty/paper-generator) must return only
     papers whose blueprint contains a valid generationId.
 
@@ -344,10 +390,11 @@ def test_paper_library_shows_only_ai_generated_papers(client, world, db):
     from app.models.assessment import Question as Q
 
     faculty = world["faculty"]
+    _ensure_ai_test_catalog(db, faculty.institution_id)
 
     # --- Create an AI-generated paper -----------------------------------------
     ai_paper, generation_id = _generate_and_create_ai_paper(
-        client, faculty, title="AI Paper Library Regression"
+        client, faculty, db, fake_ai_service, title="AI Paper Library Regression"
     )
     ai_paper_id = ai_paper["id"]
 
@@ -411,6 +458,7 @@ def test_paper_library_shows_only_ai_generated_papers(client, world, db):
         gen = db.get(QuestionGeneration, generation_id)
         if gen:
             db.delete(gen)
+        _remove_ai_test_catalog(db)
         db.commit()
 
 
@@ -496,15 +544,16 @@ def test_paper_library_empty_when_no_ai_papers_exist(client, world, db):
         db.commit()
 
 
-def test_ai_paper_blueprint_stores_generation_id(client, world, db):
+def test_ai_paper_blueprint_stores_generation_id(client, world, db, fake_ai_service):
     """Regression: creating a paper with generationId persists it in the blueprint JSON."""
     from app.models.assessment import Paper, PaperQuestion, QuestionGeneration, QuestionGenerationItem
     from app.models.assessment import Question as Q
     import json
 
     faculty = world["faculty"]
+    _ensure_ai_test_catalog(db, faculty.institution_id)
     ai_paper, generation_id = _generate_and_create_ai_paper(
-        client, faculty, title="Blueprint Gen ID Test"
+        client, faculty, db, fake_ai_service, title="Blueprint Gen ID Test"
     )
     paper_id = ai_paper["id"]
 
@@ -533,6 +582,7 @@ def test_ai_paper_blueprint_stores_generation_id(client, world, db):
         gen = db.get(QuestionGeneration, generation_id)
         if gen:
             db.delete(gen)
+        _remove_ai_test_catalog(db)
         db.commit()
 
 

@@ -107,19 +107,37 @@ def test_student_360_is_selected_student_not_aarav(client, world):
     assert "Meera" not in text
 
 
-def test_question_generation_persists_and_bank_grows(client, world):
+def test_question_generation_persists_and_bank_grows(client, world, competitive_catalog, fake_ai_service):
+    """Generate via the REAL deployed-agent flow and verify bank growth."""
+    from test.conftest import settle_generation
+
     faculty = world["faculty"]
     before = client.get("/v1/faculty/question-bank", headers=auth_header(faculty)).json()["total"]
     gen = client.post(
         "/v1/faculty/question-bank/generate",
-        json={"domain": "University", "questionCount": 3, "subject": "OS", "difficulty": "Medium"},
+        json={
+            "domain": "Competitive",
+            "examFamily": "NEET",
+            "questionCount": 3,
+            "subject": "Biology",
+            "chapter": "All chapters",
+            "difficulty": "Medium",
+        },
         headers=auth_header(faculty),
     )
     assert gen.status_code == 200, gen.text
     payload = gen.json()
-    assert payload["status"] == "READY"
-    assert payload["generatedCount"] == 3
-    assert len(payload["questionIds"]) == 3
+    assert payload["status"] == "PROCESSING"
+    fake_ai_service["write_output"]()
+    settled = settle_generation(client, faculty, payload["generationId"])
+    assert settled["status"] == "READY"
+    assert settled["generatedCount"] == 3
+    questions = client.get(
+        f"/v1/faculty/question-bank/generations/{payload['generationId']}/questions",
+        headers=auth_header(faculty),
+    ).json()
+    assert len(questions["questions"]) == 3
+    assert all(q["source"] == "ai" for q in questions["questions"])
     after = client.get("/v1/faculty/question-bank", headers=auth_header(faculty)).json()
     assert after["total"] >= before + 3
 
@@ -284,20 +302,45 @@ def test_attendance_mark_persists(client, world, db):
     assert any(row["id"] == session_id for row in listing["classes"])
 
 
-def test_studio_generate_persists_questions(client, world, db):
+def test_studio_generate_persists_questions(client, world, db, competitive_catalog, fake_ai_service):
+    from test.conftest import settle_generation
+
     faculty = world["faculty"]
     if db.get(FacultyProfile, faculty.id) is None:
         db.add(FacultyProfile(user_id=faculty.id, institution_id=faculty.institution_id))
         db.commit()
     res = client.post(
         "/v1/faculty/question-studio/generate",
-        json={"settings": {"count": 2, "domain": "University", "difficulty": "Easy"}},
+        json={
+            "settings": {
+                "count": 2,
+                "domain": "Competitive",
+                "examFamily": "NEET",
+                "subject": "Biology",
+                "chapter": "All chapters",
+                "topic": "All topics",
+                "difficulty": "Easy",
+                "qType": "MCQ",
+            }
+        },
         headers=auth_header(faculty),
     )
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["ok"] is True
-    questions = body["session"]["questions"]
+    assert body["session"]["generationId"]
+
+    # Async real-agent contract: questions become available after the agent
+    # finishes. Simulate completion, settle, then read the session back.
+    fake_ai_service["write_output"]()
+    settled = settle_generation(client, faculty, body["session"]["generationId"])
+    assert settled["status"] == "READY"
+    session_res = client.get(
+        f"/v1/faculty/question-studio/sessions/{body['session']['studioSessionId']}",
+        headers=auth_header(faculty),
+    )
+    assert session_res.status_code == 200
+    questions = session_res.json()["session"]["questions"]
     assert len(questions) == 2
     assert all(q.get("id") for q in questions)
 
