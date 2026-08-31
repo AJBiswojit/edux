@@ -29,12 +29,16 @@ from app.services.examination import (
     create_sql_paper,
     delete_sql_paper,
     duplicate_sql_paper,
+    generate_paper_pdf,
     get_faculty_paper,
     list_faculty_papers,
     list_question_bank,
     publish_sql_paper,
     regenerate_sql_paper,
+    set_paper_draft,
+    update_sql_paper,
 )
+
 from app.services.question_generation import (
     create_generation,
     get_current_generation,
@@ -678,7 +682,30 @@ def create_paper(body: dict, db: DbDep, user: FacultyDep):
     return create_sql_paper(db, user, body or {})
 
 
+@router.put("/faculty/paper-generator/papers/{paper_id}")
+@router.patch("/faculty/paper-generator/papers/{paper_id}")
+def update_paper(paper_id: str, body: dict, db: DbDep, user: FacultyDep):
+    return update_sql_paper(db, user, paper_id, body or {})
+
+
+@router.post("/faculty/paper-generator/papers/{paper_id}/edit")
+def edit_paper(paper_id: str, db: DbDep, user: FacultyDep):
+    return set_paper_draft(db, user, paper_id)
+
+
+@router.get("/faculty/paper-generator/papers/{paper_id}/download")
+@router.get("/faculty/paper-generator/papers/{paper_id}/pdf")
+def download_paper(paper_id: str, db: DbDep, user: FacultyDep):
+    data, filename = generate_paper_pdf(db, user, paper_id)
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.delete("/faculty/paper-generator/papers/{paper_id}")
+
 def delete_paper(paper_id: str, db: DbDep, user: FacultyDep):
     return delete_sql_paper(db, user, paper_id)
 

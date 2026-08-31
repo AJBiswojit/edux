@@ -7,35 +7,33 @@
  * -> backend creates a generation identity and submits the job to the deployed
  *    AI agent -> backend persists the agent's real questions to PostgreSQL and
  *    links them to the generation -> GET generation/{id}/questions returns ONLY
- *    those questions -> faculty reviews/selects -> Save Paper.
+ *    those questions -> faculty reviews/selects -> Save Paper -> status READY.
  *
- * No mock/seeded/fallback questions. Phase 6 shows ONLY the questions of the
- * CURRENT generation request; it never renders question-bank records, old
- * generations or historical AI papers.
+ * One unified generation workflow:
+ * Paper Configuration -> Generate Paper -> AI generates -> Review questions -> Save Paper -> Paper Library.
+ * No separate or duplicate Question Bank section.
  *
- * Generation lifecycle: mounting the studio never generates automatically. If
- * the faculty already has a persisted current generation, the tab rehydrates
- * that generation state (refresh recovery) without re-running the agent;
- * otherwise it opens in a clean empty state.
+ * Edit Paper workflow:
+ * READY paper -> Faculty clicks Edit -> DRAFT -> Modify paper/questions -> Confirm Changes -> READY.
  *
- * Preserves existing UI: paper name, domain, exam family, subject, chapter, topic, question count,
- * difficulty, question type, advanced blueprint, Bloom, chapter weighting, CO coverage, PYQ preference,
- * negative marking, exam pattern, KPI cards, tabs, filters, dropdowns, Paper Library, etc.
+ * No mock/seeded/fallback questions. Displays ONLY the questions of the
+ * CURRENT generation request.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2, Printer, Save, SlidersHorizontal, ChevronDown, Wand2, AlertTriangle, Database,
-  Sparkles, Loader2, RefreshCw,
+  Sparkles, Loader2, RefreshCw, X, Pencil,
 } from 'lucide-react'
-import { usePaperGeneratorBackend, usePaperCreateBackend } from '@/services/faculty-papers'
+import { usePaperGeneratorBackend, usePaperCreateBackend, usePaperUpdateBackend } from '@/services/faculty-papers'
 import { useQuestionGeneration, useGenerationStatus, useGenerationQuestions, useCurrentGeneration, GENERATION_STATUS, isTerminalStatus } from '@/services/faculty-question-generation'
 import { Badge, Button, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { useFilterCascade } from '@/hooks/use-filter-cascade'
 import { buildPaperGeneratorCascade } from './paper-generator-cascade'
 import { PaperPrintPreview, DIFF_STYLES } from './paper-parts'
+import { optionText } from '@/api/adapters/questions'
 
 function Section({ n, title, subtitle, children, right }) {
   return (
@@ -71,6 +69,11 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   // Catalog config for the generator. The Paper Library lives in its own tab now.
   const { data: paperData, isLoading: catalogLoading, isError: catalogError, refetch: refetchCatalog } = usePaperGeneratorBackend()
   const { mutateAsync: createPaper } = usePaperCreateBackend()
+  const { mutateAsync: updatePaperBackend } = usePaperUpdateBackend()
+
+  // Edit mode tracking
+  const [editingPaperId, setEditingPaperId] = useState(null)
+  const isEditing = !!editingPaperId
 
   // Form state — domain isolation explicit
   const [domain, setDomain] = useState(() => (searchParams.get('mode') === 'Competitive' ? 'Competitive' : 'University'))
@@ -86,13 +89,10 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [questionTypeFilter, setQuestionTypeFilter] = useState('All')
 
   // Cascade — backend-oriented, uses only the real catalog from the live API.
-  // No hardcoded course/subject/chapter/topic fallbacks.
   const cfg = paperData?.config ?? null
   const courseCatalog = useMemo(() => cfg?.courseCatalog ?? [], [cfg])
-  const subjectCatalog = useMemo(() => cfg?.subjectCatalog ?? [], [cfg])
   const courseLabel = (row) => (row ? `${row.code} — ${row.name}` : '')
   const courseOptions = courseCatalog.map(courseLabel)
-  const courseByLabel = useMemo(() => new Map(courseCatalog.map((c) => [courseLabel(c), c])), [courseCatalog])
   const normalizeCourseValue = (value) => {
     if (!value) return ''
     const row = courseCatalog.find((c) => courseLabel(c) === value || c.code === value || c.name === value)
@@ -112,8 +112,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const { values: scopeValues, options: scopeOptions, apply: applyScope } = useFilterCascade(cascadeConfig)
   const { course, subject, chapter, topic } = scopeValues
 
-  /* Display helpers: parent validity + honest empty-state labels (no
-     backend/PostgreSQL/API wording leaks to the end user). */
   const courseEmpty = !course
   const subjectOptions = scopeOptions.subject ?? []
   const chapterOptions = scopeOptions.chapter ?? []
@@ -130,9 +128,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
   // ===== Question Generation State =====
-  // A generation exists ONLY after a real Generate request (or when this
-  // session rehydrates the faculty's persisted current generation). No
-  // persisted/paper-library record is ever re-surfaced as a new generation.
   const [generationId, setGenerationId] = useState(null)
   const [generationRequested, setGenerationRequested] = useState(0)
   const [generationStatus, setGenerationStatus] = useState(null) // idle | GENERATING | PROCESSING | READY | FAILED
@@ -142,6 +137,11 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [generationTriggered, setGenerationTriggered] = useState(false)
   const generationStartedInSession = useRef(false)
 
+  // Paper builder — ID-based only, real backend IDs
+  const [selectedIds, setSelectedIds] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [printOpen, setPrintOpen] = useState(false)
+
   const { mutateAsync: triggerGeneration } = useQuestionGeneration()
   const { data: currentGeneration } = useCurrentGeneration()
   const { data: statusData } = useGenerationStatus(generationId, { enabled: !!generationId && !isTerminalStatus(generationStatus) })
@@ -150,16 +150,16 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   // Refresh/navigation recovery — rehydrate the persisted current generation
   // identity without generating again. When no current generation exists the
   // studio stays in the clean empty state. Never overrides a generation that
-  // was started in THIS session.
+  // was started in THIS session or an active edit session.
   useEffect(() => {
-    if (!currentGeneration?.id || generationStartedInSession.current) return
+    if (isEditing || !currentGeneration?.id || generationStartedInSession.current) return
     if (generationId === currentGeneration.id) return
     setGenerationId(currentGeneration.id)
     setGenerationStatus(currentGeneration.status ?? null)
     setGenerationRequested(currentGeneration.requestedCount ?? 0)
     if (currentGeneration.errorMessage) setGenerationError(currentGeneration.errorMessage)
     setGenerationTriggered(false)
-  }, [currentGeneration, generationId])
+  }, [currentGeneration, generationId, isEditing])
 
   // Update status from polling
   useEffect(() => {
@@ -175,9 +175,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     }
   }, [statusData])
 
-  // Update generated questions when fetched. Pre-selection applies ONLY to a
-  // generation triggered in this session (restored generations are presented
-  // for review without selecting anything).
+  // Update generated questions when fetched.
   useEffect(() => {
     if (genQuestionsData?.questions) {
       setGenerationQuestions(genQuestionsData.questions)
@@ -189,6 +187,58 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     }
   }, [genQuestionsData, generationTriggered])
 
+  // Edit paper from library — load details and questions
+  useEffect(() => {
+    if (editPaper) {
+      setEditingPaperId(editPaper.id)
+      setTitle(editPaper.title ?? '')
+      setDomain(editPaper.domain ?? editPaper.mode ?? 'University')
+      setPaperType(editPaper.paperType ?? editPaper.examType ?? 'Mid Semester')
+      const editCourse = editPaper.course ?? ''
+      const matchingCourse = courseCatalog.find(
+        (row) => row.code === editCourse || row.name === editCourse || courseLabel(row) === editCourse,
+      )
+      applyScope({
+        course: matchingCourse ? courseLabel(matchingCourse) : '',
+        subject: editPaper.subject ?? 'All subjects',
+        chapter: editPaper.chapter ?? 'All chapters',
+        topic: editPaper.topic ?? 'All topics',
+      })
+      setExamFamily(editPaper.examFamily ?? editPaper.exam ?? 'JEE')
+      setMarks(String(editPaper.totalMarks ?? 50))
+      setDuration(String(editPaper.duration ?? 120))
+      setQuestionCount(String(editPaper.questions ?? editPaper.questionCount ?? 'Auto'))
+      setDifficulty(editPaper.difficulty ?? 'Mixed')
+
+      // Load question list or IDs
+      if (Array.isArray(editPaper.questionList) && editPaper.questionList.length > 0) {
+        setGenerationQuestions(editPaper.questionList)
+        setGenerationStatus(GENERATION_STATUS.READY)
+        setSelectedIds(editPaper.questionList.map((q) => q.id ?? q.questionId).filter(Boolean))
+      } else if (Array.isArray(editPaper.selectedQuestionIds) && editPaper.selectedQuestionIds.length > 0) {
+        setSelectedIds(editPaper.selectedQuestionIds)
+        setGenerationStatus(GENERATION_STATUS.READY)
+      } else if (Array.isArray(editPaper.questions) && typeof editPaper.questions[0] === 'string') {
+        setSelectedIds(editPaper.questions)
+        setGenerationStatus(GENERATION_STATUS.READY)
+      }
+    }
+  }, [editPaper, courseCatalog])
+
+  const handleCancelEdit = () => {
+    setEditingPaperId(null)
+    setTitle('')
+    setGenerationId(null)
+    setGenerationStatus(null)
+    setGenerationQuestions([])
+    setSelectedIds([])
+    setGenerationError(null)
+    setIsGenerating(false)
+    setGenerationTriggered(false)
+    generationStartedInSession.current = false
+    onClearEdit?.()
+  }
+
   const parseQuestionCount = (raw) => {
     if (raw === 'Auto' || !raw) return 20
     const n = parseInt(raw, 10)
@@ -196,12 +246,9 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   }
 
   const handleGenerateQuestions = async () => {
-    // The backend scopes generated questions to the selected subject. For
-    // Competitive, an explicit 'All subjects' choice distributes across the
-    // exam family's subjects — never an arbitrary single-subject fallback.
-    // University papers always need an explicit subject (the deployed agent
-    // supports JEE/NEET only, so an unselected University scope is a real
-    // configuration error, not a "distribute across everything" request).
+    // Prevent accidental double clicks
+    if (isGenerating || isGenerationRunning) return
+
     const universitySubjectMissing = domain === 'University' && !subjectSelected
     if (universitySubjectMissing || (subject !== 'All subjects' && !subjectSelected)) {
       toast.error('Select a subject', domain === 'University' ? 'Choose a course and subject before generating questions.' : 'Choose a subject before generating questions.')
@@ -259,13 +306,9 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       setGenerationStatus(status)
 
       if (status === GENERATION_STATUS.READY || status === GENERATION_STATUS.COMPLETED) {
-        // Real questions are read back by the generation-questions query, which
-        // becomes enabled as soon as generationId + READY land in state. The
-        // bank listing is refreshed by the mutation's cache invalidation.
         setIsGenerating(false)
         toast.success('Questions Generated', `${generatedCount || count} questions generated and saved.`)
       } else {
-        // Polling will handle PROCESSING -> READY
         toast.success('Generation started', `AI is generating ${count} questions...`)
       }
     } catch (e) {
@@ -295,28 +338,23 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     handleGenerateQuestions()
   }
 
-  // Determine empty state category per spec
-  const hasGeneration = !!generationId
+  const hasGeneration = !!generationId || isEditing
   const isGenerationRunning = generationStatus === GENERATION_STATUS.GENERATING || generationStatus === GENERATION_STATUS.PROCESSING || isGenerating
   const isGenerationReady = generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED
   const isGenerationFailed = generationStatus === GENERATION_STATUS.FAILED
 
   // Phase 6 working set: ONLY the questions of the CURRENT generation request.
-  // The optional question-type filter narrows that set client-side; it never
-  // reaches into the question bank or another generation.
   const availableQuestions = useMemo(() => {
-    if (!isGenerationReady) return []
+    if (!isGenerationReady && !isEditing) return []
     if (questionTypeFilter === 'All') return generationQuestions
     return generationQuestions.filter((q) => (q.type ?? q.questionType) === questionTypeFilter)
-  }, [generationQuestions, isGenerationReady, questionTypeFilter])
+  }, [generationQuestions, isGenerationReady, isEditing, questionTypeFilter])
 
-  const totalQuestions = availableQuestions.length
   const isBankEmpty = !hasGeneration && generationQuestions.length === 0
 
   const requestedCountForDisplay = generationRequested || parseQuestionCount(questionCount)
   const generatedCountForDisplay = generationQuestions.length || 0
 
-  /* Display-only label for the generation state (IDLE → "Idle"). No behaviour change. */
   const GENERATION_STATUS_LABELS = {
     [GENERATION_STATUS.GENERATING]: 'Generating',
     [GENERATION_STATUS.PROCESSING]: 'Generating',
@@ -324,46 +362,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     [GENERATION_STATUS.COMPLETED]: 'Complete',
     [GENERATION_STATUS.FAILED]: 'Failed',
   }
-  const generationStatusLabel = GENERATION_STATUS_LABELS[generationStatus] ?? 'Idle'
-
-  // Paper builder — ID-based only, real backend IDs
-  const [selectedIds, setSelectedIds] = useState([])
-  const [saving, setSaving] = useState(false)
-  const [printOpen, setPrintOpen] = useState(false)
-
-  // Edit paper from library — load IDs only
-  useEffect(() => {
-    if (editPaper) {
-      setTitle(editPaper.title ?? '')
-      setDomain(editPaper.domain ?? editPaper.mode ?? 'University')
-      setPaperType(editPaper.paperType ?? editPaper.examType ?? 'Mid Semester')
-      const editCourse = editPaper.course ?? ''
-      const matchingCourse = courseCatalog.find(
-        (row) => row.code === editCourse || row.name === editCourse || courseLabel(row) === editCourse,
-      )
-      applyScope({
-        course: matchingCourse ? courseLabel(matchingCourse) : '',
-        subject: editPaper.subject ?? 'All subjects',
-        chapter: editPaper.chapter ?? 'All chapters',
-        topic: editPaper.topic ?? 'All topics',
-      })
-      setExamFamily(editPaper.examFamily ?? editPaper.exam ?? 'JEE')
-      setMarks(String(editPaper.totalMarks ?? 50))
-      setDuration(String(editPaper.duration ?? 120))
-      setQuestionCount(String(editPaper.questions ?? editPaper.questionCount ?? 'Auto'))
-      setDifficulty(editPaper.difficulty ?? 'Mixed')
-      // ID-based: prefer selectedQuestionIds, fallback to questionList IDs for backward compat
-      if (Array.isArray(editPaper.selectedQuestionIds)) {
-        setSelectedIds(editPaper.selectedQuestionIds)
-      } else if (Array.isArray(editPaper.questionList)) {
-        setSelectedIds(editPaper.questionList.map((q) => q.id).filter(Boolean))
-      } else if (Array.isArray(editPaper.questions) && typeof editPaper.questions[0] === 'string') {
-        setSelectedIds(editPaper.questions)
-      }
-      onClearEdit?.()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editPaper])
+  const generationStatusLabel = isEditing ? 'Draft' : (GENERATION_STATUS_LABELS[generationStatus] ?? 'Idle')
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
@@ -375,22 +374,21 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     if (isGenerationRunning) return false
     if (isGenerationFailed) return false
     if (selectedIds.length === 0) return false
-    if (isGenerationReady) {
-      // Check completeness: requested vs generated
+    if (isGenerationReady && !isEditing) {
       if (generatedCountForDisplay > 0 && requestedCountForDisplay > 0) {
         if (generatedCountForDisplay < requestedCountForDisplay) return false
       }
     }
     return true
-  }, [isGenerationRunning, isGenerationFailed, selectedIds.length, isGenerationReady, generatedCountForDisplay, requestedCountForDisplay])
+  }, [isGenerationRunning, isGenerationFailed, selectedIds.length, isGenerationReady, isEditing, generatedCountForDisplay, requestedCountForDisplay])
 
   const handleCreate = async () => {
     if (!title.trim()) {
-      toast.error('Paper name required', 'Give the paper a name before creating.')
+      toast.error('Paper name required', 'Give the paper a name before saving.')
       return
     }
     if (selectedIds.length === 0) {
-      toast.error('Select questions', 'Pick at least one question from the question bank.')
+      toast.error('Select questions', 'Pick at least one question for the paper.')
       return
     }
     if (isGenerationRunning) {
@@ -401,14 +399,57 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       toast.error('Generation failed', 'Retry question generation before saving paper.')
       return
     }
-    // Completeness check: if generation requested N but only M available and M < N, warn but allow? Spec says fail closed for Send, not necessarily for Save.
-    // We allow save but Paper Library Send will be disabled if incomplete.
-    if (isGenerationReady && requestedCountForDisplay > generatedCountForDisplay) {
-      toast.error('Incomplete generation', `Requested ${requestedCountForDisplay} but only ${generatedCountForDisplay} generated. Regenerate or select available questions.`)
-      // Fail closed: do not allow save if incomplete? Spec says paper must NOT become sendable until requested number available.
-      // We allow save but will be marked not ready in library via selected count vs requested.
-    }
+
     setSaving(true)
+
+    if (isEditing) {
+      // Confirm Edit flow -> updates existing paper and sets status back to READY
+      try {
+        const res = await updatePaperBackend({
+          id: editingPaperId,
+          payload: {
+            title: title.trim(),
+            domain,
+            examFamily: domain === 'Competitive' ? examFamily : null,
+            mode: domain,
+            exam: domain === 'Competitive' ? examFamily : null,
+            course: domain === 'University' ? course : `${examFamily} · ${subject}`,
+            subject,
+            chapter,
+            topic,
+            program: domain === 'University' ? program : null,
+            totalMarks: Number(marks) || 50,
+            duration: Number(duration) || 120,
+            difficulty,
+            questions: selectedIds.length,
+            selectedQuestionIds: selectedIds,
+            paperType,
+            examType: paperType,
+            bloomPreset: domain === 'University' ? bloomPreset : null,
+            weightagePreset: domain === 'University' ? weightagePreset : null,
+            coPreset: domain === 'University' ? coPreset : null,
+            pyqPreference: domain === 'Competitive' ? pyqPreference : null,
+            negativeMarking: domain === 'Competitive' ? negativeMarking : null,
+            examPattern: domain === 'Competitive' ? examPattern : null,
+            status: 'ready',
+          },
+        })
+        if (res?.ok || res?.paper) {
+          toast.success('Paper updated successfully', `"${title.trim()}" is now READY in your Paper Library with ${selectedIds.length} questions.`)
+          handleCancelEdit()
+        } else {
+          toast.error(res?.error ?? 'Could not update', res?.message ?? 'Please try again.')
+        }
+      } catch (e) {
+        const msg = e?.response?.data?.detail ?? e?.response?.data?.message ?? e?.message ?? 'Could not update paper'
+        toast.error('Could not update', msg)
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
+    // Normal Save Paper flow -> persists new paper with status READY
     try {
       const res = await createPaper({
         title: title.trim(),
@@ -437,13 +478,20 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         coverage: 90,
         sets: 1,
         interventionId: searchParams.get('intervention') ?? null,
-        // Pass the active generation ID so the backend marks this paper as
-        // AI-generated and includes it in the Paper Library filter.
         generationId: generationId ?? null,
+        status: 'ready',
       })
       if (res?.ok || res?.paper) {
         toast.success('Paper saved to library', `"${title.trim()}" is now in your Paper Library with ${selectedIds.length} questions.`)
+        // Reset generation workflow to clean state
+        setGenerationId(null)
+        setGenerationStatus(null)
+        setGenerationQuestions([])
         setSelectedIds([])
+        setGenerationError(null)
+        setIsGenerating(false)
+        setGenerationTriggered(false)
+        generationStartedInSession.current = false
       } else {
         toast.error(res?.error ?? 'Could not save', res?.message ?? 'Please try again.')
       }
@@ -472,12 +520,37 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
           <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
             <Wand2 className="h-3.5 w-3.5" /> Question Paper Studio
           </p>
-          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">Design, generate and publish question papers</h2>
+          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+            {isEditing ? `Editing Paper: ${title || 'Draft Paper'}` : 'Design, generate and publish question papers'}
+          </h2>
         </div>
-        <Badge variant={isGenerationReady ? 'success' : isGenerationFailed ? 'danger' : isGenerationRunning ? 'warning' : 'secondary'} className="px-3 py-1">
-          Generation: {generationStatusLabel}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {isEditing && (
+            <Badge variant="warning" className="px-3 py-1">
+              Editing · DRAFT
+            </Badge>
+          )}
+          <Badge variant={isGenerationReady ? 'success' : isGenerationFailed ? 'danger' : isGenerationRunning ? 'warning' : 'secondary'} className="px-3 py-1">
+            Generation: {generationStatusLabel}
+          </Badge>
+        </div>
       </div>
+
+      {/* Editing Banner */}
+      {isEditing && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <Pencil className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-xs font-bold">You are currently editing &ldquo;{title}&rdquo; (Status: DRAFT)</p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">Modify the paper configuration or selected questions below and click &ldquo;Confirm Changes&rdquo; to save and transition status to READY.</p>
+            </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleCancelEdit} className="border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-200">
+            <X className="h-3.5 w-3.5" /> Cancel Edit
+          </Button>
+        </div>
+      )}
 
       {/* Section 1 */}
       <Section n={1} title="Basic details" subtitle="The domain and exam family set the scope of this paper.">
@@ -510,12 +583,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                   <button
                     key={e}
                     onClick={() => {
-                      // Domain stays Competitive; only the exam family changes.
-                      // The cascade hook re-sanitizes against the new family's
-                      // subject list (JEE Mathematics ∉ NEET etc.), so a stale
-                      // subject/chapter/topic selection is cleared — but call
-                      // applyScope too so the reset is synchronous (no stale
-                      // option rendered for one frame) and page selection resets.
                       setExamFamily(e)
                       setSelectedIds([])
                       applyScope({ subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' })
@@ -538,7 +605,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         </div>
       </Section>
 
-      {/* Section 2 — Syllabus filters backend-oriented. No standalone search field. */}
+      {/* Section 2 — Syllabus filters */}
       <Section n={2} title="Syllabus / content" subtitle={domain === 'Competitive' ? 'Domain + Exam Family → Subject → Chapter → Topic.' : 'Domain → Course → Subject → Chapter → Topic.'}>
         <div className={`grid grid-cols-2 gap-4 ${domain === 'University' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {domain === 'University' && (
@@ -710,11 +777,11 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         )}
       </Section>
 
-      {/* Phase G: Generate Questions Action — Primary CTA */}
+      {/* Section 5: Question Generation & Review — ONE unified workflow */}
       <Section
         n={5}
         title="Question Generation"
-        subtitle={`Generate questions for this paper · Status: ${generationStatusLabel} · Requested: ${requestedCountForDisplay} · Generated: ${generatedCountForDisplay}`}
+        subtitle={`Generate, review and save questions · Status: ${generationStatusLabel} · Requested: ${requestedCountForDisplay} · Generated: ${generatedCountForDisplay}`}
         right={
           <Badge variant={isGenerationReady ? 'success' : isGenerationFailed ? 'danger' : isGenerationRunning ? 'warning' : 'secondary'} className="px-3 py-1">
             {isGenerationRunning ? <><Loader2 className="h-3 w-3 animate-spin" /> Generating</> : isGenerationReady ? <><CheckCircle2 className="h-3 w-3" /> {generatedCountForDisplay} generated</> : isGenerationFailed ? <><AlertTriangle className="h-3 w-3" /> Failed</> : <>Idle</>}
@@ -722,6 +789,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         }
       >
         <div className="space-y-4">
+          {/* Generation CTA Header */}
           <div className="flex flex-wrap items-center gap-3">
             <Button
               size="lg"
@@ -749,7 +817,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
               )}
             </Button>
 
-            {isGenerationReady && (
+            {isGenerationReady && !isEditing && (
               <Button size="sm" variant="outline" onClick={handleRetryGeneration} className="border-indigo-200 text-indigo-600">
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate Questions
               </Button>
@@ -757,11 +825,10 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
 
             <div className="text-[11px] text-slate-400">
               <p>Config: {domain}{domain === 'Competitive' ? ` · ${examFamily}` : ''} · {subject} · {chapter} · {topic} · {difficulty} · {parseQuestionCount(questionCount)} Qs · {qTypes.join(', ')}</p>
-              <p>Blueprint: {bloomPreset} · {weightagePreset} · {coPreset} · {domain === 'Competitive' ? `${pyqPreference} · ${negativeMarking} · ${examPattern}` : 'University'}</p>
             </div>
           </div>
 
-          {/* Generation lifecycle UI */}
+          {/* Empty State */}
           {isBankEmpty && (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center dark:border-slate-700 dark:bg-slate-800/30">
               <Database className="mx-auto h-8 w-8 text-slate-300" />
@@ -770,6 +837,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             </div>
           )}
 
+          {/* Loading State */}
           {isGenerationRunning && (
             <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-6 text-center dark:border-indigo-500/30 dark:bg-indigo-500/5">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-indigo-500" />
@@ -779,23 +847,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             </div>
           )}
 
-          {isGenerationReady && (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-200">
-                  <CheckCircle2 className="h-4 w-4" /> {generatedCountForDisplay} questions generated
-                  {requestedCountForDisplay !== generatedCountForDisplay && (
-                    <span className="ml-2 text-[11px] font-normal text-amber-600">Requested {requestedCountForDisplay}, got {generatedCountForDisplay} — {generatedCountForDisplay < requestedCountForDisplay ? 'not ready, Send disabled' : 'ready'}</span>
-                  )}
-                </p>
-                <Badge variant={generatedCountForDisplay >= requestedCountForDisplay ? 'success' : 'warning'} size="sm">
-                  {generatedCountForDisplay >= requestedCountForDisplay ? 'Ready · Send enabled' : 'Not ready · Send disabled'}
-                </Badge>
-              </div>
-              <p className="mt-1 text-[11px] text-emerald-700/70 dark:text-emerald-300/70">Reference {generationId} · Status {generationStatusLabel}</p>
-            </div>
-          )}
-
+          {/* Failure State */}
           {isGenerationFailed && (
             <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6 text-center dark:border-rose-500/30 dark:bg-rose-500/5">
               <AlertTriangle className="mx-auto h-8 w-8 text-rose-500" />
@@ -807,114 +859,127 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             </div>
           )}
 
-          {/* Completeness check */}
-          {isGenerationReady && generatedCountForDisplay < requestedCountForDisplay && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-500/30 dark:bg-amber-500/5">
-              <p className="flex items-center gap-2 text-[12px] font-bold text-amber-800 dark:text-amber-200"><AlertTriangle className="h-4 w-4" /> Incomplete generation — Send disabled</p>
-              <p className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-300/80">Requested {requestedCountForDisplay} questions, generated {generatedCountForDisplay}. The paper is not ready — regenerate or adjust the count.</p>
-            </div>
-          )}
-        </div>
-      </Section>
-
-      {/* Section 6: the CURRENT generation's questions — review/select, then save */}
-      <Section
-        n={6}
-        title="Question Bank"
-        subtitle="Questions generated by the current generation request — review and select them, then save the paper"
-      >
-        <>
-          {isGenerationRunning ? (
-            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-10 text-[12.5px] text-slate-500 dark:border-indigo-500/20 dark:bg-indigo-500/5">
-              <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-              <p className="font-bold text-slate-700 dark:text-slate-200">AI is generating {requestedCountForDisplay} questions…</p>
-              <p className="text-[11px] text-slate-400">Generated questions will appear here when the agent completes.</p>
-            </div>
-          ) : isGenerationFailed ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6 text-center dark:border-rose-500/30 dark:bg-rose-500/5">
-              <AlertTriangle className="mx-auto h-7 w-7 text-rose-500" />
-              <p className="mt-2 text-sm font-bold text-rose-700 dark:text-rose-200">Question generation failed.</p>
-              <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-300/80">Question generation failed. Please try again.</p>
-              <p className="mt-1 text-[10px] text-rose-400">Reference: {generationId ?? '—'}</p>
-            </div>
-          ) : availableQuestions.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
-              <Database className="mx-auto h-8 w-8 text-slate-300" />
-              {!hasGeneration ? (
-                <>
-                  <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions generated yet.</p>
-                  <p className="mt-1 text-xs text-slate-400">Configure your paper and click Generate Paper.</p>
-                  <Button size="sm" className="mt-4 bg-gradient-to-r from-indigo-600 to-blue-600" onClick={handleGenerateQuestions}><Sparkles className="h-3.5 w-3.5" /> Generate Paper</Button>
-                </>
-              ) : generationQuestions.length === 0 ? (
-                <>
-                  <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions were generated for this generation.</p>
-                  <p className="mt-1 text-xs text-slate-400">Regenerate questions or adjust the paper configuration and try again.</p>
-                  <Button size="sm" variant="outline" className="mt-4 border-indigo-200 text-indigo-600" onClick={handleRetryGeneration}><RefreshCw className="h-3.5 w-3.5" /> Regenerate Questions</Button>
-                </>
-              ) : (
-                <>
-                  <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions match these filters</p>
-                  <p className="mt-1 text-xs text-slate-400">Try a different question type filter.</p>
-                </>
-              )}
-            </div>
-          ) : (
+          {/* Success / Review State */}
+          {(isGenerationReady || (isEditing && generationQuestions.length > 0)) && (
             <>
-              <div className="space-y-2.5">
-                {availableQuestions.map((q) => {
-                  const id = q.id ?? q._id
-                  const isSelected = selectedIds.includes(id)
-                  return (
-                    <div key={id} className={`rounded-2xl border p-3.5 transition-all ${isSelected ? 'border-indigo-300 bg-indigo-50/50 dark:border-indigo-500/40 dark:bg-indigo-500/5' : 'border-slate-100 bg-white hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900'}`}>
-                      <div className="flex items-start gap-3">
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(id)} className="mt-1 h-4 w-4 accent-indigo-600" data-testid={`question-checkbox-${id}`} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap gap-1.5">
-                            <Badge variant="secondary" size="sm">{q.subjectName ?? q.subject ?? q.subjectCode ?? '—'}</Badge>
-                            {q.chapter && <Badge variant="outline" size="sm">{q.chapter}</Badge>}
-                            {q.topic && <Badge variant="outline" size="sm">{q.topic}</Badge>}
-                            {q.difficulty && <Badge variant={DIFF_STYLES[q.difficulty] ?? 'secondary'} size="sm">{q.difficulty}</Badge>}
-                            {q.type && <Badge variant="secondary" size="sm">{q.type}</Badge>}
-                            {q.questionType && <Badge variant="secondary" size="sm">{q.questionType}</Badge>}
-                            {q.exam && <Badge variant="info" size="sm">{q.exam}</Badge>}
-                            {q.marks && <Badge variant="outline" size="sm">{q.marks} marks</Badge>}
-                          </div>
-                          <p className="mt-2 text-[13px] font-medium leading-relaxed text-slate-700 dark:text-slate-200">{q.text ?? q.question ?? '—'}</p>
-                          {Array.isArray(q.options) && q.options.length > 0 && (
-                            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                              {q.options.map((opt, i) => (
-                                <span key={i} className="rounded-lg bg-slate-50 px-3 py-1.5 text-[11.5px] text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">({String.fromCharCode(65 + i)}) {opt}</span>
-                              ))}
+              {!isEditing && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-200">
+                      <CheckCircle2 className="h-4 w-4" /> {generatedCountForDisplay} questions generated
+                    </p>
+                    <Badge variant={generatedCountForDisplay >= requestedCountForDisplay ? 'success' : 'warning'} size="sm">
+                      {generatedCountForDisplay >= requestedCountForDisplay ? 'Ready · Send enabled' : 'Not ready · Send disabled'}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-[11px] text-emerald-700/70 dark:text-emerald-300/70">Reference {generationId} · Status {generationStatusLabel}</p>
+                </div>
+              )}
+
+              {availableQuestions.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center dark:border-slate-700">
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">No questions match the filter &ldquo;{questionTypeFilter}&rdquo;.</p>
+                  <p className="mt-1 text-xs text-slate-400">Switch filter to &ldquo;All types&rdquo; to view all generated questions.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {availableQuestions.map((q) => {
+                    const id = q.id ?? q._id
+                    const isSelected = selectedIds.includes(id)
+                    return (
+                      <div key={id} className={`rounded-2xl border p-3.5 transition-all ${isSelected ? 'border-indigo-300 bg-indigo-50/50 dark:border-indigo-500/40 dark:bg-indigo-500/5' : 'border-slate-100 bg-white hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900'}`}>
+                        <div className="flex items-start gap-3">
+                          <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(id)} className="mt-1 h-4 w-4 accent-indigo-600" data-testid={`question-checkbox-${id}`} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap gap-1.5">
+                              <Badge variant="secondary" size="sm">{q.subjectName ?? q.subject ?? q.subjectCode ?? '—'}</Badge>
+                              {q.chapter && <Badge variant="outline" size="sm">{q.chapter}</Badge>}
+                              {q.topic && <Badge variant="outline" size="sm">{q.topic}</Badge>}
+                              {q.difficulty && <Badge variant={DIFF_STYLES[q.difficulty] ?? 'secondary'} size="sm">{q.difficulty}</Badge>}
+                              {q.type && <Badge variant="secondary" size="sm">{q.type}</Badge>}
+                              {q.questionType && <Badge variant="secondary" size="sm">{q.questionType}</Badge>}
+                              {q.exam && <Badge variant="info" size="sm">{q.exam}</Badge>}
+                              {q.marks && <Badge variant="outline" size="sm">{q.marks} marks</Badge>}
                             </div>
-                          )}
-                          <p className="mt-1 text-[10px] text-slate-400">ID: {id} · Domain: {q.domain ?? domain} · Exam family: {q.examFamily ?? examFamily ?? 'University'} · Source: {q.source ?? 'AI'}</p>
+                            <p className="mt-2 text-[13px] font-medium leading-relaxed text-slate-700 dark:text-slate-200">{q.text ?? q.question ?? '—'}</p>
+                            {Array.isArray(q.options) && q.options.length > 0 && (
+                              <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                                {q.options.map((opt, i) => (
+                                  <span key={i} className="rounded-lg bg-slate-50 px-3 py-1.5 text-[11.5px] text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                                    ({String.fromCharCode(65 + i)}) {optionText(opt)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <p className="mt-1 text-[10px] text-slate-400">ID: {id} · Domain: {q.domain ?? domain} · Exam family: {q.examFamily ?? examFamily ?? 'University'} · Source: {q.source ?? 'AI'}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
 
+              {/* Bottom Action Bar */}
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/30">
                 <div>
                   <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{selectedIds.length} questions selected</p>
-                  <p className="text-[11px] text-slate-400">{isGenerationReady && generatedCountForDisplay < requestedCountForDisplay ? 'Not ready — incomplete generation, Send disabled.' : isPaperReady ? 'Ready — Send enabled.' : 'Select questions to enable Save.'}</p>
+                  <p className="text-[11px] text-slate-400">
+                    {isEditing
+                      ? 'Confirming will save changes and transition paper status to READY.'
+                      : isPaperReady
+                        ? 'Ready to save paper into Paper Library.'
+                        : 'Select questions to enable Save.'}
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setPrintOpen(true)}><Printer className="h-3.5 w-3.5" /> Preview</Button>
-                  <Button size="sm" onClick={handleCreate} disabled={saving || selectedIds.length === 0 || isGenerationRunning || isGenerationFailed} data-testid="save-paper-button"><Save className="h-3.5 w-3.5" /> {saving ? 'Saving…' : `Save Paper (${selectedIds.length})`}</Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setPrintOpen(true)}>
+                    <Printer className="h-3.5 w-3.5" /> Preview
+                  </Button>
+                  {isEditing ? (
+                    <>
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        <X className="h-3.5 w-3.5" /> Cancel Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleCreate}
+                        disabled={saving || selectedIds.length === 0}
+                        className="bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md shadow-emerald-500/25 hover:brightness-110"
+                        data-testid="save-paper-button"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> {saving ? 'Confirming…' : `Confirm Changes (${selectedIds.length})`}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={handleCreate}
+                      disabled={saving || selectedIds.length === 0 || isGenerationRunning || isGenerationFailed}
+                      data-testid="save-paper-button"
+                    >
+                      <Save className="h-3.5 w-3.5" /> {saving ? 'Saving…' : `Save Paper (${selectedIds.length})`}
+                    </Button>
+                  )}
                 </div>
               </div>
             </>
           )}
-        </>
+        </div>
       </Section>
 
-      {/* Paper Library removed — it now lives in the dedicated Paper Library tab. */}
-
-      {/* Dialogs — print preview is used by the Section 6 Preview button. */}
-      <PaperPrintPreview paper={{ title, totalMarks: Number(marks) || 50, duration: Number(duration) || 120, questions: selectedIds.length, questionList: availableQuestions.filter((q) => selectedIds.includes(q.id ?? q._id)) }} open={printOpen} onOpenChange={setPrintOpen} />
+      {/* Dialogs */}
+      <PaperPrintPreview
+        paper={{
+          title,
+          totalMarks: Number(marks) || 50,
+          duration: Number(duration) || 120,
+          questions: selectedIds.length,
+          questionList: availableQuestions.filter((q) => selectedIds.includes(q.id ?? q._id)),
+        }}
+        open={printOpen}
+        onOpenChange={setPrintOpen}
+      />
     </div>
   )
 }

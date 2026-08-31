@@ -6,14 +6,14 @@
 
 import { useEffect, useState } from 'react'
 import { BookOpen, Database } from 'lucide-react'
-import { useAiPaperLibrary, usePaperDeleteBackend } from '@/services/faculty-papers'
+import { usePaperLibrary, usePaperDeleteBackend, downloadPaperPdf, startEditPaper } from '@/services/faculty-papers'
 import { StatCard } from '@/components/shared/stat-card'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { Button, Input, useToast } from '@/components/ui'
 import { PaperCard, PaperPreviewDialog, PaperDeleteDialog, SharePaperDialog } from './paper-parts'
 
 function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
-  const { data, isLoading, isError, error, refetch } = useAiPaperLibrary()
+  const { data, isLoading, isError, error, refetch } = usePaperLibrary()
   const { mutateAsync: deletePaper } = usePaperDeleteBackend()
   const [filter, setFilter] = useState('All')
   const [modeFilter, setModeFilter] = useState('All')
@@ -88,6 +88,27 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
     }
   }
 
+  const handleDownload = async (paper) => {
+    try {
+      toast.info('Downloading PDF…', `Generating PDF for "${paper.title}"`)
+      await downloadPaperPdf(paper.id, paper.title)
+      toast.success('Download complete', `Downloaded "${paper.title}.pdf"`)
+    } catch (e) {
+      toast.error('Download failed', e?.response?.data?.detail ?? e?.message ?? 'Could not generate paper PDF.')
+    }
+  }
+
+  const handleEdit = async (paper) => {
+    try {
+      await startEditPaper(paper.id)
+    } catch {
+      // Continue to open edit form
+    }
+    if (onEditPaper) {
+      onEditPaper({ ...paper, status: 'Draft' })
+    }
+  }
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -158,7 +179,8 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
             onView={(paper) => { setSelectedPaper(paper); setPreviewOpen(true) }}
             onDelete={setDeleteTarget}
             onShare={setShareTarget}
-            onEdit={(paper) => { if (onEditPaper) onEditPaper({ ...paper }); }}
+            onEdit={handleEdit}
+            onDownload={handleDownload}
           />
         ))}
       </div>
@@ -185,3 +207,4 @@ function PaperLibraryTab({ onEditPaper = null, onGoToGenerate = null }) {
 
 export { PaperLibraryTab }
 export default PaperLibraryTab
+

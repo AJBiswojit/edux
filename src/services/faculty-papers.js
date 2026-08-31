@@ -126,7 +126,71 @@ export async function deletePaper(id) {
   return data
 }
 
+export async function updatePaper(id, payload) {
+  const examFamily = payload.domain === 'Competitive' || payload.mode === 'Competitive'
+    ? canonicalExamFamily(payload.examFamily ?? payload.exam)
+    : null
+  const body = {
+    title: payload.title,
+    domain: payload.domain ?? payload.mode ?? 'University',
+    examFamily,
+    mode: payload.domain ?? payload.mode ?? 'University',
+    exam: examFamily,
+    examType: payload.examType ?? payload.paperType ?? 'Mid Semester',
+    paperType: payload.paperType ?? payload.examType ?? 'Mid Semester',
+    course: payload.course ?? null,
+    subject: payload.subject ?? null,
+    chapter: payload.chapter ?? null,
+    topic: payload.topic ?? null,
+    program: payload.program ?? null,
+    totalMarks: payload.totalMarks,
+    duration: payload.duration,
+    difficulty: payload.difficulty ?? 'Mixed',
+    questions: payload.selectedQuestionIds?.length ?? payload.questions ?? 0,
+    selectedQuestionIds: payload.selectedQuestionIds,
+    bloomPreset: payload.bloomPreset ?? null,
+    weightagePreset: payload.weightagePreset ?? null,
+    coPreset: payload.coPreset ?? null,
+    pyqPreference: payload.pyqPreference ?? null,
+    negativeMarking: payload.negativeMarking ?? null,
+    examPattern: payload.examPattern ?? null,
+    config: payload.config ?? null,
+    coverage: payload.coverage ?? 90,
+    sets: payload.sets ?? 1,
+    status: payload.status ?? 'ready',
+  }
+
+  const { data } = await api.put(`/faculty/paper-generator/papers/${id}`, body)
+  return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
+}
+
+export async function startEditPaper(id) {
+  const { data } = await api.post(`/faculty/paper-generator/papers/${id}/edit`)
+  return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
+}
+
+export async function downloadPaperPdf(paperId, title = 'question_paper') {
+  const response = await api.get(`/faculty/paper-generator/papers/${paperId}/download`, {
+    responseType: 'blob',
+  })
+  const blob = new Blob([response.data], { type: 'application/pdf' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  const sanitized = (title || 'question_paper')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/[-\s]+/g, '_')
+  link.download = `${sanitized}.pdf`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+  return true
+}
+
 export async function duplicatePaper(id) {
+
   const { data } = await api.post(`/faculty/paper-generator/papers/${id}/duplicate`)
   return { ...data, paper: data?.paper ? normalizePaper(data.paper) : data?.paper }
 }
@@ -215,6 +279,19 @@ export function usePaperDeleteBackend() {
     },
   })
 }
+
+export function usePaperUpdateBackend() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }) => updatePaper(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator'] })
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-library'] })
+      qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator', 'backend'] })
+    },
+  })
+}
+
 
 export function usePaperDuplicateBackend() {
   const qc = useQueryClient()

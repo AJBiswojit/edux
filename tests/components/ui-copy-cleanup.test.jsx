@@ -36,12 +36,14 @@ vi.mock('../../src/services/faculty-papers', () => {
       isLoading: false, isError: false, error: null, refetch: () => {},
     }),
     usePaperCreateBackend: noop,
+    usePaperUpdateBackend: noop,
     usePaperDeleteBackend: noop,
     usePaperDuplicateBackend: noop,
     usePaperRegenerateBackend: noop,
     usePaperArchiveBackend: noop,
     usePaperPublishBackend: noop,
     usePaperShareBackend: noop,
+    downloadPaperPdf: vi.fn(),
     useAiPaperLibrary: () => ({
       data: { generatedPapers: [
         {
@@ -163,7 +165,6 @@ describe('UI copy cleanup — implementation terminology removed from product su
 
     expect(text).toContain('Question Paper Studio')
     expect(text).toContain('Question Generation')
-    expect(text).toContain('Question Bank')
     expect(text).toContain('Generation: Idle')
     // Phase 6 shows ONLY the current generation — with no generation it must
     // render the honest empty state, never question-bank records.

@@ -32,7 +32,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.ai_papers import AiGeneratedPaperQuestion
-from app.models.assessment import Question, QuestionGeneration, QuestionGenerationItem
+from app.models.assessment import Paper, Question, QuestionGeneration, QuestionGenerationItem
+
 from app.models.catalog import Chapter, Subject, Topic
 from app.models.identity import User
 from app.services import ai_paper_client
@@ -703,15 +704,25 @@ def get_generation(db: Session, user: User, generation_id: str) -> QuestionGener
 
 
 def get_current_generation(db: Session, user: User) -> QuestionGeneration | None:
-    """The faculty's most recent generation — used to recover the current
-    generation/paper state after a page refresh. Never synthesises one."""
+    """The faculty's most recent un-saved generation — used to recover the current
+    in-flight generation state after a page refresh. If the generation is already
+    saved into a Paper (completed workflow), it is not returned as current."""
     query = select(QuestionGeneration).where(QuestionGeneration.institution_id == user.institution_id)
     if user.primary_role != "admin":
         query = query.where(QuestionGeneration.faculty_id == user.id)
-    row = db.scalars(query.order_by(QuestionGeneration.created_at.desc())).first()
-    if row:
-        _sync_ai_generation(db, row)
-    return row
+    rows = list(db.scalars(query.order_by(QuestionGeneration.created_at.desc()).limit(10)).all())
+    for row in rows:
+        saved = db.scalar(
+            select(Paper.id).where(
+                Paper.institution_id == user.institution_id,
+                Paper.blueprint.like(f"%{row.id}%"),
+            ).limit(1)
+        )
+        if not saved:
+            _sync_ai_generation(db, row)
+            return row
+    return None
+
 
 
 def list_generations(db: Session, user: User, limit: int = 20) -> list[QuestionGeneration]:

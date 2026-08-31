@@ -13,16 +13,20 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.models.ai_papers import AiGeneratedPaper, AiGeneratedPaperQuestion
 from app.models.assessment import Paper, PaperQuestion, Question, QuestionGeneration
 from app.models.catalog import Chapter, Course, Subject, Topic
 from app.models.exams import ExamAttempt, ExamQuestionAttempt, ExamSitting
 from app.models.identity import User
 from app.models.people import StudentProfile
+from app.services.storage import write_paper_pdf
 
+STATUS_READY = "ready"
 STATUS_DRAFT = "draft"
 STATUS_PUBLISHED = "published"
 STATUS_ARCHIVED = "archived"
 LETTER = "ABCD"
+
 
 
 def utcnow() -> datetime:
@@ -75,9 +79,19 @@ def title_family(family: str | None) -> str | None:
 
 
 def title_status(raw: str | None) -> str:
-    mapping = {STATUS_DRAFT: "Draft", STATUS_PUBLISHED: "Published", STATUS_ARCHIVED: "Archived"}
-    key = (raw or STATUS_DRAFT).lower()
-    return mapping.get(key, (raw or "Draft").title())
+    mapping = {
+        STATUS_READY: "Ready",
+        STATUS_DRAFT: "Draft",
+        STATUS_PUBLISHED: "Published",
+        STATUS_ARCHIVED: "Archived",
+        "ready": "Ready",
+        "draft": "Draft",
+        "published": "Published",
+        "archived": "Archived",
+    }
+    key = (raw or STATUS_READY).lower()
+    return mapping.get(key, (raw or "Ready").title())
+
 
 
 def title_type(q_type: str | None) -> str:
@@ -547,6 +561,9 @@ def create_sql_paper(db: Session, user: User, body: dict) -> dict:
         negative_marking = negative.lower() in {"enabled", "true", "yes", "1"}
     else:
         negative_marking = bool(negative) if negative is not None else mode == "competitive"
+    status_raw = body.get("status")
+    paper_status = (status_raw.lower() if isinstance(status_raw, str) else None) or STATUS_READY
+
     paper = Paper(
         institution_id=user.institution_id,
         paper_code=body.get("paperCode") or f"PAPER-{uuid4().hex[:8].upper()}",
@@ -583,11 +600,12 @@ def create_sql_paper(db: Session, user: User, body: dict) -> dict:
                 "generationId": _resolve_generation_id(db, user, body.get("generationId")),
             }
         ),
-        status=STATUS_DRAFT,
+        status=paper_status,
         version=1,
         intervention_id=body.get("interventionId"),
         created_by=user.id,
     )
+
     try:
         db.add(paper)
         db.flush()
@@ -611,6 +629,224 @@ def create_sql_paper(db: Session, user: User, body: dict) -> dict:
         raise
     db.refresh(paper)
     return {"ok": True, "paper": serialize_paper_faculty(db, paper)}
+
+
+def set_paper_draft(db: Session, user: User, paper_id: str) -> dict:
+    """Transition a paper from READY to DRAFT when faculty begins editing."""
+    paper = db.get(Paper, paper_id)
+    if not paper:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Paper not found")
+    require_paper_manager(user, paper)
+    paper.status = STATUS_DRAFT
+    paper.updated_at = utcnow()
+    db.commit()
+    db.refresh(paper)
+    return {"ok": True, "paper": serialize_paper_faculty(db, paper)}
+
+
+def update_sql_paper(db: Session, user: User, paper_id: str, body: dict) -> dict:
+    """Update paper metadata and/or questions list, transitioning back to READY."""
+    paper = db.get(Paper, paper_id)
+    if not paper:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Paper not found")
+    require_paper_manager(user, paper)
+
+    title = str(body.get("title") or paper.title).strip()
+    if not title:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Paper name is required.")
+
+    # Check for duplicate title across other papers in this institution
+    exists = db.scalars(
+        select(Paper).where(
+            Paper.institution_id == user.institution_id,
+            Paper.id != paper.id,
+            func.lower(Paper.title) == title.lower(),
+        )
+    ).first()
+    if exists:
+        raise HTTPException(status.HTTP_409_CONFLICT, f'A paper named "{title}" already exists — choose a different name.')
+
+    mode, family = mode_family_from_body(body) if ("domain" in body or "mode" in body) else (paper.exam_mode, paper.exam_family)
+    ids = body.get("selectedQuestionIds")
+    questions = None
+    if ids is not None:
+        if not isinstance(ids, list):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "selectedQuestionIds must be an array of question ids")
+        questions = _load_selected_questions(db, user, ids, mode, family)
+
+    if "duration" in body or "durationMinutes" in body:
+        paper.duration_minutes = int(body.get("duration") or body.get("durationMinutes") or 120)
+
+    if questions is not None:
+        total_marks = body.get("totalMarks")
+        if total_marks is None:
+            total_marks = sum(q.marks or 0 for q in questions) or 0
+        paper.total_marks = float(total_marks or 0)
+    elif "totalMarks" in body:
+        paper.total_marks = float(body.get("totalMarks") or 0)
+
+    negative = body.get("negativeMarking")
+    if negative is not None:
+        if isinstance(negative, str):
+            paper.negative_marking = negative.lower() in {"enabled", "true", "yes", "1"}
+        else:
+            paper.negative_marking = bool(negative)
+
+    paper.title = title
+    paper.exam_mode = mode
+    paper.exam_family = family
+    if "paperType" in body or "examType" in body:
+        paper.paper_type = body.get("paperType") or body.get("examType")
+
+    bp = parse_json(paper.blueprint, {})
+    for field in [
+        "course", "subject", "chapter", "topic", "program", "difficulty",
+        "examType", "paperType", "bloomPreset", "weightagePreset", "coPreset",
+        "pyqPreference", "examPattern", "coverage", "sets", "config",
+    ]:
+        if field in body:
+            bp[field] = body[field]
+
+    if questions is not None:
+        bp["questionCount"] = len(questions)
+        bp["requestedQuestionCount"] = len(questions)
+
+    # Transition to READY unless explicitly specified otherwise
+    status_raw = body.get("status")
+    paper.status = (status_raw.lower() if isinstance(status_raw, str) else None) or STATUS_READY
+    paper.blueprint = json.dumps(bp)
+    paper.version = (paper.version or 1) + 1
+    paper.updated_at = utcnow()
+
+    if questions is not None:
+        db.query(PaperQuestion).filter(PaperQuestion.paper_id == paper.id).delete()
+        subjects, chapters, topics = _catalog_maps(db, user.institution_id)
+        for index, question in enumerate(questions, start=1):
+            db.add(
+                PaperQuestion(
+                    paper_id=paper.id,
+                    question_id=question.id,
+                    sort_order=index,
+                    marks_override=None,
+                    snapshot=json.dumps(snapshot_question(question, subjects, chapters, topics)),
+                )
+            )
+
+    db.commit()
+    db.refresh(paper)
+    return {"ok": True, "paper": serialize_paper_faculty(db, paper)}
+
+
+def generate_paper_pdf(db: Session, user: User, paper_id: str) -> tuple[bytes, str]:
+    """Generate a production-quality PDF for a question paper with actual questions."""
+    paper = db.get(Paper, paper_id)
+    questions_list: list[dict] = []
+    title = "Question Paper"
+    domain = "University"
+    exam_family = None
+    subject = None
+    total_marks = 0
+    duration = 120
+    negative_marking = False
+
+    if paper:
+        require_paper_manager(user, paper)
+        title = paper.title
+        domain = title_domain(paper.exam_mode)
+        exam_family = title_family(paper.exam_family)
+        total_marks = int(paper.total_marks or 0)
+        duration = int(paper.duration_minutes or 120)
+        negative_marking = bool(paper.negative_marking)
+
+        bp = parse_json(paper.blueprint, {})
+        subject = bp.get("subject") or bp.get("course")
+
+        links = _paper_questions(db, paper.id)
+        q_ids = [link.question_id for link in links]
+        q_map = {row.id: row for row in db.scalars(select(Question).where(Question.id.in_(q_ids))).all()} if q_ids else {}
+
+        for link in links:
+            q = q_map.get(link.question_id)
+            delivery = serialize_delivery_question(link, q, include_answer=False)
+            questions_list.append(delivery)
+    else:
+        # Check AiGeneratedPaper
+        ai_paper = db.get(AiGeneratedPaper, paper_id)
+        if not ai_paper:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Paper not found")
+
+        title = ai_paper.title or "AI Generated Question Paper"
+        domain = "Competitive"
+        from app.api.v1.faculty import _ai_exam_label
+        exam_family = _ai_exam_label(ai_paper.exam_family)
+        subject = ai_paper.subject_name
+        total_marks = int(ai_paper.total_marks or (ai_paper.question_count or 10) * 4)
+        duration = int(ai_paper.duration_minutes or (ai_paper.question_count or 10) * 2)
+
+        rows = db.scalars(
+            select(AiGeneratedPaperQuestion)
+            .where(AiGeneratedPaperQuestion.paper_id == paper_id)
+            .order_by(AiGeneratedPaperQuestion.position)
+        ).all()
+
+        for q in rows:
+            raw_options = q.options or []
+            if isinstance(raw_options, str):
+                try:
+                    raw_options = json.loads(raw_options)
+                except (ValueError, TypeError):
+                    raw_options = []
+            options = [
+                (opt.get("text") if isinstance(opt, dict) else str(opt))
+                for opt in raw_options
+            ]
+            questions_list.append({
+                "text": q.stem_text,
+                "type": "MCQ",
+                "difficulty": (q.level or "medium").title(),
+                "marks": q.marks or 4,
+                "negativeMarks": q.negative_marks or 1,
+                "options": options,
+            })
+
+    subtitle_parts = [domain]
+    if exam_family:
+        subtitle_parts.append(exam_family)
+    if subject:
+        subtitle_parts.append(subject)
+    subtitle = " · ".join(subtitle_parts)
+
+    meta_items = [
+        ("Total Marks", str(total_marks)),
+        ("Duration", f"{duration} mins"),
+        ("Questions", str(len(questions_list))),
+    ]
+    if domain == "Competitive" and exam_family:
+        meta_items.insert(0, ("Exam", exam_family))
+    elif subject:
+        meta_items.insert(0, ("Subject", subject))
+
+    instructions = [
+        "All questions are compulsory.",
+        "Read each question carefully and select the best answer.",
+    ]
+    if negative_marking or domain == "Competitive":
+        instructions.append("Negative marking is applicable: -1 mark for each incorrect response.")
+
+    pdf_bytes = write_paper_pdf(
+        title=title,
+        subtitle=subtitle,
+        meta_items=meta_items,
+        instructions=instructions,
+        questions=questions_list,
+    )
+
+    clean_title = re.sub(r"[^\w\s-]", "", title).strip()
+    clean_title = re.sub(r"[-\s]+", "_", clean_title) or "question_paper"
+    filename = f"{clean_title}.pdf"
+
+    return pdf_bytes, filename
+
 
 
 def delete_sql_paper(db: Session, user: User, paper_id: str) -> dict:
