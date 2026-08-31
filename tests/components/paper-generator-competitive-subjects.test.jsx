@@ -6,31 +6,34 @@
  *  - Competitive + NEET → Physics, Chemistry, Biology
  *  - Switching exam family clears a subject that belongs to the previous
  *    family only (Mathematics for JEE; Biology for NEET) together with its
- *    chapter/topic descendants, so stale IDs are never sent to the API.
+ *    chapter/topic descendants, so stale filters are never sent to the AI
+ *    generation agent (POST /faculty/question-bank/generate).
  */
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-const state = vi.hoisted(() => ({ bankCalls: [], posts: [] }))
+const state = vi.hoisted(() => ({ posts: [], gets: [] }))
 
 vi.mock('@/api/axios', () => ({
   default: {
     get: vi.fn(async (url, config = {}) => {
+      state.gets.push({ url, params: config.params ?? null })
       if (url === '/faculty/paper-generator') {
         return { data: { generatedPapers: [], config: CATALOG, versionHistory: {} } }
       }
-      if (url === '/faculty/question-bank') {
-        const params = config.params ?? {}
-        state.bankCalls.push(params)
-        const questions = BANK[`${params.domain}-${params.examFamily}`] ?? []
-        return { data: { questions, total: questions.length, summary: { total: questions.length } } }
+      if (url === '/faculty/question-bank/generations/current') return { data: { generation: null } }
+      if (url.endsWith('/questions') && url.includes('/generations/')) {
+        return { data: { ok: true, status: 'READY', total: 0, requestedCount: 0, generatedCount: 0, questions: [] } }
       }
       return { data: {} }
     }),
     post: vi.fn(async (url, body) => {
       state.posts.push({ url, body })
+      if (url === '/faculty/question-bank/generate') {
+        return { data: { ok: true, generationId: 'gen-1', id: 'gen-1', status: 'READY', requestedCount: 20, generatedCount: 0 } }
+      }
       return { data: { ok: true } }
     }),
     patch: vi.fn(async () => ({ data: { ok: true } })),
@@ -59,15 +62,6 @@ const CATALOG = {
   },
 }
 
-const BANK = {
-  'Competitive-JEE': [
-    { id: 'jee-1', subject: 'Mathematics', domain: 'Competitive', examFamily: 'JEE', type: 'MCQ', difficulty: 'Medium', text: 'JEE maths question', options: ['a', 'b', 'c', 'd'] },
-  ],
-  'Competitive-NEET': [
-    { id: 'neet-1', subject: 'Biology', domain: 'Competitive', examFamily: 'NEET', type: 'MCQ', difficulty: 'Medium', text: 'NEET biology question', options: ['a', 'b', 'c', 'd'] },
-  ],
-}
-
 const cleanups = []
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -85,8 +79,8 @@ function mount() {
 }
 
 beforeEach(() => {
-  state.bankCalls = []
   state.posts = []
+  state.gets = []
 })
 afterEach(() => {
   while (cleanups.length) cleanups.shift()()
@@ -94,6 +88,7 @@ afterEach(() => {
 })
 
 const button = (container, label) => [...container.querySelectorAll('button')].find((b) => b.textContent.trim().endsWith(label))
+const generatePosts = () => state.posts.filter((c) => c.url === '/faculty/question-bank/generate')
 
 async function goCompetitive(container) {
   const comp = button(container, '🎯 Competitive') || button(container, 'Competitive')
@@ -139,25 +134,29 @@ describe('Competitive exam subject mapping', () => {
     await settle(120)
     await goCompetitive(view.container)
     await choose(view.container, 'Subject', 'Mathematics')
-    // Mathematics is scoped to JEE; the bank request carries the subject
-    // code (MATH) resolved from the real catalog row.
-    expect(state.bankCalls.some((c) => c.domain === 'Competitive' && c.examFamily === 'JEE' && c.subject === 'MATH')).toBe(true)
 
     await act(async () => { button(view.container, 'NEET').click() })
     await settle(250)
 
-    // The stale subject is cleared — no Mathematics subject param survives
-    // into any post-switch NEET request.
-    const neetCalls = state.bankCalls.filter((c) => c.examFamily === 'NEET')
-    expect(neetCalls.length).toBeGreaterThan(0)
-    expect(neetCalls.at(-1)).toMatchObject({ domain: 'Competitive', examFamily: 'NEET' })
-    expect(neetCalls.at(-1).subject).toBeUndefined()
+    // The stale subject is cleared — the UI never keeps Mathematics for
+    // NEET.
     expect(triggerOf(view.container, 'Subject').textContent).toContain('All subjects')
     expect(triggerOf(view.container, 'Chapter').textContent).toContain('Select a subject first')
-    // The generation payload must not carry a stale JEE subject either.
-    const subjectTrigger = triggerOf(view.container, 'Subject')
-    await openSelect(subjectTrigger)
+    const trigger = triggerOf(view.container, 'Subject')
+    await openSelect(trigger)
     expect(optionsOf(menuOf(view.container, 'Subject')).map((o) => o.textContent.trim())).toEqual(['All subjects', 'Physics', 'Chemistry', 'Biology'])
+
+    // The generation payload must not carry a stale JEE subject either —
+    // 'All subjects' is the valid Competitive distribution contract.
+    const genButton = view.container.querySelector('[data-testid="generate-questions-button"]')
+    await act(async () => { genButton.click() })
+    await settle(200)
+    expect(generatePosts()).toHaveLength(1)
+    expect(generatePosts()[0].body).toMatchObject({
+      domain: 'Competitive',
+      examFamily: 'NEET',
+      subject: 'All subjects',
+    })
   })
 
   it('clears a NEET-only subject (Biology) when switching NEET → JEE', async () => {
@@ -167,16 +166,22 @@ describe('Competitive exam subject mapping', () => {
     await act(async () => { button(view.container, 'NEET').click() })
     await settle(120)
     await choose(view.container, 'Subject', 'Biology')
-    expect(state.bankCalls.at(-1)).toMatchObject({ domain: 'Competitive', examFamily: 'NEET', subject: 'Biology' })
 
     await act(async () => { button(view.container, 'JEE').click() })
     await settle(250)
 
-    const jeeCalls = state.bankCalls.filter((c) => c.examFamily === 'JEE')
-    // The post-switch JEE request exists and carries no stale NEET subject.
-    expect(jeeCalls.length).toBeGreaterThan(0)
-    expect(jeeCalls.at(-1)).toMatchObject({ domain: 'Competitive', examFamily: 'JEE' })
-    expect(jeeCalls.at(-1).subject).toBeUndefined()
+    // The post-switch UI carries no stale NEET subject.
     expect(triggerOf(view.container, 'Subject').textContent).toContain('All subjects')
+    expect(triggerOf(view.container, 'Chapter').textContent).toContain('Select a subject first')
+
+    const genButton = view.container.querySelector('[data-testid="generate-questions-button"]')
+    await act(async () => { genButton.click() })
+    await settle(200)
+    expect(generatePosts()).toHaveLength(1)
+    expect(generatePosts()[0].body).toMatchObject({
+      domain: 'Competitive',
+      examFamily: 'JEE',
+      subject: 'All subjects',
+    })
   })
 })

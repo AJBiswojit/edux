@@ -1,32 +1,36 @@
 /**
- * MediXO EduX — Assessment Workspace · Question Paper Studio (Phase G — Generate Questions).
+ * MediXO EduX — Assessment Workspace · Question Paper Studio.
  *
- * Phase G adds Generate Questions action that triggers REAL backend generation:
- * Faculty configures paper -> clicks Generate Questions -> POST /faculty/question-bank/generate
- * -> backend AI service -> PostgreSQL questions -> GET generated questions -> faculty selects -> paper creation.
+ * Generate Paper triggers the REAL deployed AI generation agent:
+ * Faculty configures paper -> clicks Generate Paper
+ * -> POST /faculty/question-bank/generate (complete configuration)
+ * -> backend creates a generation identity and submits the job to the deployed
+ *    AI agent -> backend persists the agent's real questions to PostgreSQL and
+ *    links them to the generation -> GET generation/{id}/questions returns ONLY
+ *    those questions -> faculty reviews/selects -> Save Paper.
  *
- * No mock/seeded questions. All questions from real DB.
+ * No mock/seeded/fallback questions. Phase 6 shows ONLY the questions of the
+ * CURRENT generation request; it never renders question-bank records, old
+ * generations or historical AI papers.
  *
- * Generation lifecycle: mounting the studio NEVER generates anything and never
- * restores a persisted paper as a fresh result — the tab opens in a clean
- * configuration state. A generation exists only after the faculty clicks
- * Generate Questions (the libraries' cached/stored papers stay in the Paper
- * Library tab).
+ * Generation lifecycle: mounting the studio never generates automatically. If
+ * the faculty already has a persisted current generation, the tab rehydrates
+ * that generation state (refresh recovery) without re-running the agent;
+ * otherwise it opens in a clean empty state.
  *
  * Preserves existing UI: paper name, domain, exam family, subject, chapter, topic, question count,
  * difficulty, question type, advanced blueprint, Bloom, chapter weighting, CO coverage, PYQ preference,
  * negative marking, exam pattern, KPI cards, tabs, filters, dropdowns, Paper Library, etc.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2, Printer, Save, SlidersHorizontal, ChevronDown, Wand2, AlertTriangle, Database,
   Sparkles, Loader2, RefreshCw,
 } from 'lucide-react'
 import { usePaperGeneratorBackend, usePaperCreateBackend } from '@/services/faculty-papers'
-import { useFacultyQuestions } from '@/services/faculty-questions'
-import { useQuestionGeneration, useGenerationStatus, useGenerationQuestions, GENERATION_STATUS, isTerminalStatus } from '@/services/faculty-question-generation'
+import { useQuestionGeneration, useGenerationStatus, useGenerationQuestions, useCurrentGeneration, GENERATION_STATUS, isTerminalStatus } from '@/services/faculty-question-generation'
 import { Badge, Button, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
 import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { useFilterCascade } from '@/hooks/use-filter-cascade'
@@ -80,7 +84,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [qTypes, setQTypes] = useState(['MCQ', 'Short Answer', 'Long Answer'])
   const [difficulty, setDifficulty] = useState(() => searchParams.get('difficulty') ?? 'Mixed')
   const [questionTypeFilter, setQuestionTypeFilter] = useState('All')
-  const [page, setPage] = useState(1)
 
   // Cascade — backend-oriented, uses only the real catalog from the live API.
   // No hardcoded course/subject/chapter/topic fallbacks.
@@ -90,7 +93,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const courseLabel = (row) => (row ? `${row.code} — ${row.name}` : '')
   const courseOptions = courseCatalog.map(courseLabel)
   const courseByLabel = useMemo(() => new Map(courseCatalog.map((c) => [courseLabel(c), c])), [courseCatalog])
-  const subjectByLabel = useMemo(() => new Map(subjectCatalog.map((s) => [s.name, s])), [subjectCatalog])
   const normalizeCourseValue = (value) => {
     if (!value) return ''
     const row = courseCatalog.find((c) => courseLabel(c) === value || c.code === value || c.name === value)
@@ -119,11 +121,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const subjectSelected = !!subject && subject !== 'All subjects'
   const chapterSelected = !!chapter && chapter !== 'All chapters'
 
-  const selectedCourse = courseByLabel.get(course)
-  const selectedSubject = subjectByLabel.get(subject)
-  const queryCourse = selectedCourse?.code
-  const querySubject = subjectSelected ? (selectedSubject?.code ?? subject) : undefined
-
   const [bloomPreset, setBloomPreset] = useState('Balanced')
   const [weightagePreset, setWeightagePreset] = useState('Balanced chapters')
   const [coPreset, setCoPreset] = useState('Balanced CO coverage')
@@ -132,9 +129,9 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [examPattern, setExamPattern] = useState('Standard')
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
-  // ===== Phase G: Question Generation State =====
-  // Generation exists ONLY for the current session's Generate action — a
-  // fresh visit to the studio starts from a clean configuration state and no
+  // ===== Question Generation State =====
+  // A generation exists ONLY after a real Generate request (or when this
+  // session rehydrates the faculty's persisted current generation). No
   // persisted/paper-library record is ever re-surfaced as a new generation.
   const [generationId, setGenerationId] = useState(null)
   const [generationRequested, setGenerationRequested] = useState(0)
@@ -142,10 +139,27 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [generationError, setGenerationError] = useState(null)
   const [generationQuestions, setGenerationQuestions] = useState([]) // real backend records
   const [isGenerating, setIsGenerating] = useState(false)
+  const [generationTriggered, setGenerationTriggered] = useState(false)
+  const generationStartedInSession = useRef(false)
 
   const { mutateAsync: triggerGeneration } = useQuestionGeneration()
+  const { data: currentGeneration } = useCurrentGeneration()
   const { data: statusData } = useGenerationStatus(generationId, { enabled: !!generationId && !isTerminalStatus(generationStatus) })
   const { data: genQuestionsData } = useGenerationQuestions(generationId, { enabled: !!generationId && (generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED) })
+
+  // Refresh/navigation recovery — rehydrate the persisted current generation
+  // identity without generating again. When no current generation exists the
+  // studio stays in the clean empty state. Never overrides a generation that
+  // was started in THIS session.
+  useEffect(() => {
+    if (!currentGeneration?.id || generationStartedInSession.current) return
+    if (generationId === currentGeneration.id) return
+    setGenerationId(currentGeneration.id)
+    setGenerationStatus(currentGeneration.status ?? null)
+    setGenerationRequested(currentGeneration.requestedCount ?? 0)
+    if (currentGeneration.errorMessage) setGenerationError(currentGeneration.errorMessage)
+    setGenerationTriggered(false)
+  }, [currentGeneration, generationId])
 
   // Update status from polling
   useEffect(() => {
@@ -161,19 +175,19 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     }
   }, [statusData])
 
-  // Update generated questions when fetched
+  // Update generated questions when fetched. Pre-selection applies ONLY to a
+  // generation triggered in this session (restored generations are presented
+  // for review without selecting anything).
   useEffect(() => {
     if (genQuestionsData?.questions) {
       setGenerationQuestions(genQuestionsData.questions)
-      // A fresh generation pre-selects every real backend ID so the paper can
-      // be reviewed and saved immediately; an existing selection is kept.
-      if (genQuestionsData.questions.length > 0) {
+      if (generationTriggered && genQuestionsData.questions.length > 0) {
         const realIds = genQuestionsData.questions.map(q => q.id).filter(Boolean)
         setSelectedIds(prev => (prev.length === 0 ? realIds : prev))
       }
       setIsGenerating(false)
     }
-  }, [genQuestionsData])
+  }, [genQuestionsData, generationTriggered])
 
   const parseQuestionCount = (raw) => {
     if (raw === 'Auto' || !raw) return 20
@@ -182,10 +196,15 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   }
 
   const handleGenerateQuestions = async () => {
-    // The backend scopes generated questions to the selected subject; generating
-    // without one would silently produce unscoped questions.
-    if (!subjectSelected) {
-      toast.error('Select a subject', 'Choose a subject before generating questions.')
+    // The backend scopes generated questions to the selected subject. For
+    // Competitive, an explicit 'All subjects' choice distributes across the
+    // exam family's subjects — never an arbitrary single-subject fallback.
+    // University papers always need an explicit subject (the deployed agent
+    // supports JEE/NEET only, so an unselected University scope is a real
+    // configuration error, not a "distribute across everything" request).
+    const universitySubjectMissing = domain === 'University' && !subjectSelected
+    if (universitySubjectMissing || (subject !== 'All subjects' && !subjectSelected)) {
+      toast.error('Select a subject', domain === 'University' ? 'Choose a course and subject before generating questions.' : 'Choose a subject before generating questions.')
       return
     }
     const count = parseQuestionCount(questionCount)
@@ -194,6 +213,9 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     setGenerationStatus(GENERATION_STATUS.GENERATING)
     setGenerationRequested(count)
     setGenerationQuestions([])
+    setSelectedIds([])
+    setGenerationTriggered(true)
+    generationStartedInSession.current = true
 
     try {
       const payload = {
@@ -273,43 +295,23 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
     handleGenerateQuestions()
   }
 
-  // Question bank — backend only, no mock fallback
-  const questionFilters = useMemo(() => ({
-    domain,
-    examFamily: domain === 'Competitive' ? examFamily : undefined,
-    course: domain === 'University' ? queryCourse : undefined,
-    subject: querySubject,
-    chapter: chapter !== 'All chapters' ? chapter : undefined,
-    topic: topic !== 'All topics' ? topic : undefined,
-    difficulty: difficulty !== 'Mixed' ? difficulty : undefined,
-    questionType: questionTypeFilter !== 'All' ? questionTypeFilter : undefined,
-    page,
-    limit: 50,
-  }), [domain, examFamily, queryCourse, querySubject, subject, chapter, topic, difficulty, questionTypeFilter, page])
-
-  const { data: questionData, isLoading: qLoading, isError: qError, error: qErr, refetch: refetchQuestions } = useFacultyQuestions(questionFilters)
-
-  // Backend returns { questions: [], total, ... } or { summary, questions } depending on implementation
-  const availableQuestions = useMemo(() => {
-    // Phase G: if generation succeeded, prioritize generated real backend questions
-    if (generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED) {
-      if (generationQuestions.length > 0) return generationQuestions
-    }
-    if (!questionData) return []
-    if (Array.isArray(questionData.questions)) return questionData.questions
-    if (Array.isArray(questionData.items)) return questionData.items
-    if (Array.isArray(questionData)) return questionData
-    return []
-  }, [questionData, generationQuestions, generationStatus])
-
-  const totalQuestions = questionData?.total ?? questionData?.summary?.total ?? availableQuestions.length
-
   // Determine empty state category per spec
-  const isBankEmpty = totalQuestions === 0 && generationQuestions.length === 0
   const hasGeneration = !!generationId
   const isGenerationRunning = generationStatus === GENERATION_STATUS.GENERATING || generationStatus === GENERATION_STATUS.PROCESSING || isGenerating
   const isGenerationReady = generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED
   const isGenerationFailed = generationStatus === GENERATION_STATUS.FAILED
+
+  // Phase 6 working set: ONLY the questions of the CURRENT generation request.
+  // The optional question-type filter narrows that set client-side; it never
+  // reaches into the question bank or another generation.
+  const availableQuestions = useMemo(() => {
+    if (!isGenerationReady) return []
+    if (questionTypeFilter === 'All') return generationQuestions
+    return generationQuestions.filter((q) => (q.type ?? q.questionType) === questionTypeFilter)
+  }, [generationQuestions, isGenerationReady, questionTypeFilter])
+
+  const totalQuestions = availableQuestions.length
+  const isBankEmpty = !hasGeneration && generationQuestions.length === 0
 
   const requestedCountForDisplay = generationRequested || parseQuestionCount(questionCount)
   const generatedCountForDisplay = generationQuestions.length || 0
@@ -516,7 +518,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                       // option rendered for one frame) and page selection resets.
                       setExamFamily(e)
                       setSelectedIds([])
-                      setPage(1)
                       applyScope({ subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' })
                     }}
                     className={`flex-1 rounded-xl px-4 py-2 text-[13px] font-bold transition-all ${examFamily === e ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
@@ -545,7 +546,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
               <Select
                 value={course}
                 ariaLabel="Course"
-                onValueChange={(v) => { applyScope({ course: v, subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }); setPage(1); setSelectedIds([]) }}
+                onValueChange={(v) => { applyScope({ course: v, subject: 'All subjects', chapter: 'All chapters', topic: 'All topics' }); setSelectedIds([]) }}
                 group="paper-generator"
                 disabled={!catalogLoading && courseOptions.length === 0}
                 loading={catalogLoading}
@@ -561,7 +562,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             <Select
               value={subjectOptions.length > 0 ? subject : ''}
               ariaLabel="Subject"
-              onValueChange={(v) => { applyScope({ subject: v, chapter: 'All chapters', topic: 'All topics' }); setPage(1); setSelectedIds([]) }}
+              onValueChange={(v) => { applyScope({ subject: v, chapter: 'All chapters', topic: 'All topics' }); setSelectedIds([]) }}
               group="paper-generator"
               disabled={domain === 'University' ? courseEmpty && subjectOptions.length === 0 : false}
               emptyText="No subjects available"
@@ -576,7 +577,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             <Select
               value={chapterOptions.length > 0 ? chapter : ''}
               ariaLabel="Chapter"
-              onValueChange={(v) => { applyScope({ chapter: v, topic: 'All topics' }); setPage(1); setSelectedIds([]) }}
+              onValueChange={(v) => { applyScope({ chapter: v, topic: 'All topics' }); setSelectedIds([]) }}
               group="paper-generator"
               disabled={!subjectSelected && chapterOptions.length === 0}
               emptyText="No chapters available"
@@ -591,7 +592,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             <Select
               value={topicOptions.length > 0 ? topic : ''}
               ariaLabel="Topic"
-              onValueChange={(v) => { applyScope({ topic: v }); setPage(1); setSelectedIds([]) }}
+              onValueChange={(v) => { applyScope({ topic: v }); setSelectedIds([]) }}
               group="paper-generator"
               disabled={!chapterSelected && topicOptions.length === 0}
               emptyText="No topics available"
@@ -624,12 +625,12 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
             </Select>
           </Field>
           <Field label="Difficulty">
-            <Select value={difficulty} onValueChange={(v) => { setDifficulty(v); setPage(1) }}>
+            <Select value={difficulty} onValueChange={(v) => { setDifficulty(v) }}>
               {DIFF_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
             </Select>
           </Field>
           <Field label="Question Type filter">
-            <Select value={questionTypeFilter} onValueChange={(v) => { setQuestionTypeFilter(v); setPage(1) }}>
+            <Select value={questionTypeFilter} onValueChange={(v) => { setQuestionTypeFilter(v) }}>
               <SelectItem value="All">All types</SelectItem>
               {TYPE_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </Select>
@@ -761,12 +762,11 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
           </div>
 
           {/* Generation lifecycle UI */}
-          {!hasGeneration && isBankEmpty && (
+          {isBankEmpty && (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center dark:border-slate-700 dark:bg-slate-800/30">
               <Database className="mx-auto h-8 w-8 text-slate-300" />
               <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions generated yet.</p>
-              <p className="mt-1 text-xs text-slate-400">Your question bank is empty. Click Generate Questions to create the questions for this paper.</p>
-              {/* Generation flow (developer note): Faculty configures paper → Generate Questions → REAL BACKEND → PostgreSQL → REAL Question records → Frontend fetches → Faculty reviews/selects → Paper creation → Paper Library → Send enabled */}
+              <p className="mt-1 text-xs text-slate-400">Configure your paper and click Generate Paper.</p>
             </div>
           )}
 
@@ -817,44 +817,50 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
         </div>
       </Section>
 
-      {/* Section 6: review the live bank selection and save the paper */}
+      {/* Section 6: the CURRENT generation's questions — review/select, then save */}
       <Section
         n={6}
         title="Question Bank"
-        subtitle="Select questions from the live bank, review them, then save the paper to the Paper Library"
+        subtitle="Questions generated by the current generation request — review and select them, then save the paper"
       >
-        {qLoading ? (
-          <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-10 text-[12.5px] text-slate-400 dark:border-slate-800 dark:bg-slate-800/30">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading question bank…
-          </div>
-        ) : qError ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6 text-center dark:border-rose-500/30 dark:bg-rose-500/5">
-            <AlertTriangle className="mx-auto h-7 w-7 text-rose-500" />
-            <p className="mt-2 text-sm font-bold text-rose-700 dark:text-rose-200">Question bank unavailable.</p>
-            <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-300/80">{qErr?.message || 'Could not load the question bank from the backend.'}</p>
-            <Button size="sm" variant="outline" className="mt-3 border-rose-300 text-rose-700" onClick={() => refetchQuestions()}>
-              <RefreshCw className="h-3.5 w-3.5" /> Retry
-            </Button>
-          </div>
-        ) : (
-          <>
-            {availableQuestions.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
-                <Database className="mx-auto h-8 w-8 text-slate-300" />
-                {isBankEmpty && !hasGeneration ? (
-                  <>
-                    <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions generated yet.</p>
-                    <p className="mt-1 text-xs text-slate-400">Create or generate questions to build your question bank.</p>
-                    <Button size="sm" className="mt-4 bg-gradient-to-r from-indigo-600 to-blue-600" onClick={handleGenerateQuestions}><Sparkles className="h-3.5 w-3.5" /> Generate Questions</Button>
-                  </>
-                ) : (
-                  <>
-                    <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions match these filters</p>
-                    <p className="mt-1 text-xs text-slate-400">Try widening the domain, exam family, subject, chapter, difficulty or search.</p>
-                  </>
-                )}
-              </div>
-            ) : (
+        <>
+          {isGenerationRunning ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-10 text-[12.5px] text-slate-500 dark:border-indigo-500/20 dark:bg-indigo-500/5">
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+              <p className="font-bold text-slate-700 dark:text-slate-200">AI is generating {requestedCountForDisplay} questions…</p>
+              <p className="text-[11px] text-slate-400">Generated questions will appear here when the agent completes.</p>
+            </div>
+          ) : isGenerationFailed ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6 text-center dark:border-rose-500/30 dark:bg-rose-500/5">
+              <AlertTriangle className="mx-auto h-7 w-7 text-rose-500" />
+              <p className="mt-2 text-sm font-bold text-rose-700 dark:text-rose-200">Question generation failed.</p>
+              <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-300/80">Question generation failed. Please try again.</p>
+              <p className="mt-1 text-[10px] text-rose-400">Reference: {generationId ?? '—'}</p>
+            </div>
+          ) : availableQuestions.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center dark:border-slate-700">
+              <Database className="mx-auto h-8 w-8 text-slate-300" />
+              {!hasGeneration ? (
+                <>
+                  <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions generated yet.</p>
+                  <p className="mt-1 text-xs text-slate-400">Configure your paper and click Generate Paper.</p>
+                  <Button size="sm" className="mt-4 bg-gradient-to-r from-indigo-600 to-blue-600" onClick={handleGenerateQuestions}><Sparkles className="h-3.5 w-3.5" /> Generate Paper</Button>
+                </>
+              ) : generationQuestions.length === 0 ? (
+                <>
+                  <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions were generated for this generation.</p>
+                  <p className="mt-1 text-xs text-slate-400">Regenerate questions or adjust the paper configuration and try again.</p>
+                  <Button size="sm" variant="outline" className="mt-4 border-indigo-200 text-indigo-600" onClick={handleRetryGeneration}><RefreshCw className="h-3.5 w-3.5" /> Regenerate Questions</Button>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">No questions match these filters</p>
+                  <p className="mt-1 text-xs text-slate-400">Try a different question type filter.</p>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
               <div className="space-y-2.5">
                 {availableQuestions.map((q) => {
                   const id = q.id ?? q._id
@@ -865,7 +871,7 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                         <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(id)} className="mt-1 h-4 w-4 accent-indigo-600" data-testid={`question-checkbox-${id}`} />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap gap-1.5">
-                            <Badge variant="secondary" size="sm">{q.subject ?? q.subjectCode ?? '—'}</Badge>
+                            <Badge variant="secondary" size="sm">{q.subjectName ?? q.subject ?? q.subjectCode ?? '—'}</Badge>
                             {q.chapter && <Badge variant="outline" size="sm">{q.chapter}</Badge>}
                             {q.topic && <Badge variant="outline" size="sm">{q.topic}</Badge>}
                             {q.difficulty && <Badge variant={DIFF_STYLES[q.difficulty] ?? 'secondary'} size="sm">{q.difficulty}</Badge>}
@@ -882,27 +888,27 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
                               ))}
                             </div>
                           )}
-                          <p className="mt-1 text-[10px] text-slate-400">ID: {id} · Domain: {q.domain ?? domain} · Exam family: {q.examFamily ?? examFamily ?? 'University'} · Source: {q.source ?? 'Bank'}</p>
+                          <p className="mt-1 text-[10px] text-slate-400">ID: {id} · Domain: {q.domain ?? domain} · Exam family: {q.examFamily ?? examFamily ?? 'University'} · Source: {q.source ?? 'AI'}</p>
                         </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
-            )}
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/30">
-              <div>
-                <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{selectedIds.length} questions selected</p>
-                <p className="text-[11px] text-slate-400">{isGenerationReady && generatedCountForDisplay < requestedCountForDisplay ? 'Not ready — incomplete generation, Send disabled.' : isPaperReady ? 'Ready — Send enabled.' : 'Select questions to enable Save.'}</p>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/30">
+                <div>
+                  <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{selectedIds.length} questions selected</p>
+                  <p className="text-[11px] text-slate-400">{isGenerationReady && generatedCountForDisplay < requestedCountForDisplay ? 'Not ready — incomplete generation, Send disabled.' : isPaperReady ? 'Ready — Send enabled.' : 'Select questions to enable Save.'}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setPrintOpen(true)}><Printer className="h-3.5 w-3.5" /> Preview</Button>
+                  <Button size="sm" onClick={handleCreate} disabled={saving || selectedIds.length === 0 || isGenerationRunning || isGenerationFailed} data-testid="save-paper-button"><Save className="h-3.5 w-3.5" /> {saving ? 'Saving…' : `Save Paper (${selectedIds.length})`}</Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setPrintOpen(true)}><Printer className="h-3.5 w-3.5" /> Preview</Button>
-                <Button size="sm" onClick={handleCreate} disabled={saving || selectedIds.length === 0 || isGenerationRunning || isGenerationFailed} data-testid="save-paper-button"><Save className="h-3.5 w-3.5" /> {saving ? 'Saving…' : `Save Paper (${selectedIds.length})`}</Button>
-              </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </>
       </Section>
 
       {/* Paper Library removed — it now lives in the dedicated Paper Library tab. */}

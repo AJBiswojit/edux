@@ -28,7 +28,9 @@ const state = vi.hoisted(() => ({
   posts: [],
   aiActive: { active: null },
   aiPaper: null,
+  currentGeneration: null,
   generation: null,
+  generationStatus: null,
   generationQuestions: null,
   bank: null,
 }))
@@ -47,8 +49,12 @@ vi.mock('@/api/axios', () => ({
         const bank = state.bank
         return { data: typeof bank === 'function' ? bank(params) : bank }
       }
+      if (url === '/faculty/question-bank/generations/current') return { data: { generation: state.currentGeneration } }
       if (url.endsWith('/questions') && url.includes('/generations/')) {
         return { data: state.generationQuestions }
+      }
+      if (url.includes('/generations/') && url.endsWith('/status') === false && !url.endsWith('/questions')) {
+        return { data: { generation: state.generationStatus } }
       }
       return { data: {} }
     }),
@@ -165,14 +171,16 @@ async function chooseByTriggerText(view, triggerText, optionText) {
 
 const bodyText = () => document.body.textContent ?? ''
 const generatePosts = () => state.posts.filter((c) => c.url === '/faculty/question-bank/generate')
-const bankCalls = () => state.gets.filter((c) => c.url === '/faculty/question-bank')
+
 
 beforeEach(() => {
   state.gets = []
   state.posts = []
   state.aiActive = { active: null }
   state.aiPaper = null
+  state.currentGeneration = null
   state.generation = null
+  state.generationStatus = null
   state.generationQuestions = null
   state.bank = bankFor
 })
@@ -187,13 +195,16 @@ describe('Generate Paper — no automatic generation on open', () => {
     await settle()
 
     expect(generatePosts()).toHaveLength(0)
-    expect(state.gets.some((c) => c.url.includes('/generations/'))).toBe(false)
+    // Only the refresh-recovery probe (current generation) may run; no
+    // generation-status/questions polling without a real generation id.
+    expect(state.gets.filter((c) => c.url.includes('/generations/') && !c.url.endsWith('/current')).length).toBe(0)
     expect(bodyText()).toContain('Generation: Idle')
     expect(bodyText()).not.toContain('AI paper ready')
     expect(bodyText()).not.toContain('questions generated while you were away')
-    // Section 6 still lists the live bank (existing design) but nothing is
-    // presented as a generation result and nothing is pre-selected.
-    expect(bodyText()).toContain('University bank question on AVL rotations')
+    // Section 6 shows ONLY the current generation — no generation means the
+    // honest empty state, never question-bank records.
+    expect(bodyText()).toContain('No questions generated yet.')
+    expect(bodyText()).not.toContain('University bank question on AVL rotations')
     expect(view.container.querySelectorAll('input[type="checkbox"]:checked')).toHaveLength(0)
   })
 
@@ -216,6 +227,40 @@ describe('Generate Paper — no automatic generation on open', () => {
     // No generation result state may be derived from persisted AI papers.
     expect(state.gets.some((c) => c.url.includes('/ai-paper/'))).toBe(false)
     expect(generatePosts()).toHaveLength(0)
+  })
+
+  it('rehydrates the persisted backend current generation on refresh (without regenerating)', async () => {
+    state.currentGeneration = {
+      id: 'gen-current', generationId: 'gen-current', status: 'READY',
+      requestedCount: 2, generatedCount: 2,
+    }
+    state.generationStatus = {
+      id: 'gen-current', generationId: 'gen-current', status: 'READY',
+      requestedCount: 2, generatedCount: 2,
+    }
+    state.generationQuestions = {
+      ok: true, status: 'READY', total: 2, requestedCount: 2, generatedCount: 2,
+      questions: Array.from({ length: 2 }, (_, i) => ({
+        id: `gen-current-q-${i + 1}`, subject: 'NEET-BIO', subjectName: 'Biology',
+        chapter: 'Cell Biology', topic: 'Cell Structure', type: 'MCQ',
+        difficulty: 'Medium', domain: 'Competitive', examFamily: 'NEET',
+        text: `Persisted generation question ${i + 1}`, options: ['A', 'B', 'C', 'D'],
+      })),
+    }
+
+    const view = mount()
+    await settle(400)
+    // The current-generation probe resolves asynchronously, which enables the
+    // generation-questions query; flush until the rehydrated questions render.
+    for (let i = 0; i < 20 && !bodyText().includes('Persisted generation question 1'); i += 1) {
+      await settle(50)
+    }
+
+    expect(generatePosts()).toHaveLength(0)
+    expect(bodyText()).toContain('Generation: Ready')
+    expect(bodyText()).toContain('Persisted generation question 1')
+    // Nothing is auto-selected for a restored generation.
+    expect(view.container.querySelectorAll('input[type="checkbox"]:checked')).toHaveLength(0)
   })
 })
 
@@ -294,7 +339,16 @@ describe('Generate Paper — generation only after the Generate action', () => {
 })
 
 describe('Generate Paper — Competitive domain', () => {
-  it('renders structured option records as their text and stays mounted', async () => {
+  it('renders generated structured option records as their text and stays mounted', async () => {
+    state.generation = {
+      ok: true, generationId: 'gen-comp', id: 'gen-comp', status: 'READY',
+      requestedCount: 3, generatedCount: 3,
+    }
+    state.generationQuestions = {
+      ok: true, status: 'READY', total: 3, requestedCount: 3, generatedCount: 3,
+      questions: COMP_QUESTIONS.map((q, i) => ({ ...q, id: `gen-comp-q-${i + 1}`, source: 'AI' })),
+    }
+
     const view = mount()
     await settle()
 
@@ -303,10 +357,19 @@ describe('Generate Paper — Competitive domain', () => {
     await act(async () => { compButton.click() })
     await settle(300)
 
+    expect(generatePosts()).toHaveLength(0)
+    expect(state.gets.some((c) => c.url === '/faculty/question-bank')).toBe(false)
+
+    const button = view.container.querySelector('[data-testid="generate-questions-button"]')
+    expect(button).toBeTruthy()
+    await act(async () => { button.click() })
+    await settle(400)
+
     // No React "Objects are not valid as a React child" crash — the page
-    // stays mounted and the Competitive question renders.
+    // stays mounted and the generated Competitive question renders. Only the
+    // current generation's questions may appear in Section 6.
     expect(view.container.textContent).toContain('A particle is projected at 20 m/s')
-    expect(bankCalls().at(-1).params).toMatchObject({ domain: 'Competitive', examFamily: 'JEE' })
+    expect(bodyText()).toContain('Generation: Ready')
 
     // Structured options render the human-readable text, never the object.
     expect(view.container.textContent).toContain('40.8 m')
@@ -322,7 +385,7 @@ describe('Generate Paper — Competitive domain', () => {
 })
 
 describe('Generate Paper — University regression and domain switching', () => {
-  it('keeps the University cascade and bank filters working', async () => {
+  it('keeps the University cascade working and sends real filters to the agent', async () => {
     const view = mount()
     await settle()
 
@@ -331,8 +394,22 @@ describe('Generate Paper — University regression and domain switching', () => 
     await choose(view, 'Chapter', 'Trees')
     await choose(view, 'Topic', 'AVL')
 
-    expect(bankCalls().at(-1).params).toMatchObject({ domain: 'University', course: 'CS501', subject: 'CS501', chapter: 'Trees', topic: 'AVL' })
-    expect(view.container.textContent).toContain('University bank question on AVL rotations')
+    // Section 6 must NEVER render question-bank records.
+    expect(state.gets.some((c) => c.url === '/faculty/question-bank')).toBe(false)
+    expect(view.container.textContent).not.toContain('University bank question on AVL rotations')
+
+    const button = view.container.querySelector('[data-testid="generate-questions-button"]')
+    await act(async () => { button.click() })
+    await settle(200)
+
+    expect(generatePosts()).toHaveLength(1)
+    expect(generatePosts()[0].body).toMatchObject({
+      domain: 'University',
+      course: 'CS501 — Data Structures & Algorithms',
+      subject: 'Data Structures & Algorithms',
+      chapter: 'Trees',
+      topic: 'AVL',
+    })
   })
 
   it('survives University → Competitive → University with consistent dependent filters', async () => {
@@ -347,16 +424,16 @@ describe('Generate Paper — University regression and domain switching', () => 
 
     await act(async () => { comp().click() })
     await settle(300)
-    expect(view.container.textContent).toContain('40.8 m')
     expect(triggerOf(view.container, 'Subject').textContent).toContain('All subjects')
 
     await act(async () => { uni().click() })
     await settle(300)
 
-    // The University bank (cached from the earlier visit of the same filters)
-    // is rendered again — no stale Competitive records leak through.
-    expect(view.container.textContent).toContain('University bank question on AVL rotations')
+    // No generation exists, so Section 6 stays in the honest empty state —
+    // no stale Competitive or University bank records can leak through.
+    expect(view.container.textContent).toContain('No questions generated yet.')
     expect(view.container.textContent).not.toContain('40.8 m')
+    expect(view.container.textContent).not.toContain('University bank question on AVL rotations')
     expect(triggerOf(view.container, 'Course').textContent).toContain('Select course…')
     expect(triggerOf(view.container, 'Subject').textContent).toContain('Select a course first')
     expect(view.container.textContent).not.toContain('[object Object]')

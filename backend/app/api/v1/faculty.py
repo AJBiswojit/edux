@@ -37,6 +37,7 @@ from app.services.examination import (
 )
 from app.services.question_generation import (
     create_generation,
+    get_current_generation,
     get_generation,
     get_generation_questions,
     list_generations,
@@ -159,6 +160,18 @@ def generate_questions(body: dict, db: DbDep, user: FacultyDep):
 def list_question_generations(db: DbDep, user: FacultyDep, limit: int = 20):
     gens = list_generations(db, user, limit=limit)
     return {"items": [serialize_generation(g) for g in gens], "count": len(gens)}
+
+
+@router.get("/faculty/question-bank/generations/current")
+def current_question_generation(db: DbDep, user: FacultyDep):
+    """Recover the faculty's current generation session (refresh / navigation).
+
+    Returns the most recent real generation (or null when none exists) so the
+    Paper Studio can restore the current generation state without ever
+    generating automatically or re-surfacing unrelated question-bank records.
+    """
+    gen = get_current_generation(db, user)
+    return {"ok": True, "generation": serialize_generation(gen) if gen else None}
 
 
 @router.get("/faculty/question-bank/generations/{generation_id}")

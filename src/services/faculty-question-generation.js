@@ -64,6 +64,11 @@ export async function fetchGenerations(limit = 20) {
   return data
 }
 
+export async function fetchCurrentGeneration() {
+  const { data } = await api.get('/faculty/question-bank/generations/current')
+  return data?.generation ?? null
+}
+
 export async function retryGeneration(generationId) {
   const { data } = await api.post(`/faculty/question-bank/generations/${generationId}/retry`)
   return data
@@ -75,6 +80,7 @@ export function useQuestionGeneration() {
     mutationFn: generateQuestions,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['faculty', 'question-generations'] })
+      qc.invalidateQueries({ queryKey: ['faculty', 'question-generations', 'current'] })
       qc.invalidateQueries({ queryKey: ['faculty', 'questions'] })
       qc.invalidateQueries({ queryKey: ['faculty', 'question-bank'] })
     },
@@ -112,6 +118,19 @@ export function useGenerations(limit = 20) {
     queryFn: () => fetchGenerations(limit),
     retry: false,
     staleTime: 1000 * 60 * 2,
+  })
+}
+
+/**
+ * The faculty's persisted current generation session (refresh recovery).
+ * Never triggers generation — it only rehydrates the last real generation.
+ */
+export function useCurrentGeneration() {
+  return useQuery({
+    queryKey: ['faculty', 'question-generations', 'current'],
+    queryFn: fetchCurrentGeneration,
+    retry: false,
+    staleTime: 1000 * 30,
   })
 }
 

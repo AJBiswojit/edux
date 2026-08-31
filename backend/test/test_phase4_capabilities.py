@@ -37,7 +37,7 @@ def _student(db, inst_id: str, user_id: str = "u_stu_p4"):
     return user
 
 
-def test_micro_assessment_lifecycle_and_student_isolation(client, world, db):
+def test_micro_assessment_lifecycle_and_student_isolation(client, world, db, competitive_catalog, fake_ai_service):
     faculty = world["faculty"]
     other = world["faculty_b"]
     student = _student(db, world["inst_a"].id)
@@ -48,7 +48,7 @@ def test_micro_assessment_lifecycle_and_student_isolation(client, world, db):
 
     created = client.post(
         "/v1/faculty/micro-assessments",
-        json={"title": "OS check", "subject": "OS", "chapter": "Scheduling", "duration": 10},
+        json={"title": "Biology check", "subject": "Biology", "chapter": "Genetics", "duration": 10},
         headers=auth_header(faculty),
     )
     assert created.status_code == 200, created.text
@@ -60,13 +60,30 @@ def test_micro_assessment_lifecycle_and_student_isolation(client, world, db):
 
     gen = client.post(
         f"/v1/faculty/micro-assessments/{assessment_id}/generate",
-        json={"questionCount": 2, "subject": "OS", "chapter": "Scheduling"},
+        json={
+            "questionCount": 2,
+            "domain": "Competitive",
+            "examFamily": "NEET",
+            "subject": "Biology",
+            "chapter": "Genetics",
+        },
         headers=auth_header(faculty),
     )
     assert gen.status_code == 200, gen.text
     assert gen.json()["ok"] is True
-    assert len(gen.json()["questions"]) == 2
-    assert all(q.get("id") for q in gen.json()["questions"])
+    generation_id = gen.json()["generationId"]
+
+    # The real agent writes asynchronously; simulate completion, settle, then
+    # read the assessment back so links are materialised.
+    fake_ai_service["write_output"]()
+    from test.conftest import settle_generation
+    settled = settle_generation(client, faculty, generation_id)
+    assert settled["status"] == "READY"
+    detail = client.get(f"/v1/faculty/micro-assessments/{assessment_id}", headers=auth_header(faculty))
+    assert detail.status_code == 200, detail.text
+    questions = detail.json()["assessment"]["questions"]
+    assert len(questions) == 2
+    assert all(q.get("id") for q in questions)
 
     forbidden = client.get(f"/v1/faculty/micro-assessments/{assessment_id}", headers=auth_header(other))
     assert forbidden.status_code in {403, 404}
@@ -141,18 +158,39 @@ def test_draft_assignment_not_visible_until_publish(client, world, db):
     assert any(item["id"] == assignment_id for item in after["items"])
 
 
-def test_studio_edit_persists_version(client, world, db):
+def test_studio_edit_persists_version(client, world, db, competitive_catalog, fake_ai_service):
     faculty = world["faculty"]
     if db.get(FacultyProfile, faculty.id) is None:
         db.add(FacultyProfile(user_id=faculty.id, institution_id=faculty.institution_id))
         db.commit()
     generated = client.post(
         "/v1/faculty/question-studio/generate",
-        json={"settings": {"count": 1, "domain": "University", "difficulty": "Easy"}},
+        json={
+            "settings": {
+                "count": 1,
+                "domain": "Competitive",
+                "examFamily": "NEET",
+                "subject": "Biology",
+                "chapter": "All chapters",
+                "topic": "All topics",
+                "difficulty": "Easy",
+                "qType": "MCQ",
+            }
+        },
         headers=auth_header(faculty),
     )
     assert generated.status_code == 200, generated.text
-    session = generated.json()["session"]
+    generated_id = generated.json()["session"]["generationId"]
+    fake_ai_service["write_output"]()
+    from test.conftest import settle_generation
+    settled = settle_generation(client, faculty, generated_id)
+    assert settled["status"] == "READY"
+    session_res = client.get(
+        f"/v1/faculty/question-studio/sessions/{generated.json()['session']['studioSessionId']}",
+        headers=auth_header(faculty),
+    )
+    assert session_res.status_code == 200
+    session = session_res.json()["session"]
     qid = session["questions"][0]["id"]
     edited = client.post(
         f"/v1/faculty/question-studio/sessions/{session['studioSessionId']}/questions/{qid}/edit",

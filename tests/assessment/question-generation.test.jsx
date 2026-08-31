@@ -170,10 +170,16 @@ describe('Phase G — Generation state handling', () => {
     expect(content).not.toMatch(/const\s+seededQuestions/i)
     expect(content).not.toMatch(/const\s+sampleQuestions/i)
     expect(content).not.toMatch(/questionFixtures/i)
-    // Must contain real backend endpoint
+    expect(content).not.toMatch(/const\s+DEMO/i)
+    expect(content).not.toMatch(/const\s+FALLBACK/i)
+    // Must go through the real deployed-agent endpoint
     expect(content).toContain('/faculty/question-bank/generate')
-    expect(content).toContain('REAL BACKEND')
+    // Only current-generation questions may reach Phase 6 — the tab must not
+    // query the generic question bank anymore.
+    expect(content).not.toMatch(/useFacultyQuestions/)
+    // Real backend persistence is required (never frontend-only generation).
     expect(content).toContain('PostgreSQL')
+    expect(content).toContain('deployed AI generation agent')
   })
 
   it('empty question bank does not block generation', async () => {

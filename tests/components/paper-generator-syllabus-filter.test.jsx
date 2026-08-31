@@ -3,10 +3,10 @@
  * Question Paper Studio — Syllabus/content filter regression test.
  *
  * Verifies the real-data-dependent Course → Subject → Chapter → Topic
- * hierarchy and that selected filters are passed to the live question-bank
- * hook. No mocked course catalog is hardcoded in the component — this test
- * supplies the same contract the FastAPI /faculty/paper-generator endpoint
- * returns.
+ * hierarchy and that selected filters are sent to the deployed AI generation
+ * agent (POST /faculty/question-bank/generate payload). No mocked course
+ * catalog is hardcoded in the component — this test supplies the same
+ * contract the FastAPI /faculty/paper-generator endpoint returns.
  */
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -19,7 +19,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 const mocks = vi.hoisted(() => ({
   paperData: null,
-  questionFilters: [],
+  generatedPayloads: [],
 }))
 
 vi.mock('@/services/faculty-papers', () => ({
@@ -31,17 +31,16 @@ vi.mock('@/services/faculty-papers', () => ({
   usePaperArchiveBackend: () => ({ mutateAsync: vi.fn() }),
 }))
 
-vi.mock('@/services/faculty-questions', () => ({
-  useFacultyQuestions: (filters) => {
-    mocks.questionFilters.push(filters)
-    return { data: { questions: [], summary: { total: 0 }, total: 0 }, isLoading: false, isError: false, refetch: vi.fn() }
-  },
-}))
-
 vi.mock('@/services/faculty-question-generation', () => ({
-  useQuestionGeneration: () => ({ mutateAsync: vi.fn() }),
+  useQuestionGeneration: () => ({
+    mutateAsync: vi.fn(async (payload) => {
+      mocks.generatedPayloads.push(payload)
+      return { ok: true, generationId: 'gen-1', id: 'gen-1', status: 'READY', requestedCount: 20, generatedCount: 0 }
+    }),
+  }),
   useGenerationStatus: () => ({ data: null }),
   useGenerationQuestions: () => ({ data: null, refetch: vi.fn() }),
+  useCurrentGeneration: () => ({ data: null }),
   GENERATION_STATUS: { GENERATING: 'GENERATING', PROCESSING: 'PROCESSING', READY: 'READY', COMPLETED: 'COMPLETED', FAILED: 'FAILED' },
   isTerminalStatus: (s) => ['READY', 'COMPLETED', 'FAILED'].includes(s),
 }))
@@ -75,7 +74,7 @@ const REAL_CATALOG = {
 const cleanups = []
 beforeEach(() => {
   mocks.paperData = { generatedPapers: [], config: REAL_CATALOG, versionHistory: {} }
-  mocks.questionFilters = []
+  mocks.generatedPayloads = []
 })
 afterEach(() => {
   while (cleanups.length) cleanups.shift()()
@@ -122,7 +121,7 @@ describe('Question Paper Studio — Syllabus/content filter', () => {
     expect(courseOptions).not.toContain('CS501 — DSA')
   })
 
-  it('keeps Children disabled until each real parent is chosen and passes filters to the bank', async () => {
+  it('keeps Children disabled until each real parent is chosen and sends the selected filters to the generation agent', async () => {
     const view = mount()
 
     const subjectTrigger = triggerOf(view.container, 'Subject')
@@ -143,16 +142,22 @@ describe('Question Paper Studio — Syllabus/content filter', () => {
 
     await choose(view, 'Topic', 'AVL')
 
-    const lastFilters = mocks.questionFilters.at(-1)
-    expect(lastFilters).toMatchObject({
-      course: 'CS501',
-      subject: 'CS501',
+    expect(mocks.generatedPayloads).toHaveLength(0)
+    const button = view.container.querySelector('[data-testid="generate-questions-button"]')
+    await act(async () => { button.click() })
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)) })
+
+    expect(mocks.generatedPayloads).toHaveLength(1)
+    expect(mocks.generatedPayloads[0]).toMatchObject({
+      domain: 'University',
+      course: COURSE_DSA,
+      subject: 'Data Structures & Algorithms',
       chapter: 'Trees',
       topic: 'AVL',
     })
   })
 
-  it('changing Course clears Subject/Chapter/Topic and updates the bank request', async () => {
+  it('changing Course clears Subject/Chapter/Topic and refuses to generate without an explicit University subject', async () => {
     const view = mount()
 
     await choose(view, 'Course', COURSE_DSA)
@@ -170,8 +175,12 @@ describe('Question Paper Studio — Syllabus/content filter', () => {
     expect(chapterTrigger.textContent).toContain('Select a subject first')
     expect(topicTrigger.textContent).toContain('Select a chapter first')
 
-    const lastFilters = mocks.questionFilters.at(-1)
-    expect(lastFilters).toMatchObject({ course: 'CS502', subject: undefined, chapter: undefined, topic: undefined })
+    // A University paper without an explicit subject is a configuration
+    // error — the agent must never be called with a half-cleared scope.
+    const button = view.container.querySelector('[data-testid="generate-questions-button"]')
+    await act(async () => { button.click() })
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)) })
+    expect(mocks.generatedPayloads).toHaveLength(0)
   })
 
   it('keeps an empty API catalog empty instead of injecting demo/sample options', async () => {

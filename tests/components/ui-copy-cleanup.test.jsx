@@ -78,6 +78,7 @@ vi.mock('../../src/services/faculty-question-generation', async (importOriginal)
     useQuestionGeneration: () => ({ mutateAsync: async () => ({ ok: true }), isPending: false }),
     useGenerationStatus: () => ({ data: undefined, isLoading: false }),
     useGenerationQuestions: () => ({ data: undefined, refetch: () => {} }),
+    useCurrentGeneration: () => ({ data: null, isLoading: false }),
   }
 })
 
@@ -164,7 +165,10 @@ describe('UI copy cleanup — implementation terminology removed from product su
     expect(text).toContain('Question Generation')
     expect(text).toContain('Question Bank')
     expect(text).toContain('Generation: Idle')
-    expect(text).toContain('Which traversal uses a queue?')
+    // Phase 6 shows ONLY the current generation — with no generation it must
+    // render the honest empty state, never question-bank records.
+    expect(text).toContain('No questions generated yet.')
+    expect(text).not.toContain('Which traversal uses a queue?')
 
     expectNoImplementationCopy(text, 'Question Paper Studio')
   })
