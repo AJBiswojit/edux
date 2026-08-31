@@ -25,10 +25,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/services/faculty-papers', () => ({
   usePaperGeneratorBackend: () => ({ data: mocks.paperData, isLoading: false, isError: false, refetch: vi.fn() }),
   usePaperCreateBackend: () => ({ mutateAsync: vi.fn() }),
+  usePaperUpdateBackend: () => ({ mutateAsync: vi.fn() }),
   usePaperDeleteBackend: () => ({ mutateAsync: vi.fn() }),
   usePaperDuplicateBackend: () => ({ mutateAsync: vi.fn() }),
   usePaperRegenerateBackend: () => ({ mutateAsync: vi.fn() }),
   usePaperArchiveBackend: () => ({ mutateAsync: vi.fn() }),
+  downloadPaperPdf: vi.fn(),
 }))
 
 vi.mock('@/services/faculty-question-generation', () => ({

@@ -11,9 +11,10 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  BookOpen, Eye, Pencil, Send, Trash2, Users, Sparkles, Loader2, AlertTriangle, FileText,
+  BookOpen, Download, Eye, Pencil, Send, Trash2, Users, Sparkles, Loader2, AlertTriangle, FileText,
 } from 'lucide-react'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useToast } from '@/components/ui'
+
 import { useAiPaperDetail, usePaperPublishBackend, usePaperShareBackend } from '@/services/faculty-papers'
 import { useFacultyRoster } from '@/services'
 import { paperSendReadiness } from '@/api/adapters/paper-send-readiness'
@@ -63,7 +64,7 @@ export function PaperMetaChips({ paper }) {
  * Primary: View. Secondary: Edit · Share · Delete. Duplicate / versions /
  * DOCX / Print / Archive actions are intentionally absent from the card.
  */
-export function PaperCard({ paper, index = 0, onView, onEdit, onDelete, onShare }) {
+export function PaperCard({ paper, index = 0, onView, onEdit, onDelete, onShare, onDownload }) {
   const qCount = paperQuestionCount(paper)
   const send = paperSendReadiness(paper)
   const domain = paper.domain ?? paper.mode
@@ -102,7 +103,7 @@ export function PaperCard({ paper, index = 0, onView, onEdit, onDelete, onShare 
           {paper.faculty && <span>· {paper.faculty}</span>}
         </div>
 
-        <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3.5 dark:border-slate-800">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3.5 dark:border-slate-800">
           {onView && (
             <Button size="sm" className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 shadow-md shadow-indigo-500/25 hover:brightness-110" onClick={() => onView(paper)}>
               <Eye className="h-3.5 w-3.5" /> View
@@ -127,6 +128,17 @@ export function PaperCard({ paper, index = 0, onView, onEdit, onDelete, onShare 
               </Button>
             </span>
           )}
+          {onDownload ? (
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label="Download paper"
+              className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-500/40 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+              onClick={() => onDownload(paper)}
+            >
+              <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Download</span>
+            </Button>
+          ) : null}
           {onDelete && (
             <Button size="sm" variant="ghost" aria-label="Delete paper" className="h-8 w-8 shrink-0 px-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-500/10" onClick={() => onDelete(paper)}>
               <Trash2 className="h-3.5 w-3.5" />
@@ -140,6 +152,7 @@ export function PaperCard({ paper, index = 0, onView, onEdit, onDelete, onShare 
     </motion.div>
   )
 }
+
 
 /** One option row for a viewer question — structured option records are
  *  resolved to human-readable text via the shared optionText adapter. */
