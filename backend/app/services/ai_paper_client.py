@@ -11,7 +11,6 @@ Endpoints used (verified live):
   GET  /api/jobs/{id}/status -> {job_id, paper_id, status, questions_generated,
                                  questions_dropped, total_questions, current_chapter,
                                  current_section, elapsed_seconds, error}
-  POST /api/validate         -> dry-run (resolved_chapters, cost, warnings)
 """
 
 from __future__ import annotations
@@ -144,22 +143,6 @@ def job_status(job_id: str) -> dict:
         raise AiPaperClientError(f"Job status error: {detail}") from exc
     except httpx.HTTPError as exc:
         log.warning("ai_job_status_unreachable", job_id=job_id, error=str(exc))
-        raise AiPaperClientError("AI generation service is unreachable") from exc
-
-
-def validate_spec(body: dict) -> dict:
-    """POST /api/validate — free dry-run (resolved chapters, cost, warnings)."""
-    url = f"{_base_url()}/api/validate"
-    payload = {k: v for k, v in body.items() if k in {
-        "exam_family", "subject", "chapters", "total_questions", "difficulty", "question_type",
-    }}
-    try:
-        with httpx.Client(timeout=_timeout()) as client:
-            resp = client.post(url, json=payload)
-            resp.raise_for_status()
-            return resp.json()
-    except httpx.HTTPError as exc:
-        log.warning("ai_validate_error", error=str(exc))
         raise AiPaperClientError("AI generation service is unreachable") from exc
 
 

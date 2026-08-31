@@ -5,18 +5,18 @@
  * selectedQuestionIds; publish is POST .../papers/{id}/publish.
  *
  * Endpoints (real backend):
- *  GET    /faculty/paper-generator           -> config + library
- *  POST   /faculty/paper-generator/papers    -> create paper (selectedQuestionIds only)
+ *  GET    /faculty/paper-generator/catalog            -> generator config
+ *  POST   /faculty/paper-generator/papers             -> create paper (selectedQuestionIds only)
  *  DELETE /faculty/paper-generator/papers/:id
  *  POST   /faculty/paper-generator/papers/:id/duplicate
- *  POST   /faculty/paper-generator/papers/:id/regenerate
  *  PATCH  /faculty/paper-generator/papers/:id/archive
  *  POST   /faculty/paper-generator/papers/:id/share
- *  GET    /faculty/paper-generator/papers/:id  (optional detail)
+ *  POST   /faculty/paper-generator/generate-demo      -> deterministic bank generation
  *  POST   /faculty/paper-generator/generate-ai        -> trigger AI generation
  *  GET    /faculty/paper-generator/ai-status/:jobId   -> poll AI job progress
  *  GET    /faculty/paper-generator/ai-paper/:paperId  -> read back AI questions
  *  GET    /faculty/paper-generator/ai-active          -> resume latest in-progress job
+ *  GET    /faculty/paper-generator/ai-library         -> AI paper library
  *
  * Domain isolation preserved via domain+examFamily, not subject inference.
  * `{ ok: false }` HTTP 200 is rejected by the axios interceptor.
@@ -59,7 +59,7 @@ export async function fetchAiActive() {
   return data
 }
 
-/** Paper Library backed by ai_generated_papers (same shape as fetchPapers). */
+/** Paper Library backed by ai_generated_papers. */
 export async function fetchAiLibrary() {
   const { data } = await api.get('/faculty/paper-generator/ai-library')
   return {
@@ -83,6 +83,10 @@ export async function fetchPaperById(id) {
   return normalizePaper(data?.paper ?? data)
 }
 
+/**
+ * Create paper — backend contract (Phase 9 updated):
+ * selectedQuestionIds only (ID-based, no full objects). Builder stores IDs.
+ */
 export async function createPaper(payload) {
   const examFamily = payload.domain === 'Competitive' || payload.mode === 'Competitive'
     ? canonicalExamFamily(payload.examFamily ?? payload.exam)
@@ -210,18 +214,6 @@ export function usePaperDuplicateBackend() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: duplicatePaper,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator'] })
-      qc.invalidateQueries({ queryKey: ['faculty', 'paper-library'] })
-      qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator', 'backend'] })
-    },
-  })
-}
-
-export function usePaperRegenerateBackend() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: regeneratePaper,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['faculty', 'paper-generator'] })
       qc.invalidateQueries({ queryKey: ['faculty', 'paper-library'] })

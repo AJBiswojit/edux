@@ -1,3 +1,10 @@
+# LOCAL DEV stack only — spins up a throwaway Postgres + Redis + the API.
+# For the EC2 single-box deploy use the ROOT ../docker-compose.yml instead
+# (that one builds backend + frontend + nginx and points at the remote RDS).
+#
+#   Local dev:   docker compose -f backend/docker-compose.yml up -d --build
+#   Deploy:      docker compose up -d --build            (from repo root)
+
 services:
   db:
     image: postgres:16

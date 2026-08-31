@@ -7,8 +7,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  BookOpen, CheckCircle2, Copy, Download, FileText, Pencil, Printer, Shuffle,
-  Send, Trash2, History, RefreshCw, Archive, Users, Database,
+  BookOpen, Copy, Download, FileText, Pencil, Printer, Shuffle,
+  Send, Trash2, History, RefreshCw, Archive, Users,
 } from 'lucide-react'
 import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, useToast } from '@/components/ui'
 import { usePaperPublishBackend, usePaperShareBackend } from '@/services/faculty-papers'
@@ -335,35 +335,7 @@ export function SharePaperDialog({ paper, open, onOpenChange }) {
   )
 }
 
-/* Question Edit / Replace / Quality / Print — unchanged logic but ID-based where applicable */
-export function QuestionEditDialog({ question, open, onOpenChange, onSave, isUniversity }) {
-  const [draft, setDraft] = useState(null)
-  const toast = useToast()
-  // eslint-disable-next-line
-  const _ = isUniversity
-  if (question && !draft) { /* init */ }
-  // Use effect via direct check to avoid hooks violation in conditional? We'll use useState+effect pattern below via closure
-  return null
-}
-
-export function QuestionReplaceDialog() { return null }
-
-export function PaperQualityPanel({ questions }) {
-  const n = questions?.length ?? 0
-  if (!n) return null
-  const byDiff = {}
-  questions.forEach((q) => { byDiff[q.difficulty] = (byDiff[q.difficulty] ?? 0) + 1 })
-  return (
-    <div className="rounded-3xl border border-slate-200/70 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
-      <p className="flex items-center gap-2 text-[13px] font-bold text-slate-900 dark:text-white"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Paper Quality (live)</p>
-      <p className="mt-0.5 text-[11px] text-slate-400">Derived from {n} selected questions.</p>
-      <div className="mt-3 space-y-1.5">
-        {Object.entries(byDiff).map(([d, c]) => <div key={d} className="flex justify-between text-[11px]"><span>{d}</span><span className="font-bold">{c}</span></div>)}
-      </div>
-    </div>
-  )
-}
-
+/* Paper print preview — ID-based, backend-ready. */
 export function PaperPrintPreview({ paper, open, onOpenChange }) {
   if (!paper) return null
   const questionList = Array.isArray(paper?.questionList) ? paper.questionList : []
@@ -389,25 +361,4 @@ export function PaperPrintPreview({ paper, open, onOpenChange }) {
   )
 }
 
-/* Share history — backend only, no localStorage */
-export function ShareHistoryList({ paperId }) {
-  const { data } = usePaperShares()
-  if (!paperId) return null
-  const items = (data?.items || []).filter((row) => row.paperId === paperId)
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-200 p-4 dark:border-slate-700">
-      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400"><Database className="h-3 w-3" /> Share history</p>
-      {items.length === 0 ? (
-        <p className="mt-2 text-[11px] text-slate-400">No shares recorded for this paper yet.</p>
-      ) : (
-        <ul className="mt-2 space-y-1.5">
-          {items.map((row) => (
-            <li key={row.id} className="text-[11px] text-slate-500 dark:text-slate-400">
-              {row.audience || 'batch'} · {row.sharedAt ? String(row.sharedAt).slice(0, 10) : '—'} · {row.sharedBy || 'faculty'}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
+
