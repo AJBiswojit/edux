@@ -6,18 +6,25 @@
  * -> backend AI service -> PostgreSQL questions -> GET generated questions -> faculty selects -> paper creation.
  *
  * No mock/seeded questions. All questions from real DB.
+ *
+ * Generation lifecycle: mounting the studio NEVER generates anything and never
+ * restores a persisted paper as a fresh result — the tab opens in a clean
+ * configuration state. A generation exists only after the faculty clicks
+ * Generate Questions (the libraries' cached/stored papers stay in the Paper
+ * Library tab).
+ *
  * Preserves existing UI: paper name, domain, exam family, subject, chapter, topic, question count,
  * difficulty, question type, advanced blueprint, Bloom, chapter weighting, CO coverage, PYQ preference,
  * negative marking, exam pattern, KPI cards, tabs, filters, dropdowns, Paper Library, etc.
  */
 
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  CheckCircle2, FileText, Printer, Save, Send, SlidersHorizontal, ChevronDown, Wand2, AlertTriangle, Database,
+  CheckCircle2, Printer, Save, SlidersHorizontal, ChevronDown, Wand2, AlertTriangle, Database,
   Sparkles, Loader2, RefreshCw,
 } from 'lucide-react'
-import { usePaperGeneratorBackend, usePaperCreateBackend, generateAiPaper, fetchAiPaperStatus, fetchAiPaper, fetchAiActive } from '@/services/faculty-papers'
+import { usePaperGeneratorBackend, usePaperCreateBackend } from '@/services/faculty-papers'
 import { useFacultyQuestions } from '@/services/faculty-questions'
 import { useQuestionGeneration, useGenerationStatus, useGenerationQuestions, GENERATION_STATUS, isTerminalStatus } from '@/services/faculty-question-generation'
 import { Badge, Button, Field, Input, Select, SelectItem, useToast } from '@/components/ui'
@@ -25,7 +32,6 @@ import { DashboardSkeleton, ErrorState } from '@/components/shared/loading'
 import { useFilterCascade } from '@/hooks/use-filter-cascade'
 import { buildPaperGeneratorCascade } from './paper-generator-cascade'
 import { PaperPrintPreview, DIFF_STYLES } from './paper-parts'
-import { formatDate } from '@/utils/format'
 
 function Section({ n, title, subtitle, children, right }) {
   return (
@@ -127,26 +133,25 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
   // ===== Phase G: Question Generation State =====
+  // Generation exists ONLY for the current session's Generate action — a
+  // fresh visit to the studio starts from a clean configuration state and no
+  // persisted/paper-library record is ever re-surfaced as a new generation.
   const [generationId, setGenerationId] = useState(null)
   const [generationRequested, setGenerationRequested] = useState(0)
   const [generationStatus, setGenerationStatus] = useState(null) // idle | GENERATING | PROCESSING | READY | FAILED
   const [generationError, setGenerationError] = useState(null)
   const [generationQuestions, setGenerationQuestions] = useState([]) // real backend records
   const [isGenerating, setIsGenerating] = useState(false)
-  const pollingRef = useRef(null)
 
   const { mutateAsync: triggerGeneration } = useQuestionGeneration()
-  const { data: statusData, refetch: refetchStatus } = useGenerationStatus(generationId, { enabled: !!generationId && !isTerminalStatus(generationStatus) })
-  const { data: genQuestionsData, refetch: refetchGenQuestions } = useGenerationQuestions(generationId, { enabled: !!generationId && (generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED) })
+  const { data: statusData } = useGenerationStatus(generationId, { enabled: !!generationId && !isTerminalStatus(generationStatus) })
+  const { data: genQuestionsData } = useGenerationQuestions(generationId, { enabled: !!generationId && (generationStatus === GENERATION_STATUS.READY || generationStatus === GENERATION_STATUS.COMPLETED) })
 
   // Update status from polling
   useEffect(() => {
     if (statusData?.status) {
       setGenerationStatus(statusData.status)
       if (statusData.requestedCount) setGenerationRequested(statusData.requestedCount)
-      if (statusData.generatedCount != null) {
-        // keep but will be overwritten by questions fetch
-      }
       if (isTerminalStatus(statusData.status)) {
         setIsGenerating(false)
         if (statusData.status === GENERATION_STATUS.FAILED) {
@@ -160,27 +165,15 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   useEffect(() => {
     if (genQuestionsData?.questions) {
       setGenerationQuestions(genQuestionsData.questions)
-      // Auto-select all generated if none selected? Preserve existing behavior: faculty can select
-      // For better UX when bank was empty, auto-select all real backend IDs
+      // A fresh generation pre-selects every real backend ID so the paper can
+      // be reviewed and saved immediately; an existing selection is kept.
       if (genQuestionsData.questions.length > 0) {
         const realIds = genQuestionsData.questions.map(q => q.id).filter(Boolean)
-        // Only auto-select if previously empty or generation just completed
-        setSelectedIds(prev => {
-          if (prev.length === 0) return realIds
-          // Merge but keep real IDs only
-          return prev
-        })
+        setSelectedIds(prev => (prev.length === 0 ? realIds : prev))
       }
       setIsGenerating(false)
     }
   }, [genQuestionsData])
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
-    }
-  }, [])
 
   const parseQuestionCount = (raw) => {
     if (raw === 'Auto' || !raw) return 20
@@ -189,6 +182,12 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   }
 
   const handleGenerateQuestions = async () => {
+    // The backend scopes generated questions to the selected subject; generating
+    // without one would silently produce unscoped questions.
+    if (!subjectSelected) {
+      toast.error('Select a subject', 'Choose a subject before generating questions.')
+      return
+    }
     const count = parseQuestionCount(questionCount)
     setGenerationError(null)
     setIsGenerating(true)
@@ -229,7 +228,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       const genId = res?.generationId || res?.id
       const status = res?.status || GENERATION_STATUS.READY
       const generatedCount = res?.generatedCount ?? res?.questions?.length ?? 0
-      const questionIds = res?.questionIds || res?.questions || []
 
       if (!genId) {
         throw new Error('Question generation did not start')
@@ -239,15 +237,10 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
       setGenerationStatus(status)
 
       if (status === GENERATION_STATUS.READY || status === GENERATION_STATUS.COMPLETED) {
-        // Fetch real questions from backend
+        // Real questions are read back by the generation-questions query, which
+        // becomes enabled as soon as generationId + READY land in state. The
+        // bank listing is refreshed by the mutation's cache invalidation.
         setIsGenerating(false)
-        // If backend returned questionIds, fetch via generation questions endpoint
-        // The useGenerationQuestions hook will fetch when status READY
-        // Also refetch immediately
-        setTimeout(() => {
-          refetchGenQuestions()
-          refetchQuestions()
-        }, 300)
         toast.success('Questions Generated', `${generatedCount || count} questions generated and saved.`)
       } else {
         // Polling will handle PROCESSING -> READY
@@ -375,59 +368,6 @@ function PaperGeneratorTab({ data: _intelData, editPaper = null, onClearEdit = n
   }
 
   const toggleQType = (t) => setQTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
-
-  // Load a finished AI paper's questions into the Section 6 review list.
-  const loadAiQuestions = async (paperId) => {
-    const res = await fetchAiPaper(paperId)
-    const qs = res?.questions ?? []
-    setGenerationQuestions(qs)
-    setSelectedIds(qs.map((q) => q.id).filter(Boolean))
-    return qs
-  }
-
-  // Resume-on-mount: if the faculty has an AI job still running (or one that
-  // finished while they were away), restore the progress bar and, when it's done,
-  // auto-load the questions. Progress comes from the DB so it survives tab switches.
-  useEffect(() => {
-    let cancelled = false
-    let timer = null
-
-    const poll = async () => {
-      try {
-        const { active } = await fetchAiActive()
-        if (cancelled || !active) return
-        // Don't clobber an in-flight generation started in this same session.
-        if (isGenerating) return
-
-        if (active.status === 'completed' || (active.total && active.generated >= active.total)) {
-          // Only load if we aren't already showing this paper's questions.
-          setGenerationQuestions((prev) => {
-            if (prev.length > 0) return prev
-            loadAiQuestions(active.paper_id).then((qs) => {
-              if (!cancelled && qs.length > 0) {
-                toast.success('AI paper ready', `${qs.length} question${qs.length > 1 ? 's' : ''} generated while you were away. Review, then save.`)
-              }
-            }).catch(() => {})
-            return prev
-          })
-          return
-        }
-
-        if (active.status === 'pending' || active.status === 'running') {
-          timer = setTimeout(poll, 5000)
-        }
-      } catch {
-        // ignore transient errors; the tab still works without resume
-      }
-    }
-
-    poll()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const isPaperReady = useMemo(() => {
     if (isGenerationRunning) return false
